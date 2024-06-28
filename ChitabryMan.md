@@ -1,6 +1,3 @@
-# Chitabry
-Un tentativo per migliorare il mio studio della chitarra e un'idea per gestire una raccolta di accordi
-
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
 L'ultima revisione di questo documento e' la numero 2, di mercoledi' 11 marzo 2020.
 A cura di Gabriele Battaglia.
