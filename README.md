@@ -1,7 +1,9 @@
 # Chitabry
 Un tentativo per migliorare il mio studio della chitarra e un'idea per gestire una raccolta di accordi
 
-Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
+## Se esegui lo script Python, assicurati di avere GBUtils.py nella stessa cartella. Puoi scaricarlo dall'omonimo progetto su GitHub.
+
+# Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
 L'ultima revisione di questo documento e' la numero 2, di mercoledi' 11 marzo 2020.
 A cura di Gabriele Battaglia.
 
