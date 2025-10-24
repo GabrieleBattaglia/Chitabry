@@ -2,7 +2,7 @@
     "nomenclatura": "latino",
     "suono_1": {
         "descrizione": "Suono per accordi (simil-chitarra)",
-        "kind": 3,
+        "kind": 5,
         "adsr": [
             0.5,
             99.0,
@@ -10,7 +10,7 @@
             0.5
         ],
         "dur_accordi": 4.0,
-        "volume": 0.01
+        "volume": 0.4
     },
     "suono_2": {
         "descrizione": "Suono per scale (simil-flauto)",
@@ -3321,11 +3321,11 @@
             ],
             "desc": [
                 2,
-                2,
                 1,
                 2,
                 2,
                 1,
+                2,
                 2
             ],
             "simmetrica": false
@@ -3421,5 +3421,5 @@
             "simmetrica": true
         }
     },
-    "default_bpm": 60
+    "default_bpm": 120
 }

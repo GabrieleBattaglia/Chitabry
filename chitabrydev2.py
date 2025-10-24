@@ -3,14 +3,17 @@
 # 28 giugno 2024 copiato su Github
 # 22 ottobre 2025, versione 4 con importante refactoring
 
-import json
+import json, re
+import numpy as np
+import sounddevice as sd
+from scipy import signal
 import sys
-import random
+import random, threading
 from time import sleep as aspetta
-from GBUtils import dgt, manuale, menu, key, Acusticator
+from GBUtils import dgt, manuale, menu, key
 
 # --- Costanti ---
-VERSIONE = "4.0.0 del 23 ottobre 2025."
+VERSIONE = "4.1.2 del 24 ottobre 2025."
 ENARMONICI = {
     'C#': 'Db', 'Db': 'C#',
     'D#': 'Eb', 'Eb': 'D#',
@@ -78,12 +81,191 @@ MAINMENU = {
     "Esci": "Salva ed esci dall'applicazione"
 }
 
-# --- Funzioni di Gestione Dati (Fase 1) ---
+# --- Motore Audio Live (per Accordi e C.T.) ---
+FS = 22050 # Frequenza di campionamento (Hz)
+BLOCK_SIZE = 256 # Blocchi audio
+HARMONICS = [1, 0.5, 0.33, 0.25, 0.2, 0.17, 0.14, 0.125, 0.11, 0.1, 0.09, 0.08, 0.07]
+def note_to_freq(note):
+    """Converte la notazione (es. "C4") in frequenza (Hz)."""
+    if isinstance(note, (int, float)): return float(note)
+    if isinstance(note, str):
+        note_lower = note.lower()
+        if note_lower == 'p': return 0.0 # Restituisce 0 per pausa
+        match = re.match(r"^([a-g])([#b]?)(\d)$", note_lower)
+        if not match: return 0.0 # Nota non valida
+        note_letter, accidental, octave_str = match.groups()
+        try: octave = int(octave_str)
+        except ValueError: return 0.0
+        note_base = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
+        semitone = note_base[note_letter]
+        if accidental == '#': semitone += 1
+        elif accidental == 'b': semitone -= 1
+        midi_num = 12 + semitone + 12 * octave
+        freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
+        return freq
+    return 0.0
 
-# (Riga 80 circa)
+class Voice:
+    """
+    Gestisce una singola voce (corda).
+    Pre-calcola l'audio ('renderizza') per un callback stabile.
+    Usa un lock per la sicurezza tra i thread.
+    """
+    def __init__(self, fs=FS):
+        self.fs = fs
+        self.freq = 0.0
+        self.vol = 0.0
+        self.pan_l, self.pan_r = 0.707, 0.707
+        
+        self.rendered_stereo_note = np.array([], dtype=np.float32)
+        self.read_pos = 0
+        self.is_playing = False
+
+        self.adsr_list = [0,0,0,0]
+        self.dur = 0
+        self.kind = 1
+        
+        self.lock = threading.Lock() # Lock per la sicurezza
+
+    # --- Oscillatori ---
+    def _get_wave_vector(self, freq, n_samples):
+        t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
+        phase_vector = 2 * np.pi * freq * t
+        
+        if self.kind == 2: return signal.square(phase_vector)
+        elif self.kind == 3: return signal.sawtooth(phase_vector, 0.5)
+        elif self.kind == 4: return signal.sawtooth(phase_vector)
+        elif self.kind == 5:
+            wave = np.zeros(n_samples, dtype=np.float32)
+            for i, h_amp in enumerate(HARMONICS):
+                wave += np.sin((i + 1) * phase_vector) * h_amp
+            max_val = np.max(np.abs(wave))
+            if max_val > 0: wave /= max_val
+            return wave
+        else: # kind 1
+            return np.sin(phase_vector)
+
+    # --- Configurazione ---
+    def set_params(self, freq, adsr_list, dur, vol, kind, pan):
+        """Memorizza i parametri per il rendering."""
+        self.freq = freq
+        self.vol = vol
+        self.adsr_list = adsr_list
+        self.dur = dur
+        self.kind = kind
+        pan_clipped = np.clip(pan, -1.0, 1.0)
+        pan_angle = pan_clipped * (np.pi / 4.0)
+        self.pan_l = np.cos(pan_angle + np.pi / 4.0)
+        self.pan_r = np.sin(pan_angle + np.pi / 4.0)
+
+    def _render_note(self):
+        """
+        Pre-calcola l'intera nota (onda + envelope).
+        """
+        if self.freq == 0.0:
+            self.rendered_stereo_note = np.array([], dtype=np.float32)
+            return
+
+        total_note_samples = int(round(self.dur * self.fs))
+        if total_note_samples == 0:
+            self.rendered_stereo_note = np.array([], dtype=np.float32)
+            return
+            
+        wave = self._get_wave_vector(self.freq, total_note_samples)
+        wave = wave.astype(np.float32)
+
+        a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
+        attack_frac = a_pct / 100.0
+        decay_frac = d_pct / 100.0
+        sustain_level = s_level_pct / 100.0
+        release_frac = r_pct / 100.0
+        
+        attack_samples = int(round(attack_frac * total_note_samples))
+        decay_samples = int(round(decay_frac * total_note_samples))
+        release_samples = int(round(release_frac * total_note_samples))
+        
+        # --- (FIX Nota Corta) Calcolo Sustain Corretto ---
+        sustain_samples = total_note_samples - (attack_samples + decay_samples + release_samples)
+        if sustain_samples < 0:
+            # Se A+D+R > 100%, tronca il rilascio
+            release_samples += sustain_samples # sustain_samples è negativo
+            sustain_samples = 0
+            release_samples = max(0, release_samples) # Assicura non sia negativo
+        # --- Fine Fix ---
+
+        envelope = np.zeros(total_note_samples, dtype=np.float32)
+        current_pos = 0
+
+        if attack_samples > 0:
+            attack_samples = min(attack_samples, total_note_samples - current_pos)
+            envelope[current_pos : current_pos + attack_samples] = np.linspace(0., 1., attack_samples, dtype=np.float32)
+            current_pos += attack_samples
+        
+        if decay_samples > 0:
+            decay_samples = min(decay_samples, total_note_samples - current_pos)
+            envelope[current_pos : current_pos + decay_samples] = np.linspace(1., sustain_level, decay_samples, dtype=np.float32)
+            current_pos += decay_samples
+        
+        if sustain_samples > 0:
+            sustain_samples = min(sustain_samples, total_note_samples - current_pos)
+            envelope[current_pos : current_pos + sustain_samples] = sustain_level
+            current_pos += sustain_samples
+        
+        if release_samples > 0:
+            release_samples = min(release_samples, total_note_samples - current_pos)
+            if release_samples > 0:
+                envelope[current_pos : current_pos + release_samples] = np.linspace(sustain_level, 0., release_samples, dtype=np.float32)
+        
+        wave *= envelope * self.vol
+        
+        stereo_segment = np.zeros((total_note_samples, 2), dtype=np.float32)
+        stereo_segment[:, 0] = wave * self.pan_l
+        stereo_segment[:, 1] = wave * self.pan_r
+        
+        self.rendered_stereo_note = stereo_segment
+    def trigger(self):
+        """Attiva la nota (pre-calcola e resetta il playhead)."""
+        with self.lock:
+            self._render_note() 
+            self.read_pos = 0
+            self.is_playing = True
+        
+    def process_additive(self, output_buffer, n_samples):
+        """
+        Callback audio super-veloce. AGGIUNGE i campioni.
+        NON alloca memoria.
+        """
+        with self.lock:
+            if not self.is_playing:
+                return 
+
+            samples_left = len(self.rendered_stereo_note) - self.read_pos
+            if samples_left <= 0:
+                self.is_playing = False
+                return
+
+            samples_to_take = min(n_samples, samples_left)
+            
+            # Aggiunge i campioni (operazione 'in-place')
+            output_buffer[0:samples_to_take] += self.rendered_stereo_note[self.read_pos : self.read_pos + samples_to_take]
+            
+            self.read_pos += samples_to_take
+
+            if samples_to_take < n_samples:
+                self.is_playing = False
+kind = 1
+a_pct = 0.0
+d_pct = 0.0
+s_level_pct = 0.0
+r_pct = 0.0
+dur_accordi = 0.0
+pan_val = 0.0
+
+# --- Fine Motore Audio Live ---
 
 def get_impostazioni_default():
     """Restituisce la struttura dati di default per un nuovo file JSON."""
+    
     scale_default = {
         "maggiore": {
             "nome": "Maggiore",
@@ -106,7 +288,8 @@ def get_impostazioni_default():
         "minore melodica": {
             "nome": "Minore Melodica",
             "asc": [2, 1, 2, 2, 2, 2, 1],
-            "desc": [2, 2, 1, 2, 2, 1, 2], # Discendente = Minore Naturale
+            # --- (FIX Problema 2) Intervalli corretti (Minore Naturale) ---
+            "desc": [2, 1, 2, 2, 1, 2, 2], 
             "simmetrica": False
         },
         "maggiore blues": {
@@ -137,12 +320,12 @@ def get_impostazioni_default():
     
     return {
         "nomenclatura": "latino",
-        "default_bpm": 40,
+        "default_bpm": 60,
         "suono_1": {
             "descrizione": "Suono per accordi (simil-chitarra)",
             "kind": 3,
-            "adsr": [0.5, 99.0, 0.0, 0.5], # A=0.5%, D=99% (decay lungo), S=0, R=0.5%
-            "dur_accordi": 3.0, # Aumentato a 3 secondi
+            "adsr": [0.5, 99.0, 0.0, 0.5], 
+            "dur_accordi": 3.0, 
             "volume": 0.35
         },
         "suono_2": {
@@ -244,13 +427,11 @@ def get_nota(nota_std):
         
     return mappa.get(nome_nota, nota_std) + ottava
 # --- Funzioni Audio (Fase 3) ---
-
-# (Riga 255 circa)
-
 def Suona(tablatura):
     """
-    Permette l'ascolto interattivo di una tablatura (lista di 6 corde).
-    Usa Acusticator con i parametri di 'suono_1'.
+    Permette l'ascolto interattivo di una tablatura.
+    Usa il motore 'pre-calcolato' (classe Voice) e sd.play().
+    Questo elimina il callback e gli underflow.
     """
     print("\nAscolta le corde:")
     print("Tasti da 1 a 6, (A) pennata in levare, (Q) pennata in battere")
@@ -258,60 +439,104 @@ def Suona(tablatura):
     
     suono_1 = impostazioni['suono_1']
     kind = suono_1['kind']
-    adsr = suono_1['adsr']
+    adsr_list = suono_1['adsr']
     dur = suono_1['dur_accordi']
-    vol = suono_1['volume'] # Aggiunto volume
+    vol = suono_1['volume']
     
-    # Costruiamo la lista di note e pan da suonare
-    note_da_suonare = []
+    # Crea 6 voci (ma non le usa in un callback)
+    voices = [Voice(fs=FS) for _ in range(6)]
+    note_da_suonare = [] # Lista di booleani (se la corda suona)
+    note_freq = [] # Lista delle frequenze
+    note_pan = [] # Lista dei pan
+
+    # Pre-configura i parametri
     for i in range(6): # i da 0 a 5 (corda 6 a 1)
         corda = 6 - i
         tasto = tablatura[i]
-        pan = -0.8 + (i * 0.32)
+        pan_val = -0.8 + (i * 0.32) 
+        note_pan.append(pan_val)
         
+        freq = 0.0
         if tasto.isdigit() and f"{corda}.{tasto}" in CORDE:
             nota_std = CORDE[f"{corda}.{tasto}"]
-            note_da_suonare.append( (nota_std, pan) )
-        else:
-            note_da_suonare.append(None) 
-            
-    # Loop di ascolto interattivo
+            freq = note_to_freq(nota_std)
+        
+        note_freq.append(freq)
+        note_da_suonare.append(freq > 0) 
+        
+        # Imposta i parametri per questa voce
+        voices[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
+
+    note_prompt_str = get_note_da_tablatura(tablatura)
+    # Loop di ascolto interattivo (NON apre uno stream)
+    # --- MODIFICA OBIETTIVO 1: Rimossa la riga 'print("Pronto...")' ---
+    
     while True:
-        scelta = key().lower()
+        # --- MODIFICA OBIETTIVO 1: Aggiunto il prompt alla funzione key() ---
+        scelta = key(f"Note: {note_prompt_str} (1-6, A, Q, ESC): ").lower()
         
         if scelta.isdigit() and scelta in '123456':
-            corda_idx = int(scelta) - 1 
-            dati_nota = note_da_suonare[5 - corda_idx]
-            
-            if dati_nota:
-                nota, pan = dati_nota
-                score = [nota, dur, pan, vol] # Usa vol
-                Acusticator(score, kind=kind, adsr=adsr, sync=False)
+            # Tasto 1 = corda 1 = indice 5
+            corda_idx_py = 5 - (int(scelta) - 1)
+            if note_da_suonare[corda_idx_py]:
+                voices[corda_idx_py].trigger() # Renderizza
+                if voices[corda_idx_py].rendered_stereo_note.size > 0:
+                    sd.play(voices[corda_idx_py].rendered_stereo_note, samplerate=FS, blocking=False)
                 
         elif scelta == chr(27): # ESC
             print("Uscita dal menù ascolto.")
-            break
+            sd.stop() # Ferma qualsiasi suono in riproduzione
+            break 
             
-        elif scelta == 'a': # Pennata in levare
-            for i in range(5, -1, -1): 
-                dati_nota = note_da_suonare[i]
-                if dati_nota:
-                    nota, pan = dati_nota
-                    score = [nota, dur, pan, vol / 4.0] # Volume ridotto per lo strum
-                    Acusticator(score, kind=kind, adsr=adsr, sync=False)
-                    aspetta(0.05) 
+        elif scelta == 'a' or scelta == 'q': # Pennata
+            sd.stop() # Ferma suoni precedenti
+            strum_delay_sec = 0.07
+            strum_delay_samples = int(strum_delay_sec * FS)
+            note_duration_samples = int(dur * FS)
+            
+            # Lunghezza totale del buffer = durata nota + 5 delay
+            total_samples = note_duration_samples + (5 * strum_delay_samples)
+            
+            # Crea il buffer di mixaggio finale (silenzio)
+            mix_buffer = np.zeros((total_samples, 2), dtype=np.float32)
+
+            note_order = range(6) if scelta == 'q' else range(5, -1, -1)
+            
+            current_delay_samples = 0
+            for i in note_order:
+                if note_da_suonare[i]:
+                    # Imposta i parametri corretti (trigger li resetta)
+                    voices[i].set_params(note_freq[i], adsr_list, dur, vol, kind, note_pan[i])
+                    voices[i].trigger() # Renderizza
                     
-        elif scelta == 'q': # Pennata in battere
-            for i in range(6): 
-                dati_nota = note_da_suonare[i]
-                if dati_nota:
-                    nota, pan = dati_nota
-                    score = [nota, dur, pan, vol / 4.0] # Volume ridotto per lo strum
-                    Acusticator(score, kind=kind, adsr=adsr, sync=False)
-                    aspetta(0.05) 
+                    note_data = voices[i].rendered_stereo_note
+                    
+                    # Assicura che la nota non sia più lunga del buffer
+                    if len(note_data) > note_duration_samples:
+                        note_data = note_data[:note_duration_samples]
+                    
+                    # Aggiunge (mixa) la nota al buffer con il ritardo
+                    start_pos = current_delay_samples
+                    end_pos = start_pos + len(note_data)
+                    
+                    # Assicura di non scrivere fuori dai limiti
+                    if end_pos > total_samples:
+                        end_pos = total_samples
+                        note_data = note_data[:(end_pos - start_pos)]
+                        
+                    mix_buffer[start_pos:end_pos] += note_data
+                
+                current_delay_samples += strum_delay_samples
+            
+            # Normalizza il buffer se supera 1.0 (per evitare clipping)
+            max_val = np.max(np.abs(mix_buffer))
+            if max_val > 1.0:
+                mix_buffer /= max_val
+            
+            sd.play(mix_buffer, samplerate=FS, blocking=False)
+            
         else:
             print("Comando non valido. Premi 1-6, A, Q o ESC.")
-    
     return
 def Barre(t):
     """Riceve la tablatura e restituisce il capotasto del barrè, se lo trova."""
@@ -518,7 +743,7 @@ def VediAccordi():
             "i": "Torna al menu Chordpedia",
         }
         while True: # Loop sottomenu
-            print(f"Note: {note_accordo_str}") # <-- (Req 2) Stampa riepilogo
+            # --- MODIFICA OBIETTIVO 1: Rimossa la riga 'print(f"Note: ...")' da qui ---
             s = menu(d=mn_gestione_tablatura, ntf="Comando non valido", keyslist=True, show=True, show_on_filter=False)
             
             if s == "i": return # Esce da VediAccordi
@@ -808,63 +1033,87 @@ def ModificaScala():
 
 def genera_note_scala(tonica_std, intervalli):
     """
-    Genera la lista di note (stringhe) per una scala,
-    applicando la logica "intelligente" diatonica (#/b).
+    Genera la lista di note (stringhe) per una scala ascendente.
     """
-    # Trova l'indice cromatico della tonica
-    # (es. 'C4' -> 52)
     try:
-        # Crea mappa inversa C4 -> 52
         STD_TO_INDICE = {v: k for k, v in SCALACROMATICA_STD.items()}
         idx_cromatico = STD_TO_INDICE[tonica_std]
-        tonica_base = tonica_std[:-1] # Es. 'C'
     except KeyError:
         print(f"Errore: tonica '{tonica_std}' non trovata.")
         return []
 
-    # Trova l'indice diatonico della tonica (es. 'C' -> 0)
-    idx_diatonico = NOTE_DIATONICHE.index(tonica_base.replace('#', '').replace('b', ''))
-    
-    scala_generata = [tonica_std]
-    nota_precedente_base = tonica_base
-    
+    lista_note_grezze = [tonica_std]
     idx_cromatico_corrente = idx_cromatico
     
     for intervallo in intervalli:
         idx_cromatico_corrente += intervallo
-        idx_diatonico = (idx_diatonico + 1) % 7
+        if idx_cromatico_corrente in SCALACROMATICA_STD:
+            lista_note_grezze.append(SCALACROMATICA_STD[idx_cromatico_corrente])
         
-        nota_corrente_std = SCALACROMATICA_STD[idx_cromatico_corrente]
-        nota_corrente_base = nota_corrente_std[:-1] # Es. 'D#'
+    # Applica la logica diatonica alla lista grezza
+    return genera_note_scala_da_lista(lista_note_grezze)
+def genera_note_scala_da_lista(note_lista_std):
+    """
+    Applica la logica diatonica (#/b) a una lista di note
+    già calcolata (es. la scala discendente).
+    """
+    scala_generata = []
+    
+    for i, nota_corrente_std in enumerate(note_lista_std):
+        if i == 0:
+            scala_generata.append(nota_corrente_std)
+            continue
+            
+        nota_precedente_base = scala_generata[-1][:-1].replace('#', '').replace('b', '')
+        idx_diatonico_precedente = NOTE_DIATONICHE.index(nota_precedente_base)
+        idx_diatonico_atteso = (idx_diatonico_precedente + 1) % 7
+        
+        nome_diatonico_atteso = NOTE_DIATONICHE[idx_diatonico_atteso]
+        
+        nota_corrente_base = nota_corrente_std[:-1]
         ottava = nota_corrente_std[-1]
         
-        nome_diatonico_atteso = NOTE_DIATONICHE[idx_diatonico] # Es. 'D'
-        
-        # Logica "intelligente":
-        # Se la nota generata (es. 'D#') non inizia con il nome
-        # diatonico atteso (es. 'D'), cerca l'enarmonico.
         if not nota_corrente_base.startswith(nome_diatonico_atteso):
             enarmonico = ENARMONICI.get(nota_corrente_base)
             if enarmonico and enarmonico.startswith(nome_diatonico_atteso):
                 nota_corrente_base = enarmonico
-            # Caso speciale (es. Scala di F -> A, A#... deve diventare Bb)
-            elif nota_precedente_base.startswith(nome_diatonico_atteso):
-                 enarmonico = ENARMONICI.get(nota_corrente_base)
-                 if enarmonico:
-                     nota_corrente_base = enarmonico
-
+        
         scala_generata.append(nota_corrente_base + ottava)
-        nota_precedente_base = nota_corrente_base
         
     return scala_generata
 
-# (Riga 660 circa)
+def render_scale_audio(note_list, suono_params, bpm):
+    """
+    Usa la classe Voice (nuova versione) per generare un
+    intero array audio per una scala.
+    """
+    s_kind = suono_params['kind']
+    s_adsr = suono_params['adsr']
+    s_vol = suono_params['volume']
+    s_dur = 60.0 / bpm
+    s_pan = 0.0 # Pan centrale per le scale
+    
+    voice = Voice(fs=FS)
+    segmenti_audio = []
 
+    for nota_str in note_list:
+        freq = note_to_freq(nota_str)
+        
+        # Imposta i parametri e attiva il render
+        voice.set_params(freq, s_adsr, s_dur, s_vol, s_kind, s_pan)
+        voice.trigger() # Questo ora pre-calcola l'audio
+        
+        if voice.rendered_stereo_note.size > 0:
+            segmenti_audio.append(voice.rendered_stereo_note)
+    
+    if not segmenti_audio:
+        return np.array([], dtype=np.float32)
+        
+    return np.concatenate(segmenti_audio, axis=0)
 def VisualizzaEsercitatiScala():
     """Menu per visualizzare, ascoltare ed esercitarsi sulle scale."""
     scale = impostazioni['scale']
     suono_2 = impostazioni['suono_2']
-    vol = suono_2['volume'] # Aggiunto volume
     
     print("\n--- Visualizza ed Esercitati sulle Scale ---")
     if not scale:
@@ -872,7 +1121,7 @@ def VisualizzaEsercitatiScala():
         key("Premi un tasto...")
         return
         
-    # ... (Parte 1: Scegli Scala - non cambia) ...
+    # 1. Scegli Scala
     d_scale = {k: v['nome'] for k, v in scale.items()}
     chiave_scala = menu(d=d_scale, keyslist=True, show=False, pager=20,
                         ntf="Scala non trovata", p="Filtra scala: ")
@@ -881,7 +1130,7 @@ def VisualizzaEsercitatiScala():
     scala_scelta = scale[chiave_scala]
     print(f"Scala selezionata: {scala_scelta['nome']}")
     
-    # ... (Parte 2: Scegli Tonica - non cambia) ...
+    # 2. Scegli Tonica
     while True:
         s_tonica = dgt("Inserisci la nota tonica (es. C4, o DO4): ", smin=1, smax=4).upper()
         if s_tonica == "": return
@@ -903,22 +1152,44 @@ def VisualizzaEsercitatiScala():
 
     print(f"Generazione scala di {scala_scelta['nome']} di {get_nota(tonica_std)}...")
     
-    # ... (Parte 3 e 4: Genera e Stampa Scale - non cambia) ...
+    # 3. Genera Scale
     note_asc = genera_note_scala(tonica_std, scala_scelta['asc'])
     note_desc = []
     if not scala_scelta['simmetrica']:
-        tonica_alta = note_asc[-1] 
-        note_desc_temp = genera_note_scala(tonica_alta, scala_scelta['desc'])
-        note_desc = list(reversed(note_desc_temp))
+        # --- (FIX Ottava) Calcolo discendente manuale ---
+        tonica_alta_std = note_asc[-1] # Es. A5
+        
+        # Mappa inversa C4 -> 52
+        STD_TO_INDICE = {v: k for k, v in SCALACROMATICA_STD.items()}
+        
+        # Controllo sicurezza
+        if tonica_alta_std not in STD_TO_INDICE:
+             print(f"Errore: tonica alta {tonica_alta_std} non trovata.")
+             note_desc = [] # fallback
+        else:
+            idx_cromatico_corrente = STD_TO_INDICE[tonica_alta_std]
+            note_desc.append(tonica_alta_std)
+            
+            # Invertiamo la lista degli intervalli discendenti per SOTTRARLI
+            intervalli_per_scendere = list(reversed(scala_scelta['desc']))
+            
+            for intervallo in intervalli_per_scendere:
+                idx_cromatico_corrente -= intervallo
+                if idx_cromatico_corrente in SCALACROMATICA_STD:
+                    nota_std = SCALACROMATICA_STD[idx_cromatico_corrente]
+                    note_desc.append(nota_std)
+                else:
+                    print(f"Errore: indice cromatico {idx_cromatico_corrente} non valido.")
+                    break # Interrompi calcolo
     
-    print("\n--- Scala Ascendente ---")
-    print(" ".join([get_nota(n[:-1]) for n in note_asc])) 
-    
+    # 4. Stampa Scale e Riepilogo (Stampiamo solo per informazione)
+    note_asc_str_stampa = " ".join([get_nota(n[:-1]) for n in note_asc])
+    print(f"\nScala (Asc): {note_asc_str_stampa}")
     if not scala_scelta['simmetrica']:
-        print("\n--- Scala Discendente ---")
-        print(" ".join([get_nota(n[:-1]) for n in note_desc])) 
+        note_desc_str_stampa = " ".join([get_nota(n[:-1]) for n in note_desc])
+        print(f"Scala (Desc): {note_desc_str_stampa}")
 
-    # ... (Parte 5: Mostra su Manico - non cambia) ...
+    # 5. Mostra su Manico
     print("\nPuoi indicare una porzione di manico per la ricerca (es. 0.4)")
     scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
     maninf, mansup = 0, 21
@@ -930,17 +1201,32 @@ def VisualizzaEsercitatiScala():
     for nota_base in note_base_scala:
         MostraCorde(nota_base, rp=False, maninf=maninf, mansup=mansup)
     
-    # --- (Parte 6: Loop Esercizio - LOGICA CORRETTA) ---
+    # 6. Loop Esercizio
+    # --- (Req 2) Riepilogo note scala (PER IL PROMPT E IL LOOP) ---
     note_asc_str = " ".join([get_nota(n[:-1]) for n in note_asc])
-    print(f"\nScala (Asc): {note_asc_str}")
+    # Non stampiamo più qui, lo facciamo nel menu
+    
+    # --- MODIFICA CORRETTIVA (Fix Loop Display) ---
     if not scala_scelta['simmetrica']:
+        # Scala asimmetrica (es. Melodica)
         note_desc_str = " ".join([get_nota(n[:-1]) for n in note_desc])
-        print(f"Scala (Desc): {note_desc_str}")
+    else:
+        # Scala simmetrica (es. Maggiore, Pentatonica)
+        # Dobbiamo creare la stringa invertendo la lista di note ascendenti
+        note_desc_list_str = [get_nota(n[:-1]) for n in reversed(note_asc)]
+        note_desc_str = " ".join(note_desc_list_str)
+    # --- Fine Modifica ---
+
     print("\n--- Menu Esercizio Scala ---")
     bpm = impostazioni['default_bpm']
     loop_attivo = False
-    ultima_direzione = 'a' # 'a' ascendente, 'd' discendente
-    
+    loop_count = 1
+    ultima_direzione = 'a'
+
+    # Cache audio
+    audio_data_asc = None
+    audio_data_desc = None
+
     menu_esercizio = {
         "a": "Ascolta ascendente",
         "d": "Ascolta discendente",
@@ -948,94 +1234,135 @@ def VisualizzaEsercitatiScala():
         "b": "Imposta BPM",
         "i": "Indietro"
     }
-    menu(d=menu_esercizio, show=True)
-    
+
+    # --- (Abbellimento 2) Flags per la visualizzazione ---
+    menu_mostrato_iniziale = False
+    loop_messaggio_stampato = False
+    # --- Fine Abbellimento ---
     while True:
+        audio_to_play = None
+        dur_totale = 0.0
+
+        # --- (Abbellimento 2) Logica Menu/Prompt/Loop ---
         if loop_attivo:
-            print(f"Loop ATTIVO (BPM: {bpm}) - Ciclo: {loop_count} - Premi 'L' per fermare. ", end="\r", flush=True)
-            tasto = key(attesa=0.1) 
+            if not loop_messaggio_stampato:
+                print("Loop ATTIVO. Premi 'L' per fermare.")
+                loop_messaggio_stampato = True
+
+            note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
+            print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}", end="\r", flush=True)
+
+            tasto = key(attesa=0.1)
             if tasto and tasto.lower() == 'l':
                 loop_attivo = False
-                print("Loop disattivato.")
+                print("\nLoop disattivato.")
+                sd.stop()
+                loop_messaggio_stampato = False # Resetta per la prossima volta
                 continue
             else:
                 scelta = ultima_direzione # Continua a suonare
         else:
-            print(f"Loop SPENTO (BPM: {bpm}).")
-            scelta = menu(d=menu_esercizio, keyslist=True, ntf="Scelta non valida")
+            # Siamo in modalità menu interattivo
+            loop_messaggio_stampato = False # Resetta flag loop
+            prompt_scale = f"Note (Asc): {note_asc_str}"
+            if not scala_scelta['simmetrica']:
+                prompt_scale += f" | (Desc): {note_desc_str}"
+
+            # Mostra menu solo la prima volta, poi mostra le note come prompt
+            scelta = menu(d=menu_esercizio,
+                          keyslist=True,
+                          ntf="Scelta non valida",
+                          show=not menu_mostrato_iniziale, # Mostra solo la prima volta
+                          p=prompt_scale + " > " if menu_mostrato_iniziale else "> " # Prompt personalizzato dopo la prima volta
+                          )
+            if not menu_mostrato_iniziale:
+                # La prima volta che stampiamo il menu, stampiamo anche le note
+                print(f"Note (Asc): {note_asc_str}")
+                if not scala_scelta['simmetrica']:
+                    print(f"Note (Desc): {note_desc_str}")
+                menu_mostrato_iniziale = True # Non mostrare più il menu completo
+        # --- Fine Abbellimento ---
+
 
         if scelta == 'i' or scelta is None:
             if loop_attivo:
                 loop_attivo = False
-                print("\nLoop disattivato.") 
+                print("\nLoop disattivato.")
+                sd.stop()
             break
-            
+
         elif scelta == 'l':
             loop_attivo = not loop_attivo
             if loop_attivo:
-                loop_count = 1 # <-- (Req 1) Resetta contatore
-                print(f"Loop attivato (direzione: {'ascendente' if ultima_direzione == 'a' else 'discendente'}).")
+                loop_count = 1
+                # Non stampiamo nulla qui, verrà stampato all'inizio del prossimo ciclo
             else:
                 print("\nLoop disattivato.")
-            continue
-            
+                sd.stop()
+            continue 
         elif scelta == 'b':
+            global archivio_modificato
             nuovo_bpm = dgt(f"Nuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
             if nuovo_bpm != bpm:
                 bpm = nuovo_bpm
                 impostazioni['default_bpm'] = bpm
                 archivio_modificato = True
-                print(f"BPM predefiniti aggiornati a {bpm}.")            
-        elif scelta == 'a' or scelta == 'd':
-            ultima_direzione = scelta 
-            dur = 60.0 / bpm 
+                print(f"BPM predefiniti aggiornati a {bpm}.")
+                # Svuota la cache audio
+                audio_data_asc = None
+                audio_data_desc = None
             
-            note_da_suonare = []
-            if scelta == 'a':
-                note_da_suonare = note_asc
-            elif scelta == 'd':
-                if scala_scelta['simmetrica']:
-                    note_da_suonare = list(reversed(note_asc))
-                else:
-                    note_da_suonare = note_desc
+        elif scelta == 'a':
+            ultima_direzione = 'a'
+            if audio_data_asc is None: # Renderizza solo se non in cache
+                audio_data_asc = render_scale_audio(note_asc, suono_2, bpm)
+            audio_to_play = audio_data_asc
+            dur_totale = len(note_asc) * (60.0 / bpm)
             
-            if not note_da_suonare:
-                print("Scala non valida o non definita.")
+        elif scelta == 'd':
+            ultima_direzione = 'd'
+            note_da_suonare_desc = list(reversed(note_asc)) if scala_scelta['simmetrica'] else note_desc
+            
+            if not note_da_suonare_desc:
+                print("Scala discendente non definita.")
                 continue
-
-            score = []
-            for nota in note_da_suonare:
-                score.extend([nota, dur, 0.0, vol]) 
-            
+                
+            if audio_data_desc is None: # Renderizza solo se non in cache
+                audio_data_desc = render_scale_audio(note_da_suonare_desc, suono_2, bpm)
+            audio_to_play = audio_data_desc
+            dur_totale = len(note_da_suonare_desc) * (6.0 / bpm)
+        
+        # Se dobbiamo suonare qualcosa...
+        if audio_to_play is not None and audio_to_play.size > 0:
             if not loop_attivo:
                 print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
-            Acusticator(score, kind=suono_2['kind'], adsr=suono_2['adsr'], sync=False) 
             
-            dur_totale = len(note_da_suonare) * dur
+            sd.play(audio_to_play, samplerate=FS, blocking=False)
             
+            # Logica di attesa (polling)
             if loop_attivo:
-                # Se siamo in loop, attendiamo sondando (polling)
-                step = 0.05 # 50ms
+                step = 0.05
                 passi_totali = int(dur_totale / step)
                 tempo_rimanente = dur_totale - (passi_totali * step)
                 
                 for _ in range(passi_totali):
-                    # Usiamo key() come attesa non bloccante
                     tasto = key(attesa=step) 
                     if tasto and tasto.lower() == 'l':
                         loop_attivo = False
-                        print("Loop fermato.")
-                        # TODO: stop Acusticator (non possibile da doc)
+                        print("\nLoop fermato.")
+                        sd.stop()
                         break 
                 
                 if not loop_attivo:
-                    continue # Torna al menu
+                    continue 
                 
-                aspetta(tempo_rimanente) # Attendi il residuo
-                loop_count += 1 
+                aspetta(tempo_rimanente)
+                loop_count += 1
+                    
             else:
                 # Se non siamo in loop, basta aspettare
                 aspetta(dur_totale)
+            
     print("Fine esercizio.")
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
 
@@ -1116,8 +1443,8 @@ def ModificaSuono(suono_key):
     print(f"\n--- Modifica {suono['descrizione']} ---")
 
     # 1. Modifica Tipo di Onda (Kind)
-    onda_prompt = f"Tipo di onda (1=Sin, 2=Quadra, 3=Tri, 4=Dente di sega) (attuale: {suono['kind']}): "
-    suono['kind'] = dgt(onda_prompt, kind='i', imin=1, imax=4, default=suono['kind'])
+    onda_prompt = f"Onda (1=Sin, 2=Quadra, 3=Tri, 4=Saw, 5=String) (attuale: {suono['kind']}): "
+    suono['kind'] = dgt(onda_prompt, kind='i', imin=1, imax=5, default=suono['kind'])
 
     # 2. Modifica ADSR
     print("Inserisci i valori ADSR (premi Invio per confermare il valore attuale):")
@@ -1127,7 +1454,7 @@ def ModificaSuono(suono_key):
     
     for i in range(4):
         val = dgt(f"{labels_adsr[i]} (attuale: {vecchio_adsr[i]}): ", 
-                  kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[i])
+                    kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[i])
         nuovo_adsr.append(val)
     
     # Validazione somma ADSR
@@ -1235,8 +1562,6 @@ def TrovaNota():
     MostraCorde(nota_std, rp=False, maninf=maninf, mansup=mansup)
     
     key("Premi un tasto per tornare al menu...")
-# (Riga 879 circa)
-
 def TrovaPosizione():
     """Trova la nota data una posizione C.T e la suona."""
     print("\n--- Trova Posizione (C.T) ---")
@@ -1246,16 +1571,25 @@ def TrovaPosizione():
         nota_std = CORDE[s]
         print(f"Sulla corda {s.split('.')[0]}, tasto {s.split('.')[1]}, si trova la nota: {get_nota(nota_std)}")
         
-        # Suoniamo la nota
+        # Suoniamo la nota usando il motore "one-shot"
         suono_1 = impostazioni['suono_1']
-        dur = suono_1['dur_accordi']
-        vol = suono_1['volume'] # Aggiunto volume
         
+        # Calcola parametri
+        freq = note_to_freq(nota_std)
         corda_idx_zero_based = 6 - int(s.split('.')[0])
         pan = -0.8 + (corda_idx_zero_based * 0.32)
+        dur = suono_1['dur_accordi']
         
-        score = [nota_std, dur, pan, vol] # Usa vol
-        Acusticator(score, kind=suono_1['kind'], adsr=suono_1['adsr'], sync=False)
+        # Crea una singola voce
+        voice = Voice(fs=FS)
+        
+        # Imposta i parametri e attiva il render
+        voice.set_params(freq, suono_1['adsr'], dur, suono_1['volume'], suono_1['kind'], pan)
+        voice.trigger() # Questo ora pre-calcola l'audio
+        
+        # Suona (non bloccante) sul buffer renderizzato
+        if voice.rendered_stereo_note.size > 0:
+            sd.play(voice.rendered_stereo_note, samplerate=FS, blocking=False)
         
     elif s == "":
         print("Operazione annullata.")
