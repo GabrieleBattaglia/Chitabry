@@ -8,12 +8,12 @@ import numpy as np
 import sounddevice as sd
 from scipy import signal
 import sys
-import random, threading
+import random, threading, clitronomo
 from time import sleep as aspetta
 from GBUtils import dgt, manuale, menu, key
 
 # --- Costanti ---
-VERSIONE = "4.3.0 del 25 ottobre 2025."
+VERSIONE = "4.4.0 del 27 ottobre 2025."
 # Dizionario delle "Ricette" degli accordi (intervalli in semitoni)
 # La Tonica (0) è implicita e la aggiungeremo noi, qui mettiamo solo le note *dopo* la tonica.
 CHORD_PATTERN = {
@@ -163,8 +163,9 @@ for corda in range(6, 0, -1):
     for tasto in range(CAPOTASTI[corda], CAPOTASTI[corda] + 22):
         CORDE[str(corda) + "." + str(tasto - CAPOTASTI[corda])] = SCALACROMATICA_STD[tasto]
 MAINMENU = {
-    "Accordi": "Gestisci la tua raccolta di accordi (Chordpedia)",
+    "Accordi": "Gestisci la tua Chordpedia (Tablature salvate)",
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo", # <-- NUOVA VOCE
+    "Metronomo": "Avvia Clitronomo",
     "Scale": "Visualizza, esercitati e gestisci le scale",
     "Impostazioni": "Configura i suoni e la notazione delle note",
     "Nota sul manico": "Trova le posizioni di una nota sul manico",
@@ -1807,6 +1808,11 @@ def main():
         
         elif scelta == "Costruttore Accordi": # <-- NUOVO BLOCCO
             CostruttoreAccordi()
+        elif scelta == "Metronomo":
+            print("\nAvvio di Clitronomo...")
+            aspetta(0.5)
+            clitronomo.main()
+            print("\n--- Ritorno al Menu Principale di Chitabry ---")
         elif scelta == "Scale":
             MenuScale()
             
