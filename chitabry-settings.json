@@ -3242,6 +3242,1122 @@
         ]
     },
     "scale": {
+        "giapponese miyakobushi": {
+            "nome": "Giapponese Miyakobushi",
+            "asc": [
+                1,
+                4,
+                2,
+                3,
+                2
+            ],
+            "desc": [
+                4,
+                1,
+                2,
+                4,
+                1
+            ],
+            "simmetrica": false
+        },
+        "giapponese okinawan": {
+            "nome": "Giapponese Okinawan",
+            "asc": [
+                4,
+                1,
+                2,
+                4,
+                1
+            ],
+            "desc": [
+                4,
+                1,
+                2,
+                4,
+                1
+            ],
+            "simmetrica": true
+        },
+        "giapponese hirajoshi alt": {
+            "nome": "Giapponese Hirajoshi Alternativa",
+            "asc": [
+                2,
+                1,
+                4,
+                1,
+                4
+            ],
+            "desc": [
+                2,
+                1,
+                4,
+                1,
+                4
+            ],
+            "simmetrica": true
+        },
+        "indiana todi thaat": {
+            "nome": "Indiana Todi Thaat",
+            "asc": [
+                1,
+                2,
+                3,
+                1,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                1,
+                2,
+                3,
+                1,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "indiana purvi thaat": {
+            "nome": "Indiana Purvi Thaat",
+            "asc": [
+                1,
+                3,
+                2,
+                1,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                1,
+                3,
+                2,
+                1,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "indiana marva thaat": {
+            "nome": "Indiana Marva Thaat",
+            "asc": [
+                1,
+                3,
+                2,
+                1,
+                2,
+                2,
+                1
+            ],
+            "desc": [
+                1,
+                3,
+                2,
+                1,
+                2,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "indiana raga durga": {
+            "nome": "Indiana Raga Durga",
+            "asc": [
+                2,
+                3,
+                2,
+                2,
+                3
+            ],
+            "desc": [
+                2,
+                3,
+                2,
+                2,
+                3
+            ],
+            "simmetrica": true
+        },
+        "indiana raga megh": {
+            "nome": "Indiana Raga Megh",
+            "asc": [
+                2,
+                3,
+                2,
+                3,
+                2
+            ],
+            "desc": [
+                2,
+                3,
+                2,
+                3,
+                2
+            ],
+            "simmetrica": true
+        },
+        "indiana raga malkauns": {
+            "nome": "Indiana Raga Malkauns",
+            "asc": [
+                3,
+                2,
+                3,
+                2,
+2
+            ],
+            "desc": [
+                3,
+                2,
+                3,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "minore melodica classica": {
+            "nome": "Minore Melodica Classica",
+            "asc": [
+                2,
+                1,
+                2,
+                2,
+                2,
+                2,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": false
+        },
+        "minore napoletana asimmetrica": {
+            "nome": "Minore Napoletana Asimmetrica",
+            "asc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                2,
+                1
+            ],
+            "simmetrica": false
+        },
+        "aumentata testo": {
+            "nome": "Aumentata (Testo)",
+            "asc": [
+                3,
+                1,
+                2,
+                2,
+                3,
+                1
+            ],
+            "desc": [
+                3,
+                1,
+                2,
+                2,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "enigmatica testo": {
+            "nome": "Enigmatica (Testo)",
+            "asc": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                1,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                1,
+                1
+            ],
+            "simmetrica": true
+        },
+        "bebop dominante": {
+            "nome": "Bebop Dominante",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                1,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                1,
+                1
+            ],
+            "simmetrica": true
+        },
+        "bebop maggiore": {
+            "nome": "Bebop Maggiore",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                1,
+                2,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                1,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "orientale maggiore": {
+            "nome": "Orientale Maggiore",
+            "asc": [
+                1,
+                3,
+                1,
+                1,
+                3,
+                1,
+                2
+            ],
+            "desc": [
+                1,
+                3,
+                1,
+                1,
+                3,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "bachiana": {
+            "nome": "Bachiana",
+            "asc": [
+                2,
+                1,
+                2,
+                2,
+                2,
+                2,
+                1
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": false
+        },
+        "enigmatica": {
+            "nome": "Enigmatica",
+            "asc": [
+                1,
+                3,
+                2,
+                2,
+                2,
+                1,
+                1
+            ],
+            "desc": [
+                1,
+                3,
+                2,
+                2,
+                2,
+                1,
+                1
+            ],
+            "simmetrica": true
+        },
+        "persiana": {
+            "nome": "Persiana",
+            "asc": [
+                1,
+                3,
+                1,
+                1,
+                2,
+                3,
+                1
+            ],
+            "desc": [
+                1,
+                3,
+                1,
+                1,
+                2,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "ungherese maggiore": {
+            "nome": "Ungherese Maggiore",
+            "asc": [
+                3,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                3,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "misolidio b2": {
+            "nome": "Misolidio b2",
+            "asc": [
+                1,
+                3,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                1,
+                3,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "dorico b5": {
+            "nome": "Dorico b5",
+            "asc": [
+                2,
+                1,
+                2,
+                1,
+                3,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                1,
+                2,
+                1,
+                3,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "pentatonica iwato": {
+            "nome": "Pentatonica Iwato",
+            "asc": [
+                1,
+                4,
+                1,
+                4,
+                2
+            ],
+            "desc": [
+                1,
+                4,
+                1,
+                4,
+                2
+            ],
+            "simmetrica": true
+        },
+        "pentatonica pelog": {
+            "nome": "Pentatonica Pelog",
+            "asc": [
+                1,
+                2,
+                4,
+                1,
+                4
+            ],
+            "desc": [
+                1,
+                2,
+                4,
+                1,
+                4
+            ],
+            "simmetrica": true
+        },
+        "dorico b2": {
+            "nome": "Dorico b2",
+            "asc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "lidio #2": {
+            "nome": "Lidio #2",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "ultralocrio": {
+            "nome": "Ultralocrio",
+            "asc": [
+                1,
+                2,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "aumentata": {
+            "nome": "Aumentata",
+            "asc": [
+                3,
+                1,
+                3,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                3,
+                1,
+                3,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "prometheus": {
+            "nome": "Prometheus",
+            "asc": [
+                2,
+                2,
+                2,
+                3,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                3,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "tritono": {
+            "nome": "Tritono",
+            "asc": [
+                1,
+                3,
+                2,
+                1,
+                3,
+                2
+            ],
+            "desc": [
+                1,
+                3,
+                2,
+                1,
+                3,
+                2
+            ],
+            "simmetrica": true
+        },
+        "pentatonica kumoi": {
+            "nome": "Pentatonica Kumoi",
+            "asc": [
+                2,
+                1,
+                4,
+                2,
+                3
+            ],
+            "desc": [
+                2,
+                1,
+                4,
+                2,
+                3
+            ],
+            "simmetrica": true
+        },
+        "lidio aumentato": {
+            "nome": "Lidio Aumentato",
+            "asc": [
+                2,
+                2,
+                2,
+                2,
+                1,
+                2,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                2,
+                1,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "misolidio b13": {
+            "nome": "Misolidio b13",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                2,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "locrio #2": {
+            "nome": "Locrio #2",
+            "asc": [
+                2,
+                1,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "desc": [
+                2,
+                1,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "napoletana maggiore": {
+            "nome": "Napoletana Maggiore",
+            "asc": [
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                1
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "napoletana minore": {
+            "nome": "Napoletana Minore",
+            "asc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "bizantina": {
+            "nome": "Bizantina",
+            "asc": [
+                1,
+                3,
+                1,
+                2,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                1,
+                3,
+                1,
+                2,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "pentatonica egiziana": {
+            "nome": "Pentatonica Egiziana",
+            "asc": [
+                2,
+                3,
+                2,
+                3,
+                2
+            ],
+            "desc": [
+                2,
+                3,
+                2,
+                3,
+                2
+            ],
+            "simmetrica": true
+        },
+        "pentatonica hirajoshi": {
+            "nome": "Pentatonica Hirajoshi",
+            "asc": [
+                1,
+                4,
+                2,
+                1,
+                4
+            ],
+            "desc": [
+                1,
+                4,
+                2,
+                1,
+                4
+            ],
+            "simmetrica": true
+        },
+        "ungherese minore": {
+            "nome": "Ungherese Minore",
+            "asc": [
+                2,
+                1,
+                3,
+                1,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                2,
+                1,
+                3,
+                1,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
+        "pentatonica minore": {
+            "nome": "Pentatonica Minore",
+            "asc": [
+                3,
+                2,
+                2,
+                3,
+                2
+            ],
+            "desc": [
+                3,
+                2,
+                2,
+                3,
+                2
+            ],
+            "simmetrica": true
+        },
+        "dorico": {
+            "nome": "Dorico",
+            "asc": [
+                2,
+                1,
+                2,
+                2,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                1,
+                2,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "frigio": {
+            "nome": "Frigio",
+            "asc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                2,
+                1,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "lidio": {
+            "nome": "Lidio",
+            "asc": [
+                2,
+                2,
+                2,
+                1,
+                2,
+                2,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                1,
+                2,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "misolidio": {
+            "nome": "Misolidio",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "locrio": {
+            "nome": "Locrio",
+            "asc": [
+                1,
+                2,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                2,
+                1,
+                2,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "esatonale": {
+            "nome": "Esatonale",
+            "asc": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "diminuita semitono tono": {
+            "nome": "Diminuita Semitono Tono",
+            "asc": [
+                1,
+                2,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "diminuita tono semitono": {
+            "nome": "Diminuita Tono Semitono",
+            "asc": [
+                2,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2,
+                1
+            ],
+            "desc": [
+                2,
+                1,
+                2,
+                1,
+                2,
+                1,
+                2,
+                1
+            ],
+            "simmetrica": true
+        },
+        "superlocrio": {
+            "nome": "Superlocrio",
+            "asc": [
+                1,
+                2,
+                1,
+                2,
+                2,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                2,
+                1,
+                2,
+                2,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "frigio dominante": {
+            "nome": "Frigio Dominante",
+            "asc": [
+                1,
+                3,
+                1,
+                2,
+                1,
+                2,
+                2
+            ],
+            "desc": [
+                1,
+                3,
+                1,
+                2,
+                1,
+                2,
+                2
+            ],
+            "simmetrica": true
+        },
+        "lidio dominante": {
+            "nome": "Lidio Dominante",
+            "asc": [
+                2,
+                2,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "desc": [
+                2,
+                2,
+                2,
+                1,
+                2,
+                1,
+                2
+            ],
+            "simmetrica": true
+        },
+        "maggiore armonica": {
+            "nome": "Maggiore Armonica",
+            "asc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                3,
+                1
+            ],
+            "desc": [
+                2,
+                2,
+                1,
+                2,
+                1,
+                3,
+                1
+            ],
+            "simmetrica": true
+        },
         "maggiore": {
             "nome": "Maggiore",
             "asc": [
@@ -3421,5 +4537,5 @@
             "simmetrica": true
         }
     },
-    "default_bpm": 120
+    "default_bpm": 60
 }

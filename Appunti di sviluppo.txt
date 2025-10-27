@@ -1,0 +1,7 @@
+Appunti di sviluppo
+25/10
+Ok. ho capito. Allora spetta, dobbiamo ripensare tutta la faccenda. Se da un lato è vero che così avremo un motore di accordi molto più potente, è altrettanto vero che perderemo la didattica sulla chitarra: è importante che l'utente sappia come suonare l'accordo sullo strumento, quali tasti, quali corde e quali dita posizionare sul manico.
+Quindi la cordpedia che, non solo indica l'accordo ma anche corde e tasti, è prezioso e non va perduto.
+A queto punto siamo ad un bivo:1. progettiamo un motore di accordi che sia abbastanza intelligente per conoscere anche la tablatura come avviene adesso. Oppure lasciamo la cordpedia così com'è ora e aggiungiamo una funzione completamente nuova, in affiancamento, che trova ogni tipo di accordo possibile. Conosciute le note, l'utente può scoprire come suonarlo sul manico della chitarra e, volendo, può inserirlo come tablatura nella propria chordpedia.
+Questo è ciò a cui riesco a pensare al momento ma sono aperto a nuove proposte. Il punto fermo è che non dobbiamo perdere il valore didattico presente ora: cioè che chitabry insegni come suonare un accordo o una scala, sul manico della chitarra.
+***

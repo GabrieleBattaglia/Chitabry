@@ -13,7 +13,97 @@ from time import sleep as aspetta
 from GBUtils import dgt, manuale, menu, key
 
 # --- Costanti ---
-VERSIONE = "4.1.2 del 24 ottobre 2025."
+VERSIONE = "4.3.0 del 25 ottobre 2025."
+# Dizionario delle "Ricette" degli accordi (intervalli in semitoni)
+# La Tonica (0) è implicita e la aggiungeremo noi, qui mettiamo solo le note *dopo* la tonica.
+CHORD_PATTERN = {
+    # --- Triadi di Base ---
+    "Maggiore": [4, 7],
+    "Minore": [3, 7],
+    "Diminuito": [3, 6],
+    "Aumentato": [4, 8],
+    # --- Accordi Sospesi (Suspended) ---
+    "sus2 Sospeso 2": [2, 7],
+    "sus4 Sospeso 4": [5, 7],
+    "7sus4 Sospeso 7": [5, 7, 10],
+    "7sus2 Sospeso 7": [2, 7, 10],
+    "9sus4 Sospeso 4 con Nona": [5, 7, 10, 14],
+    # --- Accordi di Sesta ---
+    "6 Sesta": [4, 7, 9],
+    "m6 Minore Sesta": [3, 7, 9],
+    "6/9 Sesta/Nona": [4, 7, 9, 14],
+    # --- Accordi di Settima (Standard) ---
+    "7 Settima Dominante": [4, 7, 10],
+    "m7 Minore Settima": [3, 7, 10],
+    "maj7 Maggiore Settima": [4, 7, 11],
+    "dim7 Diminuito Settima": [3, 6, 9],
+    "m7b5 Semidiminuito": [3, 6, 10],
+    "m-maj7 Minore Maggiore Settima": [3, 7, 11],
+    "aug7 Aumentato Settima": [4, 8, 10],
+    "aug-maj7 Aumentato Maggiore Settima": [4, 8, 11],
+    # --- Accordi di Nona ---
+    "9 Nona": [4, 7, 10, 14],
+    "m9 Minore Nona": [3, 7, 10, 14],
+    "maj9 Maggiore Nona": [4, 7, 11, 14],
+    "aug9 Nona Aumentata": [4, 8, 10, 14],
+    "m9b5 Nona Semidiminuita": [3, 6, 10, 14],
+    # --- Accordi di Undicesima ---
+    "11 Undicesima": [4, 7, 10, 14, 17],
+    "m11 Minore Undicesima": [3, 7, 10, 14, 17],
+    "maj11 Maggiore Undicesima": [4, 7, 11, 14, 17],
+    "#11 Undicesima Aumentata": [4, 7, 10, 14, 18],
+    "maj9#11 Maggiore Nona Undicesima Aumentata": [4, 7, 11, 14, 18],
+    # --- Accordi di Tredicesima ---
+    "13 Tredicesima": [4, 7, 10, 14, 21],
+    "m13 Minore Tredicesima": [3, 7, 10, 14, 21],
+    "maj13 Maggiore Tredicesima": [4, 7, 11, 14, 21],
+    # --- Accordi "Add" (Aggiunti) ---
+    "add9 Add 9": [4, 7, 14],
+    "m-add9 Minore Add 9": [3, 7, 14],
+    "add11 Add 11": [4, 7, 17],
+    # --- Accordi Alterati (Dominanti) ---
+    "7b5 Settima con Quinta Bemolle": [4, 6, 10],
+    "7#5 Settima con Quinta Aumentata": [4, 8, 10],
+    "7b9 Settima con Nona Bemolle": [4, 7, 10, 13],
+    "7#9 Settima con Nona Aumentata": [4, 7, 10, 15],
+    "7b5b9 Alterato": [4, 6, 10, 13],
+    "7#5#9 Alterato": [4, 8, 10, 15],
+    "7#5b9 Alterato": [4, 8, 10, 13],
+    "7b5#9 Alterato": [4, 6, 10, 15],
+    # altri
+    "add2 Add 2": [2, 4, 7],
+    "m-add2 Minore Add 2": [2, 3, 7],
+    "m6/9 Minore Sesta/Nona": [3, 7, 9, 14],
+    "7#11 Settima Undicesima Aumentata": [4, 7, 10, 18],
+    "9b5 Nona con Quinta Bemolle": [4, 6, 10, 14],
+    "maj7b5 Maggiore Settima con Quinta Bemolle": [4, 6, 11],
+    "m-maj7-b5 Minore Maggiore Settima con Quinta Bemolle": [3, 6, 11],
+    "7b13 Settima con Tredicesima Bemolle": [4, 7, 10, 20],
+    "7sus4b9 Sospeso 7 Nona Bemolle": [5, 7, 10, 13],
+    "m-maj9 Minore Maggiore Nona": [3, 7, 11, 14],
+    "maj13#11 Maggiore Tredicesima Undicesima Aumentata": [4, 7, 11, 14, 18, 21],
+    "13sus4 Tredicesima Sospesa 4": [5, 7, 10, 14, 21],
+    "13b9 Tredicesima con Nona Bemolle": [4, 7, 10, 13, 21],
+    "7b9b13 Settima con Nona e Tredicesima Bemolle": [4, 7, 10, 13, 20],
+    "7#9b13 Settima con Nona Aumentata e Tredicesima Bemolle": [4, 7, 10, 15, 20],
+    "maj7#11 Maggiore Settima Undicesima Aumentata": [4, 7, 11, 18],
+    "mb6 Minore con Sesta Minore": [3, 7, 8],
+    "add4 Add 4": [4, 5, 7],
+    "m-maj7#5 Minore Maggiore Settima Quinta Aumentata": [3, 8, 11],
+    "m-add4 Minore Add 4": [3, 5, 7],
+    "Q3 Quartale 3 note": [5, 10],
+    # --- Accordi "Power Chord" ---
+    "5 Quinta": [7],
+    "m3 Terza Minore": [3],
+    "M3 Terza Maggiore": [4],
+    "P4 Quarta Giusta": [5],
+    "dim5 Quinta Diminuita": [6],
+    "aug5 Quinta Aumentata": [8],
+    "M6 Sesta Maggiore": [9],
+    "b6 Sesta Minore": [8],
+    "m7 Settima Minore": [10],
+    "M7 Settima Maggiore": [11]
+}
 ENARMONICI = {
     'C#': 'Db', 'Db': 'C#',
     'D#': 'Eb', 'Eb': 'D#',
@@ -49,6 +139,7 @@ STD_TO_ANGLO.update({
     'Ab': 'Ab',
     'Bb': 'Bb'
 })
+SCALA_CROMATICA_MAPPA = {nota: i for i, nota in enumerate(NOTE_STD)}
 # Struttura del manico (basata sulla notazione standard)
 SCALACROMATICA_STD = {}
 i = 0
@@ -73,9 +164,10 @@ for corda in range(6, 0, -1):
         CORDE[str(corda) + "." + str(tasto - CAPOTASTI[corda])] = SCALACROMATICA_STD[tasto]
 MAINMENU = {
     "Accordi": "Gestisci la tua raccolta di accordi (Chordpedia)",
+    "Costruttore Accordi": "Analizza/Scopri le note di un accordo", # <-- NUOVA VOCE
     "Scale": "Visualizza, esercitati e gestisci le scale",
     "Impostazioni": "Configura i suoni e la notazione delle note",
-    "Trova Nota": "Trova le posizioni di una nota sul manico",
+    "Nota sul manico": "Trova le posizioni di una nota sul manico",
     "Trova Posizione": "Indica la nota su una corda/tasto (C.T)",
     "Guida": "Mostra la guida di Chitabry",
     "Esci": "Salva ed esci dall'applicazione"
@@ -468,12 +560,10 @@ def Suona(tablatura):
         voices[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
 
     note_prompt_str = get_note_da_tablatura(tablatura)
-    # Loop di ascolto interattivo (NON apre uno stream)
-    # --- MODIFICA OBIETTIVO 1: Rimossa la riga 'print("Pronto...")' ---
-    
     while True:
         # --- MODIFICA OBIETTIVO 1: Aggiunto il prompt alla funzione key() ---
-        scelta = key(f"Note: {note_prompt_str} (1-6, A, Q, ESC): ").lower()
+        print(f"Note: {note_prompt_str}): ",end="\r",flush=True)
+        scelta = key().lower()
         
         if scelta.isdigit() and scelta in '123456':
             # Tasto 1 = corda 1 = indice 5
@@ -1204,7 +1294,6 @@ def VisualizzaEsercitatiScala():
     # 6. Loop Esercizio
     # --- (Req 2) Riepilogo note scala (PER IL PROMPT E IL LOOP) ---
     note_asc_str = " ".join([get_nota(n[:-1]) for n in note_asc])
-    # Non stampiamo più qui, lo facciamo nel menu
     
     # --- MODIFICA CORRETTIVA (Fix Loop Display) ---
     if not scala_scelta['simmetrica']:
@@ -1250,7 +1339,7 @@ def VisualizzaEsercitatiScala():
                 loop_messaggio_stampato = True
 
             note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
-            print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}", end="\r", flush=True)
+            print(f"Rp: {loop_count} - {note_scala_loop_str}", end="\r", flush=True)
 
             tasto = key(attesa=0.1)
             if tasto and tasto.lower() == 'l':
@@ -1264,44 +1353,62 @@ def VisualizzaEsercitatiScala():
         else:
             # Siamo in modalità menu interattivo
             loop_messaggio_stampato = False # Resetta flag loop
-            prompt_scale = f"Note (Asc): {note_asc_str}"
-            if not scala_scelta['simmetrica']:
-                prompt_scale += f" | (Desc): {note_desc_str}"
 
-            # Mostra menu solo la prima volta, poi mostra le note come prompt
-            scelta = menu(d=menu_esercizio,
-                          keyslist=True,
-                          ntf="Scelta non valida",
-                          show=not menu_mostrato_iniziale, # Mostra solo la prima volta
-                          p=prompt_scale + " > " if menu_mostrato_iniziale else "> " # Prompt personalizzato dopo la prima volta
-                          )
+            # --- MODIFICA OBIETTIVO 3 (Layout) ---
             if not menu_mostrato_iniziale:
-                # La prima volta che stampiamo il menu, stampiamo anche le note
+                # La prima volta: stampa le note e mostra il menu completo
                 print(f"Note (Asc): {note_asc_str}")
                 if not scala_scelta['simmetrica']:
                     print(f"Note (Desc): {note_desc_str}")
-                menu_mostrato_iniziale = True # Non mostrare più il menu completo
-        # --- Fine Abbellimento ---
-
+                
+                scelta = menu(d=menu_esercizio,
+                              keyslist=True,
+                              ntf="Scelta non valida",
+                              show=True, # Mostra il menu
+                              p="> " # Prompt standard
+                              )
+                menu_mostrato_iniziale = True # Imposta il flag
+            else:
+                # Volte successive: mostra solo le note con \r
+                note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
+                direzione_str = "Asc" if ultima_direzione == 'a' else "Desc"
+                
+                # Stampa la riga di stato con \r (e spazi per pulire)
+                print(f"Note ({direzione_str}): {note_da_mostrare}", end="\r", flush=True)
+                
+                scelta = key().lower()
+            # --- FINE MODIFICA OBIETTIVO 3 ---
 
         if scelta == 'i' or scelta is None:
             if loop_attivo:
                 loop_attivo = False
                 print("\nLoop disattivato.")
                 sd.stop()
+            # --- MODIFICA OBIETTIVO 3 ---
+            # Pulisci la riga di stato prima di uscire
+            if menu_mostrato_iniziale and not loop_attivo:
+                 print(" " * 80, end="\r") # Pulisce la riga "Note: ..."
+            # --- FINE MODIFICA ---
             break
 
+        elif scelta == "?":
+            menu(d=menu_esercizio,show_only=True)
         elif scelta == 'l':
             loop_attivo = not loop_attivo
             if loop_attivo:
                 loop_count = 1
-                # Non stampiamo nulla qui, verrà stampato all'inizio del prossimo ciclo
+                # Pulisci la riga di stato "Note: ..."
+                print(" " * 80, end="\r") 
             else:
                 print("\nLoop disattivato.")
                 sd.stop()
             continue 
         elif scelta == 'b':
             global archivio_modificato
+            # --- MODIFICA OBIETTIVO 3 ---
+            # Pulisci la riga di stato prima di chiedere input
+            print(" " * 80, end="\r") 
+            # --- FINE MODIFICA ---
             nuovo_bpm = dgt(f"Nuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
             if nuovo_bpm != bpm:
                 bpm = nuovo_bpm
@@ -1330,13 +1437,10 @@ def VisualizzaEsercitatiScala():
             if audio_data_desc is None: # Renderizza solo se non in cache
                 audio_data_desc = render_scale_audio(note_da_suonare_desc, suono_2, bpm)
             audio_to_play = audio_data_desc
-            dur_totale = len(note_da_suonare_desc) * (6.0 / bpm)
+            dur_totale = len(note_da_suonare_desc) * (60.0 / bpm)
         
         # Se dobbiamo suonare qualcosa...
         if audio_to_play is not None and audio_to_play.size > 0:
-            if not loop_attivo:
-                print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
-            
             sd.play(audio_to_play, samplerate=FS, blocking=False)
             
             # Logica di attesa (polling)
@@ -1362,7 +1466,11 @@ def VisualizzaEsercitatiScala():
             else:
                 # Se non siamo in loop, basta aspettare
                 aspetta(dur_totale)
-            
+    
+    # --- MODIFICA OBIETTIVO 3 ---
+    # Pulisci la riga prima di stampare "Fine esercizio"
+    print(" " * 80, end="\r") 
+    # --- FINE MODIFICA ---
     print("Fine esercizio.")
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
 
@@ -1597,6 +1705,84 @@ def TrovaPosizione():
         print(f"Posizione '{s}' non valida. Formato richiesto: C.T (es. 6.3), tasti da 0 a 21.")
     
     key("Premi un tasto per tornare al menu...")
+def CostruttoreAccordi():
+    """
+    Guida l'utente nella creazione teorica di un accordo,
+    calcola le note e le mostra sul manico.
+    """
+    print("\n--- Costruttore di Accordi Teorico ---")
+    print("Scopri quali note compongono qualsiasi accordo.\nPremi '?' per vedere i pattern disponibili.")
+    # --- 1. Scegli la Tonica ---
+    if impostazioni['nomenclatura'] == 'latino':
+        mappa_note = {std: lat for std, lat in STD_TO_LATINO.items() if len(std) <= 2}
+    else:
+        mappa_note = {std: anglo for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2}
+    
+    tonica_std = menu(d=mappa_note, keyslist=True, show=False, pager=12,
+                        ntf="Nota non valida", p="Scegli la TONICA: ")
+    if tonica_std is None:
+        print("Costruzione annullata.")
+        return
+
+    # --- 2. Scegli la "Ricetta" (Qualità dell'accordo) ---
+    d_ricette = {nome: nome for nome in CHORD_PATTERN.keys()}
+    
+    ricetta_nome = menu(d=d_ricette, keyslist=True, show=False, pager=10,
+                        ntf="Tipo non valido", p=f"Scegli il TIPO di accordo per {get_nota(tonica_std)}: ")
+    if ricetta_nome is None:
+        print("Costruzione annullata.")
+        return
+        
+    intervalli = CHORD_PATTERN[ricetta_nome]
+    
+    # --- 3. Calcola le Note dell'Accordo ---
+    note_accordo_std = [] 
+    note_accordo_formattate = [] 
+
+    # Aggiungi la Tonica
+    note_accordo_std.append(tonica_std)
+    note_accordo_formattate.append(get_nota(tonica_std))
+    
+    idx_tonica = SCALA_CROMATICA_MAPPA.get(tonica_std)
+    if idx_tonica is None:
+         print(f"Errore: tonica '{tonica_std}' non trovata.")
+         return
+
+    for intervallo in intervalli:
+        idx_nuova_nota = (idx_tonica + intervallo) % 12
+        nota_std = NOTE_STD[idx_nuova_nota]
+        
+        # (Per ora saltiamo la logica enarmonica complessa, usiamo i diesis)
+        # TODO: Affinare la logica enarmonica se necessario
+        
+        if nota_std not in note_accordo_std: # Evitiamo duplicati
+            note_accordo_std.append(nota_std)
+            note_accordo_formattate.append(get_nota(nota_std))
+
+    # --- 4. Mostra i Risultati ---
+    nome_accordo_completo = f"{get_nota(tonica_std)} {ricetta_nome}"
+    note_str = " - ".join(note_accordo_formattate)
+    print(f"\n--- Risultato Analisi ---")
+    print(f"Accordo: {nome_accordo_completo}")
+    print(f"Note componenti: {note_str}")
+    print("--------------------------")
+    
+    # --- 5. Mostra sul Manico (Il valore didattico) ---
+    print(f"\nEcco dove trovare queste note sul manico:")
+    print("Puoi indicare una porzione di manico (es. 0.4)")
+    scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
+    maninf, mansup = 0, 21
+    if scelta_manico != "":
+        maninf, mansup = Manlimiti(scelta_manico)
+
+    # Chiamiamo MostraCorde per OGNI nota dell'accordo
+    for nota_base in note_accordo_std:
+        MostraCorde(nota_base, rp=False, maninf=maninf, mansup=mansup)
+    
+    print("\nUsando queste posizioni, puoi trovare una diteggiatura e salvarla nella tua Chordpedia.")
+    key("Premi un tasto per tornare al menu...")
+    
+    return
 def main():
     global archivio_modificato, impostazioni
     
@@ -1606,7 +1792,8 @@ def main():
     carica_impostazioni()
     
     num_accordi = len(impostazioni.get('chordpedia', {}))
-    print(f"La tua Chordpedia contiene {num_accordi} accordi.")
+    num_scale = len(impostazioni.get('scale', {}))
+    print(f"La tua Chordpedia contiene {num_accordi} accordi e {num_scale} pattern di scale.")
     print("\n--- Menu Principale ---")
     
     while True:
@@ -1618,13 +1805,15 @@ def main():
         if scelta == "Accordi":
             GestoreChordpedia()
         
+        elif scelta == "Costruttore Accordi": # <-- NUOVO BLOCCO
+            CostruttoreAccordi()
         elif scelta == "Scale":
             MenuScale()
             
         elif scelta == "Impostazioni":
             GestoreImpostazioni()
             
-        elif scelta == "Trova Nota":
+        elif scelta == "Nota sul manico":
             TrovaNota()
             
         elif scelta == "Trova Posizione":
