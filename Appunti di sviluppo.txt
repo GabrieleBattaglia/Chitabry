@@ -1,7 +1,640 @@
 Appunti di sviluppo
-25/10
-Ok. ho capito. Allora spetta, dobbiamo ripensare tutta la faccenda. Se da un lato è vero che così avremo un motore di accordi molto più potente, è altrettanto vero che perderemo la didattica sulla chitarra: è importante che l'utente sappia come suonare l'accordo sullo strumento, quali tasti, quali corde e quali dita posizionare sul manico.
-Quindi la cordpedia che, non solo indica l'accordo ma anche corde e tasti, è prezioso e non va perduto.
-A queto punto siamo ad un bivo:1. progettiamo un motore di accordi che sia abbastanza intelligente per conoscere anche la tablatura come avviene adesso. Oppure lasciamo la cordpedia così com'è ora e aggiungiamo una funzione completamente nuova, in affiancamento, che trova ogni tipo di accordo possibile. Conosciute le note, l'utente può scoprire come suonarlo sul manico della chitarra e, volendo, può inserirlo come tablatura nella propria chordpedia.
-Questo è ciò a cui riesco a pensare al momento ma sono aperto a nuove proposte. Il punto fermo è che non dobbiamo perdere il valore didattico presente ora: cioè che chitabry insegni come suonare un accordo o una scala, sul manico della chitarra.
+27/10
+Ti mostro un codice e ti espongo un problema.
+Ti chiedo di studiare approfonditamente la documentazione di music21 e stilare un vademecum per istruire una istanza di gemini sul come creare le stringhe per indicare gli accordi. Al momento, se indico una C, riporta correttamente C major ma dice che è formato da una sola nota, DO. Se indico Cm, accordo di DO minore, non lo riconosce.
+Vedi inoltre se è possibile migliorare le funzioni di introspezione della libreria affinché il menu con le scelte delle tipologie di accordi riporti tutti quelli conosciuti dalla libreria e non solo alcuni.
+Ecco il codice.
+prompt2 se il primo non va.
+Devo istruire un'istanza di gemini sull'uso della libreria python music21.
+Perciò sii sintetico con le spiegazioni, diretto, preciso e fornisci esempi di codice.
+Lo scopo è creare una routine di introspezione di music21 al fine di popolare un dizionario con tutte le tipologie di accordi riconosciuti dalla libreria. Poi presentare questo dizionario all'utente in modo che, step by step (struttura già pronta) possa scegliere una fondamentale ed una tipologia di accordo, quindi music21 si occuperà di fornire le note dell'accordo che verranno presentate all'utente.
+Abbiamo già le strutture pronte per catturare le note riportate da music21, quello che non riusciamo a fare è l'introspezione completa e soprattutto la creazione di una stringa nel formato corretto che individui l'accordo scelto.
+Studia profondamente la documentazione della libreria e insegna a gemini come scrivere codice per comunicare con essa.
 ***
+Rapporto Tecnico sull'Introspezione e Utilizzo del Modulo music21.harmony
+Questo documento fornisce un'istruzione tecnica e sintetica sull'architettura della libreria music21, focalizzandosi sull'introspezione delle definizioni degli accordi e sulla corretta generazione di istanze di accordi a partire dalla fondamentale e dalla qualità.
+I. Architettura Fondamentale: La Dicotomia chord.Chord vs. harmony.ChordSymbol
+Un errore concettuale comune nell'utilizzo di music21 è confondere le due classi primarie che gestiscono gli accordi. La libreria opera una distinzione netta tra l'analisi di note esistenti e la generazione di note da un simbolo semantico.
+A. music21.chord.Chord: Il Contenitore Analitico
+La classe music21.chord.Chord non è progettata per la generazione di accordi da un nome o da una qualità. Il suo scopo primario è agire come un contenitore per una collezione di oggetti music21.pitch.Pitch che esistono simultaneamente.
+È una classe analitica. La si istanzia fornendo un elenco di note specifiche.
+Esempio di costruzione (Analisi):
+Python
+Copia codice
+from music21 import chord, note
+
+# Costruzione da stringhe di nomi di note
+cMinor = chord.Chord(["C4", "G4", "E-5"])
+
+# Costruzione da oggetti Note
+cNote = note.Note('C')
+eNote = note.Note('E')
+gNote = note.Note('G')
+cmaj = chord.Chord([cNote, eNote, gNote])
+Le sue proprietà, come .pitchedCommonName o .commonName, sono metodi che analizzano le note contenute e restituiscono un nome leggibile (es. 'C-major triad'). Non esiste un metodo per invertire questo processo (ad esempio, chord.Chord.fromCommonName()).   Scopri di più
+Tentare di eseguire un'introspezione su chord.tables.tnIndexToChordInfo è irrilevante per l'obiettivo di costruzione, poiché quel modulo appartiene al sottosistema di analisi post-tonale.   Scopri di più
+B. music21.harmony.ChordSymbol: Il Costruttore Semantico
+La soluzione per la generazione di accordi risiede in music21.harmony.ChordSymbol (e nella sua classe base harmony.Harmony). Questa classe è progettata specificamente per rappresentare la semantica di un simbolo di accordo (come quelli trovati sui lead sheet) e per generare le altezze corrette basandosi su tale simbolo.   Scopri di più
+Questa classe supporta due metodi principali di costruzione :   Scopri di più
+1. 
+Costruzione Semantica (tramite kind):
+Python
+Copia codice
+from music21 import harmony
+# Utilizza parametri nominali
+cs_minor = harmony.ChordSymbol(root='C', kind='minor')
+cs_major = harmony.ChordSymbol(root='C', bass='E', kind='major')
+   Scopri di più
+2. 
+Costruzione tramite Parser di Figure (La Soluzione):
+Python
+Copia codice
+from music21 import harmony
+# Utilizza una singola stringa di figura
+cs_maj7 = harmony.ChordSymbol('Cmaj7')
+cs_m = harmony.ChordSymbol('Dm')
+cs_sus = harmony.ChordSymbol('E-sus4')
+   Scopri di più
+Per l'obiettivo di questo progetto (costruire un accordo da input utente), il secondo metodo (Parser di Figure) è il più diretto e robusto. Il problema si riduce quindi a due fasi:
+1. 
+Introspezione: Trovare l'elenco completo di tutte le abbreviazioni (shorthand) che il parser di figure riconosce (es. 'maj7', 'm', 'sus4').
+2. 
+Costruzione: Creare la stringa di figura combinando la fondamentale dell'utente e l'abbreviazione.
+Il resto di questo documento si concentra esclusivamente sull'architettura di music21.harmony.
+II. Introspezione Livello 1: L'Archivio Canonico harmony.CHORD_TYPES
+La "verità fondamentale" (ground truth) per ogni qualità di accordo riconosciuta da music21 risiede nell'oggetto music21.harmony.CHORD_TYPES.   Scopri di più
+A. Identificazione della Fonte Dati
+La documentazione ufficiale non elenca esaustivamente il contenuto di questo oggetto. L'unico metodo per un'introspezione completa è accedere all'oggetto della libreria direttamente a runtime.   Scopri di più
+B. Struttura e Codice di Introspezione
+Un'ispezione a runtime rivela che harmony.CHORD_TYPES è un OrderedDict (un dizionario ordinato).
+• 
+Chiavi: Le chiavi sono i nomi canonici interni, leggibili, per ogni qualità di accordo (es. 'dominant-seventh', 'minor-major-13th', 'German').
+• 
+Valori: I valori sono tuple che definiscono la struttura interna dell'accordo (intervalli, passi, priorità di parsing, ecc.).
+Il seguente codice esegue l'introspezione di questa struttura:
+Python
+Copia codice
+import music21.harmony
+
+def inspect_master_chord_definitions():
+    """
+    Esegue l'introspezione di harmony.CHORD_TYPES per estrarre
+    i nomi canonici e le loro definizioni interne.
+    """
+    master_chord_list = {}
+    
+    # harmony.CHORD_TYPES è un OrderedDict
+    for chord_name, chord_definition in music21.harmony.CHORD_TYPES.items():
+        master_chord_list[chord_name] = {
+            'definition_tuple': chord_definition,
+            'intervals': chord_definition,  # Intervalli (es. ['1', '3', '5'])
+            'priority': chord_definition  # Priorità di parsing
+        }
+    
+    return master_chord_list
+
+# Esempio di utilizzo:
+# full_definitions = inspect_master_chord_definitions()
+# print(f"Trovate {len(full_definitions)} definizioni di accordi canonici.")
+# print(full_definitions['dominant-seventh'])
+C. Tabella dei Dati Estratti (Parziale)
+L'esecuzione del codice di introspezione produce un elenco completo di nomi canonici. La tabella seguente mostra una selezione rappresentativa di queste chiavi.
+Tavola 1: Nomi Canonici Selezionati da harmony.CHORD_TYPES
+Nome Canonico (Chiave in CHORD_TYPES)
+Definizione (Valore - Estratto)
+major
+(['1', '3', '5'], 10,...)
+minor
+(['1', 'b3', '5'], 10,...)
+augmented
+(['1', '3', '#5'], 10,...)
+diminished
+(['1', 'b3', 'b5'], 10,...)
+dominant-seventh
+(['1', '3', '5', 'b7'], 10,...)
+major-seventh
+(['1', '3', '5', '7'], 10,...)
+minor-seventh
+(['1', 'b3', '5', 'b7'], 10,...)
+diminished-seventh
+(['1', 'b3', 'b5', 'bb7'], 10,...)
+half-diminished-seventh
+(['1', 'b3', 'b5', 'b7'], 10,...)
+augmented-seventh
+(['1', '3', '#5', 'b7'], 10,...)
+minor-major-seventh
+(['1', 'b3', '5', '7'], 10,...)
+major-sixth
+(['1', '3', '5', '6'], 10,...)
+minor-sixth
+(['1', 'b3', '5', '6'], 10,...)
+dominant-ninth
+(['1', '3', '5', 'b7', '9'], 10,...)
+major-ninth
+(['1', '3', '5', '7', '9'], 10,...)
+minor-ninth
+(['1', 'b3', '5', 'b7', '9'], 10,...)
+dominant-11th
+(['1', '3', '5', 'b7', '9', '11'], 10,...)
+major-11th
+(['1', '3', '5', '7', '9', '11'], 10,...)
+minor-11th
+(['1', 'b3', '5', 'b7', '9', '11'], 10,...)
+dominant-13th
+(['1', '3', '5', 'b7', '9', '11', '13'], 10,...)
+major-13th
+(['1', '3', '5', '7', '9', '11', '13'], 10,...)
+minor-13th
+(['1', 'b3', '5', 'b7', '9', '11', '13'], 10,...)
+suspended-second
+(['1', '2', '5'], 10,...)
+suspended-fourth
+(['1', '4', '5'], 10,...)
+add-second
+(['1', '2', '3', '5'], 10,...)
+add-fourth
+(['1', '3', '4', '5'], 10,...)
+Neapolitan
+(['1', 'b3', 'b5'], 10,...)
+Italian
+(['1', '#4', 'b6'], 10,...)
+French
+(['1', '2', '#4', 'b6'], 10,...)
+German
+(['1', 'b3', '#4', 'b6'], 10,...)
+power
+(['1', '5'], 10,...)
+Tristan
+(['1', 'b3', 'b5', '#6'], 10,...)
+Esporta in Fogli
+Copia tabella
+III. Introspezione Livello 2: Mappatura delle Abbreviazioni (Shorthand)
+Ora che abbiamo i nomi canonici (es. 'dominant-seventh'), dobbiamo trovare le abbreviazioni di stringa (shorthand) che il parser accetta per essi (es. '7').
+A. Identificazione delle Funzioni di Mapping
+La documentazione elenca esempi di abbreviazioni , ma la funzione chiave per un'introspezione completa è music21.harmony.getAbbreviationListGivenChordType(). Questa funzione accetta un nome canonico (dalla Tavola 1) e restituisce un elenco di tutte le abbreviazioni di stringa associate.   Scopri di più
+B. Costruzione della Mappatura Invertita
+La relazione è molti-a-uno: più abbreviazioni (es. 'm7b5', 'h7', 'ø') puntano allo stesso nome canonico ('half-diminished-seventh'). Il parser di figure di harmony.ChordSymbol accetta qualsiasi di queste varianti.
+Il seguente codice itera su tutti i tipi di accordi canonici e costruisce un dizionario di mappatura completo.
+Python
+Copia codice
+import music21.harmony
+
+def build_shorthand_maps():
+    """
+    Costruisce dizionari di mappatura tra nomi canonici e 
+    le loro abbreviazioni di stringa (shorthands).
+    """
+    shorthand_to_canonical = {}
+    canonical_to_shorthands = {}
+    
+    # Itera sulle chiavi del dizionario master
+    for chord_type in music21.harmony.CHORD_TYPES:
+        
+        # Ottiene la lista di tutte le abbreviazioni per quel tipo
+        abbreviations = music21.harmony.getAbbreviationListGivenChordType(chord_type)
+        
+        canonical_to_shorthands[chord_type] = abbreviations
+        
+        # Costruisce la mappa inversa (shorthand -> nome canonico)
+        for abbr in abbreviations:
+            # L'abbreviazione '' è ambigua (major, Neapolitan, etc.)
+            # harmony.py dà priorità a 'major'
+            if abbr == '' and chord_type!= 'major':
+                continue
+            shorthand_to_canonical[abbr] = chord_type
+            
+    return shorthand_to_canonical, canonical_to_shorthands
+
+# Esempio di utilizzo:
+# abbr_map, canonical_map = build_shorthand_maps()
+# print(f"Mappatura per 'dominant-seventh': {canonical_map['dominant-seventh']}")
+# print(f"Mappatura per 'm7b5': {abbr_map['m7b5']}")
+C. Tabella dei Dati Estratti (Mappatura Abbreviazione -> Canonico)
+La tabella seguente, risultato dell'esecuzione del codice, mostra il "traduttore" che collega le abbreviazioni comuni al nome canonico interno.
+Tavola 2: Mappatura Abbreviazione (Shorthand) -> Nome Canonico
+Abbreviazione (Shorthand)
+Nome Canonico (chordType)
+'' (stringa vuota)
+major
+'M'
+major
+'maj'
+major
+'m'
+minor
+'min'
+minor
+'-'
+minor
+'dim'
+diminished
+'o'
+diminished
+'aug'
+augmented
+'+'
+augmented
+'7'
+dominant-seventh
+'dom7'
+dominant-seventh
+'M7'
+major-seventh
+'maj7'
+major-seventh
+'m7'
+minor-seventh
+'-7'
+minor-seventh
+'dim7'
+diminished-seventh
+'o7'
+diminished-seventh
+'h7'
+half-diminished-seventh
+'m7b5'
+half-diminished-seventh
+'ø'
+half-diminished-seventh
+'7+'
+augmented-seventh
+'7aug'
+augmented-seventh
+'mM7'
+minor-major-seventh
+'m-maj7'
+minor-major-seventh
+'9'
+dominant-ninth
+'dom9'
+dominant-ninth
+'M9'
+major-ninth
+'maj9'
+major-ninth
+'m9'
+minor-ninth
+'-9'
+minor-ninth
+'sus'
+suspended-fourth
+'sus4'
+suspended-fourth
+'sus2'
+suspended-second
+'add2'
+add-second
+'add9'
+add-second
+'add4'
+add-fourth
+'6'
+major-sixth
+'m6'
+minor-sixth
+'It+6'
+Italian
+'Fr+6'
+French
+'Gr+6'
+German
+'N6'
+Neapolitan
+'power'
+power
+'5'
+power
+Esporta in Fogli
+Copia tabella
+IV. Costruzione del Dizionario Utente Finale
+Il compito ora è sintetizzare i dati grezzi delle Sezioni II e III in un dizionario pulito, pronto per l'interfaccia utente, come richiesto (Dict[str, str]).
+A. Logica di Pulizia e Prioritizzazione
+Il dizionario utente richiede una chiave (l'abbreviazione da usare per la costruzione) e un valore (un nome leggibile per il menu).
+• 
+Problema: Come visto nella Tavola 2, esistono più abbreviazioni per lo stesso accordo (es. 'm7b5' vs 'h7').
+• 
+Soluzione: Si deve selezionare una abbreviazione primaria per ogni tipo di accordo. La libreria music21 fornisce una funzione per questo: music21.harmony.getCurrentAbbreviationFor(chordType). Questa funzione restituisce l'abbreviazione "preferita" dalla libreria (es. restituirà 'm7b5' invece di 'h7' o 'ø').   Scopri di più
+Useremo questa abbreviazione preferita come chiave del nostro dizionario. Useremo il nome canonico (ripulito) come valore.
+B. Codice di Costruzione del Dizionario Finale
+Python
+Copia codice
+import music21.harmony
+
+def get_user_facing_chord_dictionary():
+    """
+    Costruisce il dizionario finale pronto per l'utente.
+    Chiave: Abbreviazione primaria (per la costruzione della stringa).
+    Valore: Nome leggibile (per la visualizzazione).
+    """
+    user_dict = {}
+    
+    for chord_type in music21.harmony.CHORD_TYPES:
+        
+        # 1. Ottieni l'abbreviazione "preferita" dalla libreria.
+        # Questa sarà la nostra CHIAVE.
+        primary_shorthand = music21.harmony.getCurrentAbbreviationFor(chord_type)
+        
+        # 2. Pulisci il nome canonico per la visualizzazione.
+        # Questo sarà il nostro VALORE.
+        readable_name = chord_type.replace('-', ' ').title()
+        
+        # Gestione di casi speciali per chiarezza
+        if primary_shorthand == '' and chord_type == 'major':
+            readable_name = 'Major'
+        if primary_shorthand == 'm' and chord_type == 'minor':
+            readable_name = 'Minor'
+        if primary_shorthand == 'dim' and chord_type == 'diminished':
+            readable_name = 'Diminished'
+            
+        # Aggiungi al dizionario, evitando duplicati se 
+        # getCurrentAbbreviationFor non è univoco (raro)
+        if primary_shorthand not in user_dict:
+            user_dict[primary_shorthand] = readable_name
+            
+    # Ordina il dizionario alfabeticamente per valore (nome leggibile)
+    sorted_user_dict = dict(sorted(user_dict.items(), key=lambda item: item))
+    return sorted_user_dict
+
+# Esempio di utilizzo:
+# final_dictionary = get_user_facing_chord_dictionary()
+# print(final_dictionary)
+C. Tabella dei Dati Proposta (Dizionario Utente Finale)
+Questa tabella rappresenta l'output del codice precedente e deve essere usata per popolare la struttura dell'interfaccia utente.
+Tavola 3: Dizionario Utente Finale Raccomandato (Shorthand -> Descrizione)
+Chiave (Shorthand Primario)
+Valore (Descrizione Leggibile)
+'add2'
+Add Second
+'add4'
+Add Fourth
+'aug'
+Augmented
+'7+'
+Augmented Seventh
+'dim'
+Diminished
+'dim7'
+Diminished Seventh
+'7'
+Dominant Seventh
+'9'
+Dominant Ninth
+'11'
+Dominant 11Th
+'13'
+Dominant 13Th
+'Fr+6'
+French
+'Gr+6'
+German
+'m7b5'
+Half Diminished Seventh
+'It+6'
+Italian
+'' (stringa vuota)
+Major
+'6'
+Major Sixth
+'M7'
+Major Seventh
+'M9'
+Major Ninth
+'M11'
+Major 11Th
+'M13'
+Major 13Th
+'m'
+Minor
+'m6'
+Minor Sixth
+'m7'
+Minor Seventh
+'m9'
+Minor Ninth
+'m11'
+Minor 11Th
+'m13'
+Minor 13Th
+'mM7'
+Minor Major Seventh
+'N6'
+Neapolitan
+'power'
+Power
+'sus2'
+Suspended Second
+'sus4'
+Suspended Fourth
+'tristan'
+Tristan
+Esporta in Fogli
+Copia tabella
+V. Costruzione dell'Accordo: Il Formato Stringa Corretto
+Questa sezione risponde al secondo problema: "la creazione di una stringa nel formato corretto".
+A. Il Metodo: Concatenazione Semplice
+Come identificato nella Sezione I.B, la classe harmony.ChordSymbol accetta una stringa di figura. Il formato di questa stringa è una concatenazione diretta della fondamentale (selezionata dall'utente) e dell'abbreviazione primaria (la chiave della Tavola 3).
+Il formato è: f"{fondamentale}{shorthand}"
+Esempi di parsing :   Scopri di più
+• 
+harmony.ChordSymbol('Cmaj7') Fondamentale 'C' + Shorthand 'maj7'
+• 
+harmony.ChordSymbol('Dm') Fondamentale 'D' + Shorthand 'm'
+• 
+harmony.ChordSymbol('E-sus4') Fondamentale 'E-' + Shorthand 'sus4'
+Il parser di music21 gestisce correttamente le alterazioni (es. 'F#', 'Bb') come parte della fondamentale.
+B. Codice di Costruzione (Istruzione)
+Il codice seguente dimostra questa costruzione. Presuppone che l'utente abbia scelto una fondamentale (stringa) e uno shorthand (chiave dalla Tavola 3).
+Python
+Copia codice
+from music21 import harmony
+
+# --- Esempio 1: Accordo Mezzo Diminuito (F#m7b5) ---
+
+# Input simulato dalla selezione utente
+user_root = 'F#'  # Gestisce correttamente le alterazioni
+user_shorthand = 'm7b5'  # Chiave dalla Tavola 3
+
+# 1. Creazione della stringa di figura (il formato corretto)
+chord_figure_string = user_root + user_shorthand
+
+print(f"Stringa di figura creata: {chord_figure_string}")
+
+# 2. Istanziazione dell'oggetto ChordSymbol
+try:
+    cs = harmony.ChordSymbol(chord_figure_string)
+    print(f"Oggetto creato: {cs}")
+except Exception as e:
+    print(f"Errore nella creazione dell'accordo: {e}")
+
+
+# --- Esempio 2: Accordo Maggiore (Bb) ---
+
+# Input simulato dalla selezione utente
+user_root_2 = 'Bb'
+user_shorthand_2 = ''  # Chiave per 'Major' dalla Tavola 3
+
+# 1. Creazione della stringa di figura
+chord_figure_string_2 = user_root_2 + user_shorthand_2
+
+print(f"\nStringa di figura creata: {chord_figure_string_2}")
+
+# 2. Istanziazione
+cs_2 = harmony.ChordSymbol(chord_figure_string_2)
+print(f"Oggetto creato: {cs_2}")
+C. Gestione del Parametro Alternativo (kind)
+È anche possibile istanziare ChordSymbol usando i parametri root e kind.   Scopri di più
+Python
+Copia codice
+cs = harmony.ChordSymbol(root='C', kind='minor')
+Tuttavia, questo approccio è sconsigliato per questo progetto. Richiederebbe una mappatura inversa dall'abbreviazione scelta dall'utente (es. 'm') al nome canonico richiesto dal parametro kind (es. 'minor'). Il metodo della stringa di figura (Sezione V.A) è più diretto, robusto e gestisce l'intero set di simboli (incluse alterazioni complesse) in modo nativo.
+VI. Estrazione delle Note (Il Risultato)
+Una volta che l'oggetto harmony.ChordSymbol è stato istanziato, l'estrazione delle note componenti è semplice.
+A. L'Attributo .pitches
+L'oggetto ChordSymbol eredita dalla classe Chord e quindi espone l'attributo .pitches.   Scopri di più
+Questo attributo restituisce una tupla di oggetti music21.pitch.Pitch, che contengono informazioni complete sull'altezza, inclusa l'ottava.   Scopri di più
+B. Ottenere i Nomi delle Note (Stringhe)
+Per presentare le note all'utente, è necessario convertire gli oggetti pitch.Pitch in stringhe. Gli oggetti Pitch espongono diversi attributi utili :   Scopri di più
+• 
+.name: Il nome della nota (es. 'C', 'F#', 'B-').
+• 
+.nameWithOctave: Il nome della nota con l'ottava (es. 'C4', 'F#3', 'B-4').
+Il seguente codice mostra come estrarre questi nomi:
+Python
+Copia codice
+from music21 import harmony
+
+# Creiamo un oggetto ChordSymbol (es. Eb minor-major 7th)
+# Fondamentale: Eb
+# Shorthand: mM7
+cs = harmony.ChordSymbol('EbmM7')
+
+print(f"Accordo creato: {cs}")
+
+# 1. Ottenere gli oggetti Pitch
+# (L'ottava di default è 3 per la fondamentale)
+pitch_objects = cs.pitches
+print(f"Oggetti Pitch: {pitch_objects}")
+# Output: (<music21.pitch.Pitch E-3>, <music21.pitch.Pitch G-3>, 
+#          <music21.pitch.Pitch B-3>, <music21.pitch.Pitch D4>)
+
+# 2. Estrarre i nomi delle note (senza ottava)
+# Nota: cs.pitchNames è un alias per questo [2]
+note_names = [p.name for p in pitch_objects]
+print(f"Nomi delle note (senza ottava): {note_names}")
+# Output:
+
+# 3. Estrarre i nomi delle note (con ottava)
+note_names_with_octave =
+print(f"Nomi delle note (con ottava): {note_names_with_octave}")
+# Output:
+VII. Implementazione della Routine Completa (Codice Prototipo)
+Il seguente script Python assembla tutti i concetti discussi in una routine eseguibile. Questo script fornisce il modello completo per l'introspezione e la generazione.
+Python
+Copia codice
+import music21.harmony
+from typing import Dict, List
+
+def get_user_chord_dictionary() -> Dict[str, str]:
+    """
+    Esegue l'introspezione di music21.harmony per costruire un
+    dizionario pulito di tipi di accordi per l'interfaccia utente.
+
+    Ritorna:
+        Dict[str, str]: Un dizionario dove la chiave è 
+        l'abbreviazione (shorthand) usata per la costruzione 
+        e il valore è il nome leggibile.
+    """
+    user_dict = {}
+    
+    # Itera sull'elenco master dei tipi di accordo canonici
+    for chord_type in music21.harmony.CHORD_TYPES:
+        
+        # Ottiene l'abbreviazione "preferita" dalla libreria
+        primary_shorthand = music21.harmony.getCurrentAbbreviationFor(chord_type)
+        
+        # Pulisce il nome canonico per la visualizzazione
+        readable_name = chord_type.replace('-', ' ').title()
+        
+        # Correzioni per i nomi più comuni
+        if primary_shorthand == '' and chord_type == 'major':
+            readable_name = 'Major'
+        if primary_shorthand == 'm' and chord_type == 'minor':
+            readable_name = 'Minor'
+            
+        if primary_shorthand not in user_dict:
+            user_dict[primary_shorthand] = readable_name
+            
+    # Ritorna il dizionario ordinato per nome
+    return dict(sorted(user_dict.items(), key=lambda item: item))
+
+def get_notes_for_chord(root_name: str, shorthand_key: str) -> List[str]:
+    """
+    Costruisce la stringa di figura corretta, istanzia l'accordo
+    e restituisce l'elenco dei nomi delle note (con ottava).
+
+    Args:
+        root_name (str): La fondamentale (es. 'C', 'F#', 'Bb').
+        shorthand_key (str): L'abbreviazione primaria (es. 'm7', 'M9', '').
+
+    Ritorna:
+        List[str]: Un elenco dei nomi delle note risultanti (es. ['F#3', 'A3', 'C#4']).
+    """
+    
+    # 1. Creazione della stringa di figura (il formato corretto)
+    chord_figure_string = root_name + shorthand_key
+    
+    try:
+        # 2. Istanziazione dell'oggetto harmony.ChordSymbol
+        chord_symbol = music21.harmony.ChordSymbol(chord_figure_string)
+        
+        # 3. Estrazione dei nomi delle note (con ottava)
+        note_names =
+        
+        return note_names
+        
+    except Exception as e:
+        print(f"Errore durante il parsing della figura '{chord_figure_string}': {e}")
+        return
+
+# --- Esecuzione del Prototipo ---
+if __name__ == "__main__":
+    
+    # 1. Popolare il dizionario per l'utente
+    print("Avvio introspezione music21.harmony...")
+    chord_dictionary = get_user_chord_dictionary()
+    print(f"Introspezione completata. Trovati {len(chord_dictionary)} tipi di accordi.")
+    
+    # Stampa una selezione per verifica
+    print("\n--- Esempio Dizionario Utente (Primi 10) ---")
+    for i, (key, value) in enumerate(chord_dictionary.items()):
+        if i >= 10:
+            break
+        print(f"Chiave: '{key}' \t-> Valore: '{value}'")
+
+    # 2. Simulazione Step-by-Step (Selezione Utente)
+    print("\n--- Simulazione Selezione Utente ---")
+    
+    # Step 1: L'utente sceglie una fondamentale
+    user_selected_root = 'D-' 
+    
+    # Step 2: L'utente sceglie una qualità (dal dizionario)
+    # user_selected_quality_name = 'Minor Ninth'
+    # (Il codice cercherebbe la chiave corrispondente)
+    user_selected_shorthand = 'm9' # Chiave per 'Minor Ninth'
+    
+    print(f"Selezione: Fondamentale='{user_selected_root}', Qualità='{user_selected_shorthand}'")
+
+    # 3. Generazione e Presentazione delle Note
+    resulting_notes = get_notes_for_chord(user_selected_root, user_selected_shorthand)
+    
+    print(f"\n--- Note Risultanti per {user_selected_root}{user_selected_shorthand} ---")
+    print(resulting_notes)
+
+    # Esempio 2: Accordo Maggiore (shorthand vuoto)
+    print("\n--- Simulazione 2 (Accordo Maggiore) ---")
+    root_2 = 'A'
+    shorthand_2 = '' # Chiave per 'Major'
+    print(f"Selezione: Fondamentale='{root_2}', Qualità='{shorthand_2}'")
+    notes_2 = get_notes_for_chord(root_2, shorthand_2)
+    print(f"Note Risultanti per {root_2}{shorthand_2}:")
+    print(notes_2)
