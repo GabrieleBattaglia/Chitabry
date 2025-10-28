@@ -31,11 +31,11 @@ cNote = note.Note('C')
 eNote = note.Note('E')
 gNote = note.Note('G')
 cmaj = chord.Chord([cNote, eNote, gNote])
-Le sue proprietà, come .pitchedCommonName o .commonName, sono metodi che analizzano le note contenute e restituiscono un nome leggibile (es. 'C-major triad'). Non esiste un metodo per invertire questo processo (ad esempio, chord.Chord.fromCommonName()).   Scopri di più
-Tentare di eseguire un'introspezione su chord.tables.tnIndexToChordInfo è irrilevante per l'obiettivo di costruzione, poiché quel modulo appartiene al sottosistema di analisi post-tonale.   Scopri di più
+Le sue proprietà, come .pitchedCommonName o .commonName, sono metodi che analizzano le note contenute e restituiscono un nome leggibile (es. 'C-major triad'). Non esiste un metodo per invertire questo processo (ad esempio, chord.Chord.fromCommonName()).   
+Tentare di eseguire un'introspezione su chord.tables.tnIndexToChordInfo è irrilevante per l'obiettivo di costruzione, poiché quel modulo appartiene al sottosistema di analisi post-tonale.   
 B. music21.harmony.ChordSymbol: Il Costruttore Semantico
-La soluzione per la generazione di accordi risiede in music21.harmony.ChordSymbol (e nella sua classe base harmony.Harmony). Questa classe è progettata specificamente per rappresentare la semantica di un simbolo di accordo (come quelli trovati sui lead sheet) e per generare le altezze corrette basandosi su tale simbolo.   Scopri di più
-Questa classe supporta due metodi principali di costruzione :   Scopri di più
+La soluzione per la generazione di accordi risiede in music21.harmony.ChordSymbol (e nella sua classe base harmony.Harmony). Questa classe è progettata specificamente per rappresentare la semantica di un simbolo di accordo (come quelli trovati sui lead sheet) e per generare le altezze corrette basandosi su tale simbolo.   
+Questa classe supporta due metodi principali di costruzione :   
 1. 
 Costruzione Semantica (tramite kind):
 Python
@@ -44,7 +44,7 @@ from music21 import harmony
 # Utilizza parametri nominali
 cs_minor = harmony.ChordSymbol(root='C', kind='minor')
 cs_major = harmony.ChordSymbol(root='C', bass='E', kind='major')
-   Scopri di più
+   
 2. 
 Costruzione tramite Parser di Figure (La Soluzione):
 Python
@@ -54,7 +54,7 @@ from music21 import harmony
 cs_maj7 = harmony.ChordSymbol('Cmaj7')
 cs_m = harmony.ChordSymbol('Dm')
 cs_sus = harmony.ChordSymbol('E-sus4')
-   Scopri di più
+   
 Per l'obiettivo di questo progetto (costruire un accordo da input utente), il secondo metodo (Parser di Figure) è il più diretto e robusto. Il problema si riduce quindi a due fasi:
 1. 
 Introspezione: Trovare l'elenco completo di tutte le abbreviazioni (shorthand) che il parser di figure riconosce (es. 'maj7', 'm', 'sus4').
@@ -62,9 +62,9 @@ Introspezione: Trovare l'elenco completo di tutte le abbreviazioni (shorthand) c
 Costruzione: Creare la stringa di figura combinando la fondamentale dell'utente e l'abbreviazione.
 Il resto di questo documento si concentra esclusivamente sull'architettura di music21.harmony.
 II. Introspezione Livello 1: L'Archivio Canonico harmony.CHORD_TYPES
-La "verità fondamentale" (ground truth) per ogni qualità di accordo riconosciuta da music21 risiede nell'oggetto music21.harmony.CHORD_TYPES.   Scopri di più
+La "verità fondamentale" (ground truth) per ogni qualità di accordo riconosciuta da music21 risiede nell'oggetto music21.harmony.CHORD_TYPES.   
 A. Identificazione della Fonte Dati
-La documentazione ufficiale non elenca esaustivamente il contenuto di questo oggetto. L'unico metodo per un'introspezione completa è accedere all'oggetto della libreria direttamente a runtime.   Scopri di più
+La documentazione ufficiale non elenca esaustivamente il contenuto di questo oggetto. L'unico metodo per un'introspezione completa è accedere all'oggetto della libreria direttamente a runtime.   
 B. Struttura e Codice di Introspezione
 Un'ispezione a runtime rivela che harmony.CHORD_TYPES è un OrderedDict (un dizionario ordinato).
 • 
@@ -171,7 +171,7 @@ Copia tabella
 III. Introspezione Livello 2: Mappatura delle Abbreviazioni (Shorthand)
 Ora che abbiamo i nomi canonici (es. 'dominant-seventh'), dobbiamo trovare le abbreviazioni di stringa (shorthand) che il parser accetta per essi (es. '7').
 A. Identificazione delle Funzioni di Mapping
-La documentazione elenca esempi di abbreviazioni , ma la funzione chiave per un'introspezione completa è music21.harmony.getAbbreviationListGivenChordType(). Questa funzione accetta un nome canonico (dalla Tavola 1) e restituisce un elenco di tutte le abbreviazioni di stringa associate.   Scopri di più
+La documentazione elenca esempi di abbreviazioni , ma la funzione chiave per un'introspezione completa è music21.harmony.getAbbreviationListGivenChordType(). Questa funzione accetta un nome canonico (dalla Tavola 1) e restituisce un elenco di tutte le abbreviazioni di stringa associate.   
 B. Costruzione della Mappatura Invertita
 La relazione è molti-a-uno: più abbreviazioni (es. 'm7b5', 'h7', 'ø') puntano allo stesso nome canonico ('half-diminished-seventh'). Il parser di figure di harmony.ChordSymbol accetta qualsiasi di queste varianti.
 Il seguente codice itera su tutti i tipi di accordi canonici e costruisce un dizionario di mappatura completo.
@@ -313,7 +313,7 @@ Il dizionario utente richiede una chiave (l'abbreviazione da usare per la costru
 • 
 Problema: Come visto nella Tavola 2, esistono più abbreviazioni per lo stesso accordo (es. 'm7b5' vs 'h7').
 • 
-Soluzione: Si deve selezionare una abbreviazione primaria per ogni tipo di accordo. La libreria music21 fornisce una funzione per questo: music21.harmony.getCurrentAbbreviationFor(chordType). Questa funzione restituisce l'abbreviazione "preferita" dalla libreria (es. restituirà 'm7b5' invece di 'h7' o 'ø').   Scopri di più
+Soluzione: Si deve selezionare una abbreviazione primaria per ogni tipo di accordo. La libreria music21 fornisce una funzione per questo: music21.harmony.getCurrentAbbreviationFor(chordType). Questa funzione restituisce l'abbreviazione "preferita" dalla libreria (es. restituirà 'm7b5' invece di 'h7' o 'ø').   
 Useremo questa abbreviazione preferita come chiave del nostro dizionario. Useremo il nome canonico (ripulito) come valore.
 B. Codice di Costruzione del Dizionario Finale
 Python
@@ -434,7 +434,7 @@ Questa sezione risponde al secondo problema: "la creazione di una stringa nel fo
 A. Il Metodo: Concatenazione Semplice
 Come identificato nella Sezione I.B, la classe harmony.ChordSymbol accetta una stringa di figura. Il formato di questa stringa è una concatenazione diretta della fondamentale (selezionata dall'utente) e dell'abbreviazione primaria (la chiave della Tavola 3).
 Il formato è: f"{fondamentale}{shorthand}"
-Esempi di parsing :   Scopri di più
+Esempi di parsing :   
 • 
 harmony.ChordSymbol('Cmaj7') Fondamentale 'C' + Shorthand 'maj7'
 • 
@@ -482,7 +482,7 @@ print(f"\nStringa di figura creata: {chord_figure_string_2}")
 cs_2 = harmony.ChordSymbol(chord_figure_string_2)
 print(f"Oggetto creato: {cs_2}")
 C. Gestione del Parametro Alternativo (kind)
-È anche possibile istanziare ChordSymbol usando i parametri root e kind.   Scopri di più
+È anche possibile istanziare ChordSymbol usando i parametri root e kind.   
 Python
 Copia codice
 cs = harmony.ChordSymbol(root='C', kind='minor')
@@ -490,10 +490,10 @@ Tuttavia, questo approccio è sconsigliato per questo progetto. Richiederebbe un
 VI. Estrazione delle Note (Il Risultato)
 Una volta che l'oggetto harmony.ChordSymbol è stato istanziato, l'estrazione delle note componenti è semplice.
 A. L'Attributo .pitches
-L'oggetto ChordSymbol eredita dalla classe Chord e quindi espone l'attributo .pitches.   Scopri di più
-Questo attributo restituisce una tupla di oggetti music21.pitch.Pitch, che contengono informazioni complete sull'altezza, inclusa l'ottava.   Scopri di più
+L'oggetto ChordSymbol eredita dalla classe Chord e quindi espone l'attributo .pitches.   
+Questo attributo restituisce una tupla di oggetti music21.pitch.Pitch, che contengono informazioni complete sull'altezza, inclusa l'ottava.   
 B. Ottenere i Nomi delle Note (Stringhe)
-Per presentare le note all'utente, è necessario convertire gli oggetti pitch.Pitch in stringhe. Gli oggetti Pitch espongono diversi attributi utili :   Scopri di più
+Per presentare le note all'utente, è necessario convertire gli oggetti pitch.Pitch in stringhe. Gli oggetti Pitch espongono diversi attributi utili :   
 • 
 .name: Il nome della nota (es. 'C', 'F#', 'B-').
 • 
@@ -638,3 +638,542 @@ if __name__ == "__main__":
     notes_2 = get_notes_for_chord(root_2, shorthand_2)
     print(f"Note Risultanti per {root_2}{shorthand_2}:")
     print(notes_2)
+Scale:
+1.1 Introduzione alla Sfida: Scale come Classi, Scale come Dati
+La richiesta di un "dizionario" completo di tutte le scale disponibili in music21 richiede un'analisi preliminare dell'architettura del modulo music21.scale. Un'ispezione diretta rivela che le scale non sono implementate come un singolo elenco enumerabile, ma attraverso due paradigmi di progettazione software fundamentalmente diversi. La comprensione di questa dualità è il requisito tecnico primario per costruire una soluzione di catalogo robusta.   
+Il sistema di scale di music21 deve essere unificato da due fonti distinte:
+1. 
+Scale Basate su Classi: Oggetti Python definiti programmaticamente all'interno della libreria, che ereditano da una classe base comune (ad esempio, scale.MajorScale).
+2. 
+Scale Basate su Dati: Definizioni di scale caricate da un archivio esterno di file .scl (l'archivio Scala), gestite da una classe loader specializzata.
+La seguente analisi progetterà un sistema di catalogo per enumerare entrambi i sistemi e definirà un Identificatore di Scala Univoco (USI) in grado di gestirli in modo univoco per l'istanziamento.
+1.2 Paradigma 1: La Gerarchia ConcreteScale
+Il paradigma principale per le scale comuni in music21 è la gerarchia di classi che discende da music21.scale.ConcreteScale. La classe ConcreteScale è la principale interfaccia pubblica per le scale.   
+Il termine "Concrete" (concreto) è tecnicamente significativo: si riferisce a una scala che è legata a una tonica specifica. Al contrario, una AbstractScale rappresenta la definizione intervallare di una scala (ad esempio, "maggiore") senza un punto di partenza. Per la richiesta di istanziare una scala specifica, la gerarchia ConcreteScale è il nostro obiettivo.   
+Esempi di sottoclassi di ConcreteScale includono:
+• 
+MajorScale
+• 
+MinorScale (Naturale)
+• 
+MelodicMinorScale
+• 
+HarmonicMinorScale
+• 
+OctatonicScale
+• 
+WholeToneScale
+• 
+SieveScale
+• 
+RagMarwa   
+L'istanziazione di queste classi richiede tipicamente un argomento: la tonica. Questo può essere fornito come una stringa di altezza, un oggetto music21.pitch.Pitch o un music21.note.Note.   
+Esempio di istanziazione (Concrete):
+Python
+Copia codice
+# Istanzia una scala di La Maggiore
+sc1 = scale.MajorScale('a')
+   
+Tecnicamente, il backend di molte di queste scale è un IntervalNetwork, che definisce la scala come un grafo di intervalli. Questo design consente loro di essere trasposte e istanziate su qualsiasi tonica.   
+1.3 Paradigma 2: Il Sistema ScalaScale e l'Archivio Esterno
+Il secondo paradigma è l'interfaccia di music21 con il vasto archivio di scale "Scala". Questo archivio contiene migliaia di definizioni di scale, inclusi temperamenti storici e scale microtonali, memorizzate in file di testo con estensione .scl.   
+Queste scale sono gestite dalla classe music21.scale.scala.ScalaScale. È importante notare che ScalaScale non è una sottoclasse di ConcreteScale e serve come loader e parser specializzato per questi file esterni.
+Di conseguenza, il suo costruttore è fondamentalmente diverso. Richiede due argomenti: la tonica (simile a ConcreteScale) e il nome del file della scala da caricare.   
+Esempio di istanziazione (Scala):
+Python
+Copia codice
+# Cerca le scale "mbira" disponibili
+mbiraScales = scale.scala.search('mbira')
+# ['mbira_banda.scl', 'mbira_banda2.scl',...]
+
+# Istanzia una scala mbira banda su La 4
+sc = scale.ScalaScale('a4', 'mbira_banda.scl')
+   
+I nomi dei file (es. mbira_banda.scl) fungono da identificatori univoci per questo paradigma.
+1.4 Il Caso Speciale: key.Key e la Necessità di Esclusione
+Un'analisi dell'ereditarietà delle classi in music21 rivela una potenziale complicazione critica. Gli oggetti music21.key.Key e, per estensione, music21.key.KeySignature, sono tecnicamente implementati come sottoclassi di music21.scale.Scale.   
+Questa è una decisione di implementazione interna della libreria. Tuttavia, per gli scopi della richiesta (un dizionario di "scale"), un key.Key (che rappresenta una tonalità, un centro tonale e un'armatura di chiave ) è concettualmente distinto da una scale.Scale (che rappresenta una raccolta ordinata di altezze ).   
+Un'introspezione ingenua che cerca tutte le sottoclassi di scale.Scale includerebbe erroneamente key.Key e KeySignature. Pertanto, la nostra logica di introspezione deve essere progettata per filtrare attivamente qualsiasi classe appartenente al modulo music21.key per mantenere la correttezza semantica del catalogo.
+Questa analisi della duplice architettura (ConcreteScale vs. ScalaScale) e dei loro metodi di istanziazione incompatibili (ClassName(tonic) vs. ScalaScale(tonic, filename)) informa una decisione di progettazione critica: il nostro catalogo e il nostro identificatore di stringa devono memorizzare un metadato aggiuntivo, un "paradigma", per sapere quale logica di istanziazione utilizzare.
+Sezione 2: Metodologia di Introspezione per il Catalogo Unificato delle Scale
+2.1 Obiettivo: Popolare il Dizionario
+Questa sezione affronta la richiesta di "popolare il dizionario". L'obiettivo è sviluppare una funzione Python, build_scale_catalog(), che esegua un'introspezione completa di music21 e restituisca un catalogo strutturato. Questo catalogo unificherà entrambi i paradigmi identificati nella Sezione 1. Verranno utilizzate le librerie music21.scale e inspect.
+2.2 Fase 1: Enumerazione delle Sottoclassi ConcreteScale
+Per trovare tutte le scale definite programmaticamente, è necessaria un'introspezione dell'albero delle classi di Python.
+Logica: Una funzione ricorsiva (find_scale_subclasses) navigherà l'albero di ereditarietà partendo da music21.scale.Scale. La funzione utilizzerà __subclasses__() per trovare i discendenti.   
+Criteri di Filtraggio: Per ogni classe cls trovata, verranno applicati tre filtri rigorosi per garantire che nel catalogo vengano incluse solo scale valide e istanziabili:
+1. 
+Filtro Modulo (Esclusione Key): if cls.__module__.startswith('music21.key'): continue. Questo filtro implementa la decisione presa nella Sezione 1.4, escludendo key.Key e KeySignature.   
+2. 
+Filtro Astratto: if inspect.isabstract(cls): continue. Questo esclude le classi base non istanziabili come AbstractScale e ConcreteScale stessa.   
+3. 
+Filtro Tipo: if not issubclass(cls, music21.scale.ConcreteScale): continue. Questo restringe ulteriormente i risultati per includere solo le classi che aderiscono al paradigma ConcreteScale, garantendo che accettino una tonica nel loro costruttore standard.
+Output (Fase 1): L'output sarà un elenco di classi Python, ad esempio: ``.
+Memorizzazione nel Catalogo: Per ogni classe cls valida, verrà memorizzata una voce con:
+• 
+programmatic_id: cls.__name__ (es. "MajorScale")
+• 
+paradigm: 'concrete'
+2.3 Fase 2: Enumerazione dell'Archivio ScalaScale
+Per il secondo paradigma, l'introspezione delle classi non è applicabile. È necessario invece enumerare il contenuto dell'archivio di dati Scala.
+Logica: Il modulo music21.scale.scala fornisce funzioni di utilità per interagire con l'archivio. Mentre scale.scala.search() è utile per trovare una scala specifica , il metodo corretto per un'enumerazione completa è music21.scale.scala.getPaths().   
+Processo:
+1. 
+Ottenere l'elenco completo dei percorsi: all_scala_paths = music21.scale.scala.getPaths().
+2. 
+Iterare su questo elenco.
+3. 
+Per ogni percorso, estrarre il nome del file (es. mbira_banda.scl).
+4. 
+Pulire il nome per ottenere l'ID programmatico (es. mbira_banda).
+Output (Fase 2): L'output sarà un elenco di stringhe ID, ad esempio: ['mbira_banda', 'pelog', 'partch_o1',...].
+Memorizzazione nel Catalogo: Per ogni nome di file fname:
+• 
+programmatic_id: fname.replace('.scl', '') (es. "mbira_banda")
+• 
+paradigm: 'scala'
+2.4 Fase 3: Gestione di ConcreteScale Personalizzate (definite dall'utente)
+Esiste un terzo caso d'uso che il nostro sistema deve supportare, anche se non può essere "catalogato" in anticipo. La classe ConcreteScale può essere utilizzata direttamente per definire una scala "al volo" fornendo un elenco di altezze fisse.   
+Esempio: complexScale = scale.ConcreteScale(pitches=['C#3', 'E-3', 'F3', 'G3'])   
+Il nostro catalogo pre-costruito non conterrà queste scale definite dall'utente. Tuttavia, l'Identificatore di Stringa Univoco (Sezione 3) e la funzione factory (Sezione 4) devono essere progettati per supportare questo paradigma, che chiameremo custom.
+2.5 Struttura Dati: Il Catalogo Unificato delle Scale
+La funzione build_scale_catalog() produrrà un elenco di dizionari, che funge da database di "definizione di scala" unificato. Questo catalogo è la fonte di verità sia per qualsiasi interfaccia utente sia per la logica di validazione del backend.
+La tabella seguente definisce lo schema del catalogo risultante.
+Tabella 1: Definizione dello Schema del "Scale Catalog"
+friendly_name
+programmatic_id
+paradigm
+Note
+"Major Scale"
+"MajorScale"
+concrete
+Sottoclasse di ConcreteScale
+"Whole Tone Scale"
+"WholeToneScale"
+concrete
+Sottoclasse di ConcreteScale
+"Melodic Minor Scale"
+"MelodicMinorScale"
+concrete
+Sottoclasse di ConcreteScale
+"Mbira Banda"
+"mbira_banda"
+scala
+Caricato da mbira_banda.scl
+"Pelog (Degung)"
+"pelog_degung"
+scala
+Caricato da pelog_degung.scl
+(... migliaia di voci)
+   
+Copia tabella
+Nota: friendly_name è una versione leggibile di programmatic_id (es. convertendo "MajorScale" in "Major Scale" e "mbira_banda" in "Mbira Banda") per scopi di visualizzazione.
+Sezione 3: Progettazione di un Identificatore di Scala Univoco (USI)
+3.1 Obiettivo: Costruzione della Stringa Univoca
+Questa sezione affronta la richiesta di una "costruzione corretta di una stringa". È necessario progettare un formato di stringa serializzabile, leggibile e robusto che possa rappresentare in modo univoco qualsiasi istanza di scala.
+Questo Identificatore di Scala Univoco (USI) deve codificare:
+1. 
+La Tonica (es. 'C#4')
+2. 
+L'Identificatore della Scala (il programmatic_id dalla Tabella 1)
+3. 
+Il Paradigma (la distinzione critica identificata nella Sezione 1)
+3.2 Definizione della Sintassi USI
+Formato Proposto: paradigm:tonic:scale_id
+Delimitatore: Il carattere dei due punti (:) è scelto per la sua leggibilità e facilità di parsing (usando str.split(':')). Si presume che i nomi delle toniche (che possono contenere - o #) e gli ID delle scale (che possono contenere _) non conterranno due punti.
+Componenti:
+1. 
+paradigm: Una stringa letterale che deve essere concrete, scala, or custom.
+2. 
+tonic: Una stringa che rappresenta la tonica, che può essere analizzata da music21.pitch.Pitch() (es. 'C4', 'A#5', 'E-3').   
+3. 
+scale_id: L'identificatore programmatico, il cui formato dipende dal paradigma:
+• 
+Per concrete: Il programmatic_id (nome della classe) dal catalogo (es. 'MajorScale').
+• 
+Per scala: Il programmatic_id (radice del nome file) dal catalogo (es. 'mbira_banda').
+• 
+Per custom: Un elenco di altezze separate da virgole (es. 'C4,E-4,G-4').
+3.3 Esempi di USI
+• 
+Esempio 1 (Concrete): Una scala di Si bemolle Maggiore.
+• 
+usi = "concrete:B-4:MajorScale"
+• 
+Esempio 2 (Scala): Una scala Pelog (Degung) su La 440.
+• 
+usi = "scala:A4:pelog_degung"
+• 
+Esempio 3 (Custom): Una scala personalizzata (es. una triade diminuita) basata su Do 4.
+• 
+usi = "custom:C4:C4,E-4,G-4"
+• 
+Nota: Per il paradigma custom, la tonic ('C4') è tecnicamente ridondante poiché le altezze sono assolute, ma viene mantenuta per coerenza sintattica e per fornire un valore per il metodo .getTonic() dell'oggetto risultante.   
+3.4 Tabella 2: Specifica Formale della Sintassi USI
+La seguente tabella serve come specifica tecnica formale per la costruzione e il parsing della stringa USI.
+Paradigma
+Formato USI
+tonic (Esempio)
+scale_id (Esempio)
+USI Completo (Esempio)
+Concrete
+concrete:<tonic>:<ClassName>
+C#5
+MelodicMinorScale
+"concrete:C#5:MelodicMinorScale"
+Scala
+scala:<tonic>:<filename_root>
+A4
+mbira_banda
+"scala:A4:mbira_banda"
+Custom
+custom:<tonic>:<pitch_list>
+C4
+C4,E-4,G-4
+"custom:C4:C4,E-4,G-4"
+Copia tabella
+Sezione 4: Implementazione della Factory: Parsing dell'USI e Istanziamento
+4.1 Obiettivo: Estrarre la Scala dalla Stringa
+Questa sezione affronta la richiesta di "estrarne una". Si implementerà la funzione "factory" complementare, get_scale_from_usi(usi_string). Questa funzione accetta un USI (come definito nella Sezione 3) e restituisce un oggetto music21.scale.Scale istanziato e pronto all'uso.
+4.2 Logica Software della Funzione Factory
+La funzione implementa un router basato sul paradigma codificato nella stringa USI.
+Fase 1: Parsing e Validazione
+1. 
+Si tenta di dividere la stringa in tre parti: try: paradigm, tonic_str, scale_id = usi_string.split(':').
+2. 
+Se fallisce (es. formato errato), si solleva un'eccezione personalizzata InvalidUSIFormatError.
+3. 
+Si valida che paradigm sia uno dei valori attesi ('concrete', 'scala', 'custom').
+4. 
+Si crea l'oggetto tonica: tonic_pitch = music21.pitch.Pitch(tonic_str).   
+Fase 2: Logica Condizionale (Routing del Paradigma)
+• 
+if paradigm == 'concrete':
+1. 
+Si ottiene il nome della classe: scale_class_name = scale_id.
+2. 
+Si recupera la classe reale dal modulo music21.scale: scale_class = getattr(music21.scale, scale_class_name).
+3. 
+Si solleva un'eccezione UnknownScaleError se getattr fallisce (la classe non esiste).
+4. 
+Si istanzia e restituisce: return scale_class(tonic_pitch) (es. music21.scale.MajorScale(Pitch('B-4'))).   
+• 
+elif paradigm == 'scala':
+1. 
+Si ricostruisce il nome del file: scl_filename = scale_id + ".scl".
+2. 
+Si istanzia e restituisce: return music21.scale.ScalaScale(tonic_pitch, scl_filename).   
+3. 
+(Un'implementazione di produzione dovrebbe includere un try/except per gestire file .scl non trovati).
+• 
+elif paradigm == 'custom':
+1. 
+Si analizza l'elenco di altezze: pitch_list_str = scale_id.split(',').
+2. 
+Si convertono le stringhe in oggetti Pitch: pitch_list = [music21.pitch.Pitch(p) for p in pitch_list_str].
+3. 
+Si istanzia ConcreteScale direttamente e si restituisce: return music21.scale.ConcreteScale(pitches=pitch_list, tonic=tonic_pitch).   
+4.3 Esempi d'Uso del Ciclo Completo (Round-Trip)
+I seguenti esempi di codice dimostrano l'intero processo, dalla definizione di un USI all'istanziamento dell'oggetto music21 corrispondente.
+Esempio 1 (Concrete):
+Python
+Copia codice
+usi_major = "concrete:E-4:MajorScale"
+e_flat_major = get_scale_from_usi(usi_major)
+# print(e_flat_major) 
+# Output: <music21.scale.MajorScale E- major>
+Esempio 2 (Scala):
+Python
+Copia codice
+usi_mbira = "scala:A4:mbira_banda"
+mbira_scale = get_scale_from_usi(usi_mbira)
+# print(mbira_scale) 
+# Output: <music21.scale.scala.ScalaScale A4 mbira_banda.scl>
+Esempio 3 (Custom):
+Python
+Copia codice
+# Una scala basata su una triade diminuita
+usi_custom = "custom:C4:C4,E-4,G-4"
+dim_triad_scale = get_scale_from_usi(usi_custom)
+# print(dim_triad_scale) 
+# Output: <music21.scale.ConcreteScale C4>
+Sezione 5: Guida all'Utilizzo e Considerazioni Avanzate
+5.1 Utilizzo degli Oggetti Scala Istanziati
+Una volta che un oggetto scala è stato istanziato tramite la factory get_scale_from_usi, può essere utilizzato per generare materiale musicale. L'API di music21 per le scale presenta una distinzione importante tra la proprietà .pitches e il metodo .getPitches().
+Ottenere le Altezze: .pitches vs. .getPitches()
+• 
+.pitches (Proprietà): Questa è una proprietà read-only che restituisce un elenco predefinito di altezze, tipicamente coprendo una singola ottava dalla tonica. È utile per un'ispezione rapida.   
+Python
+Copia codice
+# e_flat_major è l'oggetto dall'Esempio 1
+# print([str(p) for p in e_flat_major.pitches])
+# Output:
+• 
+.getPitches() (Metodo): Questo è il metodo più potente e flessibile per generare raccolte di altezze. A differenza della proprietà .pitches, questo metodo consente di specificare:   
+1. 
+Intervallo: getPitches(startPitch, endPitch) restituisce tutte le note della scala comprese tra due altezze qualsiasi.   
+2. 
+Direzione: direction=scale.Direction.DESCENDING o ASCENDING.   
+La specifica della direzione è essenziale per scale musicalmente complesse. Ad esempio, la MelodicMinorScale (Scala Minore Melodica) ha forme diverse in salita (gradi 6 e 7 alterati) e in discesa (gradi 6 e 7 naturali).   
+Esempio di .getPitches() (Caso Melodico Minore):
+Python
+Copia codice
+usi_melodic = "concrete:A3:MelodicMinorScale"
+a_melodic_minor = get_scale_from_usi(usi_melodic)
+
+# Forma ASCENDENTE (G#)
+asc_pitches = a_melodic_minor.getPitches('A3', 'A4', direction=scale.Direction.ASCENDING)
+# print([str(p) for p in asc_pitches])
+# Output:
+
+# Forma DISCENDENTE (G naturale, F naturale)
+desc_pitches = a_melodic_minor.getPitches('A4', 'A3', direction=scale.Direction.DESCENDING)
+# print([str(p) for p in desc_pitches])
+# Output:
+Questa distinzione è fondamentale: l'uso della proprietà .pitches su una scala melodica minore restituirebbe solo una delle sue forme, portando a risultati musicalmente errati in un contesto discendente. Il metodo .getPitches() è l'unico modo corretto per generare materiale musicale su intervalli specifici o per gestire scale direzionali.
+Altri Metodi Utili:
+• 
+.getTonic(): Restituisce l'oggetto Pitch della tonica della scala.   
+• 
+.nextPitch(pitch, direction=...): Trova la nota successiva nella scala da un dato punto, anche se il punto di partenza non è nella scala.   
+5.2 Considerazioni di Contesto
+La soluzione qui presentata si integra nell'ecosistema più ampio di music21.   
+• 
+Scale e Tonalità: Come discusso (Sezione 1.4), la scale.MajorScale('C') è concettualmente correlata ma distinta da key.Key('C'). La classe Key gestisce la tonalità e l'armatura di chiave , mentre l'oggetto Scale restituito dalla nostra factory è progettato per la generazione di altezze.   
+• 
+Scale Personalizzate e Debug: La confusione sull'ereditarietà e sulla definizione di scale personalizzate è un problema comune, come evidenziato in varie discussioni della comunità. L'approccio del paradigma custom USI (Sezione 3) e l'uso diretto di ConcreteScale evitano queste insidie. Fornisce un percorso chiaro e supportato per le scale definite dall'utente senza richiedere la creazione di sottoclassi personalizzate o la modifica interna della libreria.   
+• 
+Confronto con Chord: Gli oggetti music21.chord.Chord hanno una logica simile per l'identificazione, come la proprietà .commonName. L'architettura di catalogo e factory sviluppata in questo report per le scale potrebbe servire da modello per un sistema analogo di gestione degli accordi.   
+• 
+Approfondimenti: Risorse video esistono per esplorare ulteriormente il modulo scale di music21, inclusa CyclicalScale (una classe base per molte ConcreteScale), che può essere utile per un'analisi più approfondita.   
+Sezione 6: Conclusione e Codice Completo dell'Implementazione
+6.1 Riepilogo della Soluzione
+Questo report ha analizzato l'architettura a due paradigmi (ConcreteScale e ScalaScale) del modulo music21.scale. Ha fornito una metodologia di introspezione robusta per catalogare entrambi i sistemi, escludendo rigorosamente gli oggetti music21.key.Key per garantire la correttezza semantica.
+È stato definito un formato di Identificatore di Scala Univoco (USI) (es. paradigm:tonic:id) che gestisce in modo pulito le scale basate su classi, le scale basate su file e le scale personalizzate definite dall'utente.
+Infine, è stata fornita un'implementazione della funzione factory get_scale_from_usi per l'istanziamento e una guida critica all'uso (in particolare la distinzione tra .pitches e .getPitches()), fornendo una soluzione end-to-end per la gestione delle scale in music21.
+6.2 Codice Sorgente Completo
+Il seguente blocco di codice Python contiene l'implementazione completa delle funzioni di introspezione e della factory, insieme a un'unità dimostrativa.
+Python
+Copia codice
+import inspect
+from music21 import scale, pitch, note
+
+# --- Eccezioni Personalizzate ---
+
+class ScaleException(Exception):
+    """Classe base per errori relativi alle scale in questo modulo."""
+    pass
+
+class InvalidUSIFormatError(ScaleException):
+    """Sollevata quando una stringa USI non è nel formato atteso."""
+    def __init__(self, usi_string):
+        message = (
+            f"La stringa USI '{usi_string}' non è valida. "
+            "Il formato atteso è 'paradigm:tonic:scale_id'."
+        )
+        super().__init__(message)
+
+class UnknownScaleError(ScaleException):
+    """Sollevata quando uno scale_id non può essere trovato o istanziato."""
+    def __init__(self, paradigm, scale_id):
+        message = (
+            f"Impossibile trovare la scala con id '{scale_id}' "
+            f"per il paradigma '{paradigm}'."
+        )
+        super().__init__(message)
+
+# --- Fase 1: Introspezione (Popolamento Catalogo) ---
+
+def _find_scale_subclasses(base_class):
+    """
+    Funzione helper ricorsiva per trovare tutte le sottoclassi
+    non astratte e valide.
+    """
+    found_classes = set()
+    for subclass in base_class.__subclasses__():
+        # 1. Esclusione cruciale: ignora il modulo key.Key e KeySignature
+        if subclass.__module__.startswith('music21.key'):
+            continue
+            
+        # 2. Vogliamo solo classi concrete, non basi astratte
+        if not inspect.isabstract(subclass):
+            # 3. Assicuriamoci che sia una ConcreteScale (o discendente)
+            if issubclass(subclass, scale.ConcreteScale):
+                found_classes.add(subclass)
+        
+        # 4. Ricerca ricorsiva nei figli di questa sottoclasse
+        found_classes.update(_find_scale_subclasses(subclass))
+    return found_classes
+
+def _format_friendly_name(programmatic_id, paradigm):
+    """Helper per creare nomi leggibili."""
+    if paradigm == 'concrete':
+        # Converte 'MajorScale' in 'Major Scale'
+        if programmatic_id.endswith('Scale'):
+            programmatic_id = programmatic_id[:-5]
+        return ' '.join(a.capitalize() for a in programmatic_id.split('_'))
+    elif paradigm == 'scala':
+        # Converte 'mbira_banda' in 'Mbira Banda'
+        return ' '.join(a.capitalize() for a in programmatic_id.split('_'))
+    return programmatic_id
+
+def build_scale_catalog():
+    """
+    Esegue l'introspezione di music21 per costruire un dizionario
+    unificato di tutte le scale disponibili.
+    
+    Restituisce:
+        list[dict]: Un elenco di dizionari, ognuno 
+                    rappresentante una scala.
+    """
+    catalog =
+    
+    # --- Paradigma 1: Sottoclassi ConcreteScale ---
+    concrete_classes = _find_scale_subclasses(scale.Scale)
+    for cls in sorted(concrete_classes, key=lambda x: x.__name__):
+        prog_id = cls.__name__
+        catalog.append({
+            'programmatic_id': prog_id,
+            'friendly_name': _format_friendly_name(prog_id, 'concrete'),
+            'paradigm': 'concrete',
+            'class': cls
+        })
+        
+    # --- Paradigma 2: Archivio ScalaScale ---
+    try:
+        scala_paths = scale.scala.getPaths()
+        for scl_path in sorted(scala_paths, key=lambda x: x.name):
+            prog_id = scl_path.stem  # es. 'mbira_banda'
+            catalog.append({
+                'programmatic_id': prog_id,
+                'friendly_name': _format_friendly_name(prog_id, 'scala'),
+                'paradigm': 'scala',
+                'class': scale.scala.ScalaScale
+            })
+    except Exception as e:
+        print(f"Attenzione: Impossibile caricare l'archivio Scala. {e}")
+
+    return catalog
+
+# --- Fase 2: Factory (Parsing USI) ---
+
+def get_scale_from_usi(usi_string):
+    """
+    Analizza un Identificatore di Scala Univoco (USI) e 
+    restituisce un'istanza di music21.scale.Scale.
+
+    Args:
+        usi_string (str): La stringa USI, 
+                          es. "concrete:C4:MajorScale"
+
+    Returns:
+        music21.scale.Scale: L'oggetto scala istanziato.
+    """
+    try:
+        paradigm, tonic_str, scale_id = usi_string.split(':', 2)
+    except ValueError:
+        raise InvalidUSIFormatError(usi_string)
+        
+    try:
+        tonic_pitch = pitch.Pitch(tonic_str)
+    except Exception as e:
+        raise ScaleException(f"Tonica non valida '{tonic_str}': {e}")
+
+    # --- Routing del Paradigma ---
+    
+    if paradigm == 'concrete':
+        try:
+            # Ottiene la classe dal modulo 'scale' usando il suo nome
+            scale_class = getattr(scale, scale_id)
+            return scale_class(tonic_pitch)
+        except AttributeError:
+            raise UnknownScaleError(paradigm, scale_id)
+        except Exception as e:
+            raise ScaleException(
+                f"Errore durante l'istanziamento di {scale_id}({tonic_str}): {e}"
+            )
+            
+    elif paradigm == 'scala':
+        scl_filename = scale_id + ".scl"
+        try:
+            # Istanzia ScalaScale con tonica e nome file
+            return scale.scala.ScalaScale(tonic_pitch, scl_filename)
+        except Exception as e:
+            # Solitamente un FileNotFoundError se l'ID non è corretto
+            raise UnknownScaleError(paradigm, f"{scl_filename} ({e})")
+            
+    elif paradigm == 'custom':
+        try:
+            pitch_list_str = scale_id.split(',')
+            pitch_list = [pitch.Pitch(p) for p in pitch_list_str]
+            # Istanzia ConcreteScale direttamente con un elenco di altezze
+            return scale.ConcreteScale(pitches=pitch_list, 
+                                     tonic=tonic_pitch)
+        except Exception as e:
+            raise ScaleException(
+                f"Errore nel parsing della pitch_list 'custom': {e}"
+            )
+            
+    else:
+        raise ScaleException(f"Paradigma USI sconosciuto: '{paradigm}'")
+
+
+# --- Fase 3: Esempi d'Uso ---
+
+if __name__ == "__main__":
+    
+    print("--- 1. Costruzione del Catalogo Scale ---")
+    scale_catalog = build_scale_catalog()
+    print(f"Trovate {len(scale_catalog)} scale in totale.")
+    
+    print("\nEsempi dal catalogo 'concrete':")
+    for s in scale_catalog:
+        if s['paradigm'] == 'concrete':
+            print(f"  - {s['programmatic_id']} ({s['friendly_name']})")
+            if s['programmatic_id'] == 'OctatonicScale':
+                break # Stampa solo i primi
+    
+    print("\nEsempi dal catalogo 'scala':")
+    count = 0
+    for s in scale_catalog:
+        if s['paradigm'] == 'scala' and 'pelog' in s['programmatic_id']:
+            print(f"  - {s['programmatic_id']} ({s['friendly_name']})")
+            count += 1
+        if count >= 5:
+            break
+            
+    print("\n--- 2. Test della Factory USI (Round-Trip) ---")
+    
+    # Esempio 1: Concrete
+    usi_1 = "concrete:C#5:MelodicMinorScale"
+    print(f"Test USI 1: {usi_1}")
+    scale_1 = get_scale_from_usi(usi_1)
+    print(f"  -> Oggetto: {scale_1}")
+    
+    # Esempio 2: Scala
+    usi_2 = "scala:A4:mbira_banda"
+    print(f"Test USI 2: {usi_2}")
+    scale_2 = get_scale_from_usi(usi_2)
+    print(f"  -> Oggetto: {scale_2}")
+    
+    # Esempio 3: Custom
+    usi_3 = "custom:G3:G3,A3,C#4,D4,F4"
+    print(f"Test USI 3: {usi_3}")
+    scale_3 = get_scale_from_usi(usi_3)
+    print(f"  -> Oggetto: {scale_3}")
+    print(f"  -> Tonic: {scale_3.getTonic()}")
+
+    print("\n--- 3. Esempio d'uso avanzato (.getPitches) ---")
+    print(f"Uso di {scale_1} (Minore Melodica) con direzioni:")
+    
+    # Dimostrazione della differenza direzionale
+    pitches_asc = scale_1.getPitches('C#5', 'C#6', 
+                                   direction=scale.Direction.ASCENDING)
+    pitches_desc = scale_1.getPitches('C#6', 'C#5', 
+                                    direction=scale.Direction.DESCENDING)
+                                    
+    print("  Forma Ascendente (B#, A#):")
+    print(f"  -> {[str(p) for p in pitches_asc]}")
+    
+    print("  Forma Discendente (B, A):")
+    print(f"  -> {[str(p) for p in pitches_desc]}")

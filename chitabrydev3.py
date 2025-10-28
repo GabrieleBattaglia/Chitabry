@@ -1,71 +1,32 @@
-# Chitabry dev3 - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia
+# Chitabry dev3 - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 2.5 Pro
 # Data concepimento: venerdì 7 febbraio 2020.
 # 28 giugno 2024 copiato su Github
 # 22 ottobre 2025, versione 4 con importante refactoring
+# 27 ottobre ora usiamo music21
 
-import json, re
-from music21 import pitch, chord, scale, interval
+from time import sleep as aspetta
+from scipy import signal
+from music21 import pitch, chord, scale, interval, harmony
+from GBUtils import dgt, manuale, menu, key
+from typing import Dict
+from pathlib import Path
 import numpy as np
 import sounddevice as sd
-from scipy import signal
-import sys
-import random, threading, clitronomo
-from time import sleep as aspetta
-from GBUtils import dgt, manuale, menu, key
+import sys, json, re, inspect, random, threading, clitronomo
 
 # --- Costanti ---
-VERSIONE = "4.4.0 del 27 ottobre 2025."
+VERSIONE = "4.4.1 del 28 ottobre 2025."
+# --- Variabile Globale per il dizionario generato ---
+SCALE_CATALOG: list[Dict] = [] # Catalogo completo (lista di dizionari)
+USER_CHORD_DICT: Dict[str, str] = {}
+SCALE_TYPES_DICT: Dict[str, str] = {}
 FILE_IMPOSTAZIONI = "chitabry-settings.json"
 archivio_modificato = False
 impostazioni = {} # Conterrà l'intera configurazione caricata/default
 
-# Nomenclatura standard usata internamente e da Acusticator
-NOTE_STD = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-NOTE_LATINE = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#', 'LA', 'LA#', 'SI']
-NOTE_ANGLO = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
-# Dizionari per la conversione
-STD_TO_LATINO = dict(zip(NOTE_STD, NOTE_LATINE))
-STD_TO_ANGLO = dict(zip(NOTE_STD, NOTE_ANGLO))
-STD_TO_LATINO.update({
-    'Db': 'REb',
-    'Eb': 'MIb',
-    'Gb': 'SOLb',
-    'Ab': 'LAb',
-    'Bb': 'SIb'
-})
-STD_TO_ANGLO.update({
-    'Db': 'Db',
-    'Eb': 'Eb',
-    'Gb': 'Gb',
-    'Ab': 'Ab',
-    'Bb': 'Bb'
-})
-# Struttura del manico (basata sulla notazione standard)
-SCALACROMATICA_STD = {}
-i = 0
-for j in range(0, 8):
-    for nota in NOTE_STD:
-        i += 1
-        SCALACROMATICA_STD[i] = nota + str(j)
-
-MANICO = []
-for i in range(29, 75):
-    MANICO.append(SCALACROMATICA_STD[i])
-
-CAPOTASTI = {}
-i = 6
-for j in [29, 34, 39, 44, 48, 53]:
-    CAPOTASTI[i] = j
-    i -= 1
-
-CORDE = {}
-for corda in range(6, 0, -1):
-    for tasto in range(CAPOTASTI[corda], CAPOTASTI[corda] + 22):
-        CORDE[str(corda) + "." + str(tasto - CAPOTASTI[corda])] = SCALACROMATICA_STD[tasto]
 MAINMENU = {
-    "Accordi": "Gestisci la tua Chordpedia (Tablature salvate)",
-    "Costruttore Accordi": "Analizza/Scopri le note di un accordo", # <-- NUOVA VOCE
+    "Accordi": "Gestisci le tue Tablature Accordi (salvate)",
+    "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Metronomo": "Avvia Clitronomo",
     "Scale": "Visualizza, esercitati e gestisci le scale",
     "Impostazioni": "Configura i suoni e la notazione delle note",
@@ -100,136 +61,313 @@ def note_to_freq(note):
     return 0.0
 
 #QF
+def setup_note_constants():
+    """Crea le costanti per le note e i dizionari di conversione."""
+    NOTE_STD = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    NOTE_LATINE = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#', 'LA', 'LA#', 'SI']
+    NOTE_ANGLO = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+    STD_TO_LATINO = dict(zip(NOTE_STD, NOTE_LATINE))
+    STD_TO_ANGLO = dict(zip(NOTE_STD, NOTE_ANGLO))
+    STD_TO_LATINO.update({
+        'Db': 'REb', 'Eb': 'MIb', 'Gb': 'SOLb', 'Ab': 'LAb', 'Bb': 'SIb'
+    })
+    STD_TO_ANGLO.update({
+        'Db': 'Db', 'Eb': 'Eb', 'Gb': 'Gb', 'Ab': 'Ab', 'Bb': 'Bb'
+    })
+    
+    return NOTE_STD, NOTE_LATINE, NOTE_ANGLO, STD_TO_LATINO, STD_TO_ANGLO
+
+def build_fretboard_data(NOTE_STD):
+    """Costruisce i dizionari che rappresentano il manico della chitarra."""
+    SCALACROMATICA_STD = {}
+    i = 0
+    for j in range(0, 8):
+        for nota in NOTE_STD:
+            i += 1
+            SCALACROMATICA_STD[i] = nota + str(j)
+
+    CAPOTASTI = {}
+    i = 6
+    for j in [29, 34, 39, 44, 48, 53]:
+        CAPOTASTI[i] = j
+        i -= 1
+
+    CORDE = {}
+    for corda in range(6, 0, -1):
+        for tasto in range(CAPOTASTI[corda], CAPOTASTI[corda] + 22):
+            CORDE[str(corda) + "." + str(tasto - CAPOTASTI[corda])] = SCALACROMATICA_STD[tasto]
+            
+    return SCALACROMATICA_STD, CAPOTASTI, CORDE
+
+NOTE_STD, NOTE_LATINE, NOTE_ANGLO, STD_TO_LATINO, STD_TO_ANGLO = setup_note_constants()
+SCALACROMATICA_STD, CAPOTASTI, CORDE = build_fretboard_data(NOTE_STD)
+
 # --- Funzioni per generare dizionari da music21 (da chiamare una volta all'avvio) ---
 
-def build_scale_dictionary():
+class ScaleException(Exception):
+    """Classe base per errori relativi alle scale in questo modulo."""
+    pass
+
+class InvalidUSIFormatError(ScaleException):
+    """Sollevata quando una stringa USI non è nel formato atteso."""
+    def __init__(self, usi_string):
+        message = (
+            f"La stringa USI '{usi_string}' non è valida. "
+            "Il formato atteso è 'paradigm:tonic:scale_id'."
+        )
+        super().__init__(message)
+class UnknownScaleError(ScaleException):
+    """Sollevata quando uno scale_id non può essere trovato o istanziato."""
+    def __init__(self, paradigm, scale_id):
+        message = (
+            f"Impossibile trovare/istanziare la scala con id '{scale_id}' "
+            f"per il paradigma '{paradigm}'."
+        )
+        super().__init__(message)
+
+# --- Funzioni Helper per Introspezione (dal documento) ---
+
+def _find_scale_subclasses(base_class):
     """
-    Usa l'introspezione per trovare le classi di scale in music21
-    e genera un dizionario {nome_music21: nome_visualizzato}.
+    Funzione helper ricorsiva per trovare tutte le sottoclassi
+    ConcreteScale valide, escludendo il modulo key.
     """
-    scale_dict = {}
-    # Nomi comuni che music21 deriva tramite deriveByTonalityAndMode
-    common_scales = [
-        "major", "minor", "harmonic minor", "melodic minor",
-        "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "ionian", "locrian",
-        "pentatonic major", "pentatonic minor", "blues", "chromatic", "whole tone"
-    ]
-    for name in common_scales:
-        # Per questi, il nome music21 e quello visualizzato sono simili
-        scale_dict[name] = name.replace(" minor", " Minor").replace(" major", " Major").title()
+    found_classes = set()
+    try:
+        subclasses = base_class.__subclasses__()
+    except TypeError:
+        subclasses = []
 
-    # Potremmo aggiungere anche l'introspezione per classi specifiche se servisse,
-    # ma deriveByTonalityAndMode copre la maggior parte dei casi utili.
-    # Esempio introspezione (più complesso da rendere user-friendly):
-    # for name, obj in inspect.getmembers(scale):
-    #     if inspect.isclass(obj) and issubclass(obj, scale.AbstractScale) and obj != scale.AbstractScale:
-    #         # ... logica per ottenere un nome leggibile dalla classe ...
-    #         pass
+    for subclass in subclasses:
+        if subclass.__module__.startswith('music21.key'):
+            continue
+        if not inspect.isabstract(subclass) and issubclass(subclass, scale.ConcreteScale):
+            found_classes.add(subclass)
+        found_classes.update(_find_scale_subclasses(subclass))
+    return found_classes
 
-    # Ordiniamo per nome visualizzato
-    return dict(sorted(scale_dict.items(), key=lambda item: item[1]))
+def _format_friendly_name(programmatic_id, paradigm):
+    """Helper per creare nomi leggibili."""
+    name = programmatic_id
+    if paradigm == 'concrete':
+        if name.endswith('Scale'):
+            name = name[:-5]
+        # Modifica suggerita per inserire spazi: usa regex
+        name = re.sub(r'(?<!^)(?=[A-Z])', ' ', name).title()
+    elif paradigm == 'scala':
+        name = ' '.join(a.capitalize() for a in name.split('_'))
+    return name.strip()
 
-def build_chord_type_dictionary():
+def get_user_chord_dictionary() -> Dict[str, str]:
     """
-    Genera un dizionario {nome_music21: nome_visualizzato} per i tipi di accordo,
-    combinando qualità base con estensioni/alterazioni comuni.
+    Esegue l'introspezione di music21.harmony per costruire un
+    dizionario pulito di tipi di accordi per l'interfaccia utente.
+
+    Ritorna:
+        Dict[str, str]: Un dizionario dove la chiave è
+        l'abbreviazione (shorthand) primaria usata per la costruzione
+        e il valore è il nome leggibile per il menu.
     """
-    # Qualità base riconosciute da music21 (spesso come suffisso o nome completo)
-    qualities_m21 = {
-        "": "Major",  # Il suffisso vuoto per major
-        "m": "Minor",
-        "dim": "Diminished",
-        "aug": "Augmented",
-    }
-    # Estensioni/Alterazioni comuni (suffissi)
-    extensions_m21 = {
-        "7": "7",
-        "maj7": "maj7",
-        "6": "6",
-        "m7": "m7", # Già presente in 'm', ma serve per combinazioni
-        "dim7": "dim7", # Già presente in 'dim'
-        "m7b5": "m7b5", # Half-diminished
-        "sus2": "sus2",
-        "sus4": "sus4",
-        "9": "9",
-        "m9": "m9",
-        "maj9": "maj9",
-        "11": "11", # Spesso richiede contesto (m11)
-        "m11": "m11",
-        "13": "13", # Spesso richiede contesto (m13, maj13)
-        "m13": "m13",
-        "maj13": "maj13",
-        "7b5": "7b5",
-        "7#5": "7#5",
-        "7b9": "7b9",
-        "7#9": "7#9",
-        "add9": "add9",
-        "5": "5", # Power Chord
-    }
-    # Nomi speciali che non seguono lo schema suffisso
-    special_chords = {
-         "Neapolitan": "Neapolitan Sixth", # Esempio
-    }
+    user_dict = {}
+    processed_types = set() # Per evitare duplicati dovuti a shorthand non unici
 
-    chord_dict = {}
+    # Itera sull'elenco master dei tipi di accordo canonici
+    for chord_type in harmony.CHORD_TYPES:
 
-    # Aggiungi le triadi base
-    for suffix, display in qualities_m21.items():
-        # Saltiamo il major vuoto qui, lo gestiamo dopo
-        if suffix: chord_dict[suffix] = display
+        # Salta tipi già processati (se getCurrentAbbreviationFor non è univoco)
+        if chord_type in processed_types:
+            continue
 
-    # Aggiungi le estensioni/alterazioni comuni (spesso sono tipi completi)
-    for suffix, display in extensions_m21.items():
-         chord_dict[suffix] = display # music21 spesso li prende come nome completo
+        # 1. Ottiene l'abbreviazione "preferita" dalla libreria -> CHIAVE
+        primary_shorthand = harmony.getCurrentAbbreviationFor(chord_type)
 
-    # Aggiungi tipi speciali
-    for name, display in special_chords.items():
-        chord_dict[name] = display
+        # Evita di sovrascrivere una chiave già assegnata (es. '' per major)
+        # Diamo priorità alla prima assegnazione trovata (che di solito è quella corretta)
+        if primary_shorthand in user_dict:
+             continue
 
-    # Caso speciale per "Major" (senza suffisso)
-    chord_dict[""] = "Major" # Chiave vuota per rappresentare Major Triad
+        # 2. Pulisce il nome canonico per la visualizzazione -> VALORE
+        readable_name = chord_type.replace('-', ' ').title()
 
-    # Rimuovi eventuali duplicati basati sul valore (nome visualizzato), mantenendo una chiave
-    final_dict = {}
-    seen_values = set()
-    # Ordina per facilitare la ricerca nel menu
-    sorted_items = sorted(chord_dict.items(), key=lambda item: (len(item[0]), item[1]))
-    for key, value in sorted_items:
-        if value not in seen_values:
-            final_dict[key] = value
-            seen_values.add(value)
+        # Correzioni specifiche per leggibilità
+        if primary_shorthand == '' and chord_type == 'major':
+            readable_name = 'Major' # Triade Maggiore
+        elif primary_shorthand == 'm' and chord_type == 'minor':
+            readable_name = 'Minor' # Triade Minore
+        elif primary_shorthand == 'dim' and chord_type == 'diminished':
+            readable_name = 'Diminished' # Triade Diminuita
+        elif primary_shorthand == 'aug' and chord_type == 'augmented':
+            readable_name = 'Augmented' # Triade Aumentata
+        elif primary_shorthand == 'm7b5':
+             readable_name = 'Half-Diminished (m7b5)' # Più chiaro
+        elif chord_type == 'power':
+             readable_name = 'Power Chord (5)'
+        # Aggiungi altre correzioni se necessario per migliorare la leggibilità
 
-    # Aggiungiamo l'opzione manuale alla fine
-    final_dict["manuale"] = ">> Inserisci nome manualmente..."
+        user_dict[primary_shorthand] = readable_name
+        processed_types.add(chord_type) # Segna il tipo canonico come processato
 
-    return final_dict
 
-# --- Variabili Globali per i dizionari generati ---
+    # Aggiungi l'opzione manuale separatamente
+    user_dict["manuale"] = ">> Inserisci nome manualmente..."
 
-class Voice:
+    # Ritorna il dizionario ordinato per nome leggibile (valore)
+    # Mettiamo l'opzione manuale alla fine
+    manual_entry = user_dict.pop("manuale")
+    sorted_dict = dict(sorted(user_dict.items(), key=lambda item: item[1]))
+    sorted_dict["manuale"] = manual_entry # Riaggiungi alla fine
+
+    return sorted_dict
+
+def build_scale_catalog() -> list[Dict]:
     """
-    Gestisce una singola voce (corda).
-    Pre-calcola l'audio ('renderizza') per un callback stabile.
-    Usa un lock per la sicurezza tra i thread.
+    Esegue l'introspezione di music21 per costruire un dizionario
+    unificato di tutte le scale disponibili (Concrete e Scala).
+
+    Restituisce:
+        list[dict]: Un elenco di dizionari, ognuno
+                    rappresentante una scala.
+    """
+    catalog = []
+    processed_ids = set() # Per evitare ID duplicati
+
+    # --- Paradigma 1: Sottoclassi ConcreteScale ---
+    print("   Analisi classi ConcreteScale...")
+    try:
+        # Usiamo scale.Scale come base per la ricorsione iniziale,
+        # _find_scale_subclasses filtrerà per ConcreteScale e non astratte.
+        concrete_classes = _find_scale_subclasses(scale.Scale)
+
+        for cls in sorted(list(concrete_classes), key=lambda x: x.__name__):
+            prog_id = cls.__name__
+            if prog_id not in processed_ids:
+                catalog.append({
+                    'programmatic_id': prog_id,
+                    'friendly_name': _format_friendly_name(prog_id, 'concrete'),
+                    'paradigm': 'concrete'
+                    # 'class': cls # Rimosso per semplicità
+                })
+                processed_ids.add(prog_id)
+    except Exception as e:
+         print(f"Attenzione: Errore durante introspezione classi ConcreteScale: {e}")
+
+    # --- Paradigma 2: Archivio ScalaScale ---
+    print("   Analisi archivio Scala (.scl)...")
+    try:
+        scala_paths = scale.scala.getPaths()
+
+        # Ordina in modo robusto
+        def get_sort_key(p):
+            try: return Path(p).stem.lower()
+            except Exception: return str(p).lower()
+        sorted_scala_paths = sorted(scala_paths, key=get_sort_key)
+
+        for scl_path_obj in sorted_scala_paths:
+            try:
+                scl_path = Path(scl_path_obj) # Assicura sia Path
+                prog_id = scl_path.stem
+                filename_scl = scl_path.name
+
+                if prog_id not in processed_ids and scl_path.is_file():
+                    friendly_name_raw = _format_friendly_name(prog_id, 'scala')
+                    description = friendly_name_raw
+                    try:
+                         scale_info_data = scale.scala.getScaleInfo(filename_scl)
+                         description = scale_info_data.get('description', friendly_name_raw)
+                    except Exception: pass # Ignora errori lettura descrizione
+
+                    catalog.append({
+                        'programmatic_id': prog_id,
+                        'friendly_name': description if description else friendly_name_raw,
+                        'paradigm': 'scala'
+                        # 'class': scale.scala.ScalaScale # Rimosso per semplicità
+                    })
+                    processed_ids.add(prog_id)
+            except Exception as path_error:
+                 print(f"Attenzione: Errore nell'elaborare il percorso Scala '{scl_path_obj}': {path_error}")
+
+    except ImportError: print("Attenzione: Modulo 'scala.scala' non trovato.")
+    except AttributeError: print("Attenzione: Funzione 'getPaths' non trovata in scala.scala.")
+    except Exception as e: print(f"Attenzione: Impossibile caricare l'archivio Scala. {e}")
+
+    # Ordina catalogo finale
+    catalog.sort(key=lambda x: x.get('friendly_name', '').lower())
+
+    print(f"   ...Catalogo scale costruito con {len(catalog)} voci.")
+    return catalog
+
+def get_scale_from_usi(usi_string: str) -> scale.Scale:
+    """
+    Analizza un Identificatore di Scala Univoco (USI) e
+    restituisce un'istanza di music21.scale.Scale.
+    (Basato sulla Sezione 4.2 del documento)
+    """
+    try:
+        parts = usi_string.split(':', 2)
+        if len(parts) != 3: raise ValueError("Formato non valido")
+        paradigm, tonic_str, scale_id = parts
+    except ValueError:
+        raise InvalidUSIFormatError(usi_string)
+
+    try:
+        tonic_pitch = pitch.Pitch(tonic_str)
+    except Exception as e:
+        raise ScaleException(f"Tonica non valida '{tonic_str}': {e}")
+
+    # --- Routing del Paradigma ---
+    if paradigm == 'concrete':
+        try:
+            scale_class = getattr(scale, scale_id) # Recupera classe da music21.scale
+            # Istanzia passando solo la tonica
+            return scale_class(tonic_pitch)
+        except AttributeError:
+            raise UnknownScaleError(paradigm, scale_id)
+        except Exception as e:
+            raise ScaleException(f"Errore istanziazione {scale_id}({tonic_str}): {e}")
+
+    elif paradigm == 'scala':
+        scl_filename = scale_id + ".scl"
+        try:
+            # Istanzia ScalaScale (accedendo da scale, come corretto prima)
+            return scale.ScalaScale(tonic_pitch, scl_filename)
+        except FileNotFoundError:
+             raise UnknownScaleError(paradigm, f"File {scl_filename} non trovato.")
+        except AttributeError: # Se scale.ScalaScale non esiste
+             raise ScaleException("Classe ScalaScale non trovata.")
+        except Exception as e:
+            raise ScaleException(f"Errore istanziazione ScalaScale('{tonic_str}', '{scl_filename}'): {e}")
+
+    elif paradigm == 'custom':
+        try:
+            pitch_list_str = scale_id.split(',')
+            pitch_list = [pitch.Pitch(p.strip()) for p in pitch_list_str if p.strip()]
+            if not pitch_list: raise ValueError("Lista pitch vuota")
+            # Istanzia ConcreteScale con pitches e tonic
+            return scale.ConcreteScale(pitches=pitch_list, tonic=tonic_pitch)
+        except Exception as e:
+            raise ScaleException(f"Errore parsing/creazione scala 'custom' da '{scale_id}': {e}")
+
+    else:
+        raise ScaleException(f"Paradigma USI sconosciuto: '{paradigm}'")
+
+class NoteRenderer:
+    """
+    Gestisce il rendering "one-shot" di una singola nota.
+    Pre-calcola l'audio (onda + envelope) e lo restituisce.
     """
     def __init__(self, fs=FS):
         self.fs = fs
         self.freq = 0.0
         self.vol = 0.0
         self.pan_l, self.pan_r = 0.707, 0.707
-        
-        self.rendered_stereo_note = np.array([], dtype=np.float32)
-        self.read_pos = 0
-        self.is_playing = False
-
-        self.adsr_list = [0,0,0,0]
+        self.adsr_list = [0, 0, 0, 0]
         self.dur = 0
         self.kind = 1
-        
-        self.lock = threading.Lock() # Lock per la sicurezza
 
     # --- Oscillatori ---
     def _get_wave_vector(self, freq, n_samples):
+        """Genera il vettore d'onda base."""
         t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
         phase_vector = 2 * np.pi * freq * t
         
@@ -259,18 +397,19 @@ class Voice:
         self.pan_l = np.cos(pan_angle + np.pi / 4.0)
         self.pan_r = np.sin(pan_angle + np.pi / 4.0)
 
-    def _render_note(self):
+    def render(self):
         """
-        Pre-calcola l'intera nota (onda + envelope).
+        Pre-calcola l'intera nota (onda + envelope) e 
+        RESTITUISCE l'array stereo.
         """
+        empty_array = np.array([], dtype=np.float32)
+
         if self.freq == 0.0:
-            self.rendered_stereo_note = np.array([], dtype=np.float32)
-            return
+            return empty_array
 
         total_note_samples = int(round(self.dur * self.fs))
         if total_note_samples == 0:
-            self.rendered_stereo_note = np.array([], dtype=np.float32)
-            return
+            return empty_array
             
         wave = self._get_wave_vector(self.freq, total_note_samples)
         wave = wave.astype(np.float32)
@@ -285,14 +424,11 @@ class Voice:
         decay_samples = int(round(decay_frac * total_note_samples))
         release_samples = int(round(release_frac * total_note_samples))
         
-        # --- (FIX Nota Corta) Calcolo Sustain Corretto ---
         sustain_samples = total_note_samples - (attack_samples + decay_samples + release_samples)
         if sustain_samples < 0:
-            # Se A+D+R > 100%, tronca il rilascio
-            release_samples += sustain_samples # sustain_samples è negativo
+            release_samples += sustain_samples
             sustain_samples = 0
-            release_samples = max(0, release_samples) # Assicura non sia negativo
-        # --- Fine Fix ---
+            release_samples = max(0, release_samples)
 
         envelope = np.zeros(total_note_samples, dtype=np.float32)
         current_pos = 0
@@ -323,102 +459,11 @@ class Voice:
         stereo_segment[:, 0] = wave * self.pan_l
         stereo_segment[:, 1] = wave * self.pan_r
         
-        self.rendered_stereo_note = stereo_segment
-    def trigger(self):
-        """Attiva la nota (pre-calcola e resetta il playhead)."""
-        with self.lock:
-            self._render_note() 
-            self.read_pos = 0
-            self.is_playing = True
-        
-    def process_additive(self, output_buffer, n_samples):
-        """
-        Callback audio super-veloce. AGGIUNGE i campioni.
-        NON alloca memoria.
-        """
-        with self.lock:
-            if not self.is_playing:
-                return 
-
-            samples_left = len(self.rendered_stereo_note) - self.read_pos
-            if samples_left <= 0:
-                self.is_playing = False
-                return
-
-            samples_to_take = min(n_samples, samples_left)
-            
-            # Aggiunge i campioni (operazione 'in-place')
-            output_buffer[0:samples_to_take] += self.rendered_stereo_note[self.read_pos : self.read_pos + samples_to_take]
-            
-            self.read_pos += samples_to_take
-
-            if samples_to_take < n_samples:
-                self.is_playing = False
-kind = 1
-a_pct = 0.0
-d_pct = 0.0
-s_level_pct = 0.0
-r_pct = 0.0
-dur_accordi = 0.0
-pan_val = 0.0
-
+        return stereo_segment
 # --- Fine Motore Audio Live ---
 
 def get_impostazioni_default():
     """Restituisce la struttura dati di default per un nuovo file JSON."""
-    
-    scale_default = {
-        "maggiore": {
-            "nome": "Maggiore",
-            "asc": [2, 2, 1, 2, 2, 2, 1],
-            "desc": [2, 2, 1, 2, 2, 2, 1],
-            "simmetrica": True
-        },
-        "minore naturale": {
-            "nome": "Minore Naturale",
-            "asc": [2, 1, 2, 2, 1, 2, 2],
-            "desc": [2, 1, 2, 2, 1, 2, 2],
-            "simmetrica": True
-        },
-        "minore armonica": {
-            "nome": "Minore Armonica",
-            "asc": [2, 1, 2, 2, 1, 3, 1],
-            "desc": [2, 1, 2, 2, 1, 3, 1],
-            "simmetrica": True
-        },
-        "minore melodica": {
-            "nome": "Minore Melodica",
-            "asc": [2, 1, 2, 2, 2, 2, 1],
-            # --- (FIX Problema 2) Intervalli corretti (Minore Naturale) ---
-            "desc": [2, 1, 2, 2, 1, 2, 2], 
-            "simmetrica": False
-        },
-        "maggiore blues": {
-            "nome": "Maggiore Blues",
-            "asc": [3, 2, 1, 1, 3, 2],
-            "desc": [3, 2, 1, 1, 3, 2],
-            "simmetrica": True
-        },
-        "minore blues": {
-            "nome": "Minore Blues",
-            "asc": [2, 1, 1, 3, 2, 3], 
-            "desc": [2, 1, 1, 3, 2, 3],
-            "simmetrica": True
-        },
-        "cromatica": {
-            "nome": "Cromatica",
-            "asc": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            "desc": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            "simmetrica": True
-        },
-        "pentatonica": {
-            "nome": "Pentatonica Maggiore",
-            "asc": [2, 2, 3, 2, 3],
-            "desc": [2, 2, 3, 2, 3],
-            "simmetrica": True
-        }
-    }
-    
     return {
         "nomenclatura": "latino",
         "default_bpm": 60,
@@ -436,7 +481,6 @@ def get_impostazioni_default():
             "volume": 0.35
         },
         "chordpedia": {},
-        "scale": scale_default
     }
 def carica_impostazioni():
     """Carica le impostazioni da FILE_IMPOSTAZIONI.
@@ -508,31 +552,50 @@ def salva_impostazioni():
 
 # --- Funzioni Helper (Fase 1) ---
 
-def get_nota(nota_std):
+def get_nota(nota_std_music21):
     """
-    Converte una nota standard (es. "C#4" o "F#")
-    nella notazione scelta dall'utente (latina o anglosassone).
+    Converte una nota standard (es. "C#4", "Eb", "G~5", "A``")
+    nella notazione scelta dall'utente (latina o anglosassone),
+    preservando i simboli microtonali (~, `` , ~~, ``` ``) alla fine.
     """
+    if not isinstance(nota_std_music21, str):
+        return str(nota_std_music21) # Restituisci come stringa se non è una stringa
+
+    # Mappa di conversione base
     if impostazioni['nomenclatura'] == 'latino':
         mappa = STD_TO_LATINO
     else:
         mappa = STD_TO_ANGLO
 
-    # Separiamo nota e ottava
-    if nota_std[-1].isdigit():
-        nome_nota = nota_std[:-1]
-        ottava = nota_std[-1]
-    else:
-        nome_nota = nota_std
-        ottava = ""
-        
-    return mappa.get(nome_nota, nota_std) + ottava
+    # Estrai ottava e simboli microtonali (se presenti) alla fine della stringa
+    ottava = ""
+    micro_suffix = ""
+    base_name_std = nota_std_music21
+
+    # Estrai ottava (se presente)
+    if base_name_std and base_name_std[-1].isdigit():
+        ottava = base_name_std[-1]
+        base_name_std = base_name_std[:-1]
+
+    # Estrai simboli microtonali (~, ``, ~~, ``` ``) alla fine
+    possible_micros = ["~~", "``", "~", "`"] # Ordina dal più lungo al più corto
+    for micro in possible_micros:
+        if base_name_std.endswith(micro):
+            micro_suffix = micro
+            base_name_std = base_name_std[:-len(micro)] # Rimuovi il suffisso
+            break # Trovato il suffisso più lungo
+
+    # Ora base_name_std contiene solo la nota e l'alterazione standard (es. "C#", "Eb", "G")
+    # Traduci la parte standard
+    nome_tradotto = mappa.get(base_name_std, base_name_std) # Usa originale se non in mappa
+
+    # Ricomponi la stringa finale
+    return nome_tradotto + micro_suffix + ottava
 # --- Funzioni Audio (Fase 3) ---
 def Suona(tablatura):
     """
     Permette l'ascolto interattivo di una tablatura.
-    Usa il motore 'pre-calcolato' (classe Voice) e sd.play().
-    Questo elimina il callback e gli underflow.
+    Usa il motore 'pre-calcolato' (classe NoteRenderer) e sd.play().
     """
     print("\nAscolta le corde:")
     print("Tasti da 1 a 6, (A) pennata in levare, (Q) pennata in battere")
@@ -544,8 +607,8 @@ def Suona(tablatura):
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
     
-    # Crea 6 voci (ma non le usa in un callback)
-    voices = [Voice(fs=FS) for _ in range(6)]
+    # Crea 6 renderer (invece di 'voices')
+    renderers = [NoteRenderer(fs=FS) for _ in range(6)]
     note_da_suonare = [] # Lista di booleani (se la corda suona)
     note_freq = [] # Lista delle frequenze
     note_pan = [] # Lista dei pan
@@ -565,38 +628,35 @@ def Suona(tablatura):
         note_freq.append(freq)
         note_da_suonare.append(freq > 0) 
         
-        # Imposta i parametri per questa voce
-        voices[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
+        # Imposta i parametri per questo renderer
+        renderers[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
 
     note_prompt_str = get_note_da_tablatura(tablatura)
     while True:
-        # --- MODIFICA OBIETTIVO 1: Aggiunto il prompt alla funzione key() ---
         print(f"Note: {note_prompt_str}): ",end="\r",flush=True)
         scelta = key().lower()
         
         if scelta.isdigit() and scelta in '123456':
-            # Tasto 1 = corda 1 = indice 5
             corda_idx_py = 5 - (int(scelta) - 1)
             if note_da_suonare[corda_idx_py]:
-                voices[corda_idx_py].trigger() # Renderizza
-                if voices[corda_idx_py].rendered_stereo_note.size > 0:
-                    sd.play(voices[corda_idx_py].rendered_stereo_note, samplerate=FS, blocking=False)
-                
+                # --- MODIFICA CHIAVE ---
+                # Renderizza la nota ORA
+                note_audio = renderers[corda_idx_py].render()
+                if note_audio.size > 0:
+                    sd.play(note_audio, samplerate=FS, blocking=False)
+                    
         elif scelta == chr(27): # ESC
             print("Uscita dal menù ascolto.")
-            sd.stop() # Ferma qualsiasi suono in riproduzione
+            sd.stop() 
             break 
             
         elif scelta == 'a' or scelta == 'q': # Pennata
-            sd.stop() # Ferma suoni precedenti
+            sd.stop() 
             strum_delay_sec = 0.07
             strum_delay_samples = int(strum_delay_sec * FS)
             note_duration_samples = int(dur * FS)
             
-            # Lunghezza totale del buffer = durata nota + 5 delay
             total_samples = note_duration_samples + (5 * strum_delay_samples)
-            
-            # Crea il buffer di mixaggio finale (silenzio)
             mix_buffer = np.zeros((total_samples, 2), dtype=np.float32)
 
             note_order = range(6) if scelta == 'q' else range(5, -1, -1)
@@ -604,21 +664,19 @@ def Suona(tablatura):
             current_delay_samples = 0
             for i in note_order:
                 if note_da_suonare[i]:
-                    # Imposta i parametri corretti (trigger li resetta)
-                    voices[i].set_params(note_freq[i], adsr_list, dur, vol, kind, note_pan[i])
-                    voices[i].trigger() # Renderizza
+                    # Imposta i parametri corretti (necessario se cambiassero)
+                    renderers[i].set_params(note_freq[i], adsr_list, dur, vol, kind, note_pan[i])
                     
-                    note_data = voices[i].rendered_stereo_note
+                    # --- MODIFICA CHIAVE ---
+                    # Renderizza la nota e la ottiene
+                    note_data = renderers[i].render() 
                     
-                    # Assicura che la nota non sia più lunga del buffer
                     if len(note_data) > note_duration_samples:
                         note_data = note_data[:note_duration_samples]
                     
-                    # Aggiunge (mixa) la nota al buffer con il ritardo
                     start_pos = current_delay_samples
                     end_pos = start_pos + len(note_data)
                     
-                    # Assicura di non scrivere fuori dai limiti
                     if end_pos > total_samples:
                         end_pos = total_samples
                         note_data = note_data[:(end_pos - start_pos)]
@@ -627,7 +685,6 @@ def Suona(tablatura):
                 
                 current_delay_samples += strum_delay_samples
             
-            # Normalizza il buffer se supera 1.0 (per evitare clipping)
             max_val = np.max(np.abs(mix_buffer))
             if max_val > 1.0:
                 mix_buffer /= max_val
@@ -995,280 +1052,409 @@ def MostraCorde(nota_std, rp=False, maninf=0, mansup=21):
 
 def render_scale_audio(note_list, suono_params, bpm):
     """
-    Usa la classe Voice (nuova versione) per generare un
-    intero array audio per una scala.
+    Usa la classe NoteRenderer per generare un array audio per una scala.
+    Accetta una lista di stringhe nota (es. "C4") o frequenze (float).
     """
+    print("Rendering audio scala...")
+
     s_kind = suono_params['kind']
     s_adsr = suono_params['adsr']
     s_vol = suono_params['volume']
-    s_dur = 60.0 / bpm
+    s_dur = 60.0 / bpm # Durata di ogni nota
     s_pan = 0.0 # Pan centrale per le scale
-    
-    voice = Voice(fs=FS)
-    segmenti_audio = []
 
-    for nota_str in note_list:
-        freq = note_to_freq(nota_str)
-        
-        # Imposta i parametri e attiva il render
-        voice.set_params(freq, s_adsr, s_dur, s_vol, s_kind, s_pan)
-        voice.trigger() # Questo ora pre-calcola l'audio
-        
-        if voice.rendered_stereo_note.size > 0:
-            segmenti_audio.append(voice.rendered_stereo_note)
-    
-    if not segmenti_audio:
+    if s_dur <= 0:
+        print("Errore: Durata nota non valida (BPM troppo alti?).")
         return np.array([], dtype=np.float32)
-        
-    return np.concatenate(segmenti_audio, axis=0)
 
+    # --- CORREZIONE: Usa NoteRenderer ---
+    renderer = NoteRenderer(fs=FS)
+    # ------------------------------------
+    segmenti_audio = []
+    note_count = 0
+
+    for note_or_freq in note_list:
+        freq = 0.0
+        if isinstance(note_or_freq, (int, float)):
+            if note_or_freq is not None and note_or_freq > 0:
+                 freq = float(note_or_freq)
+        elif isinstance(note_or_freq, str):
+            freq = note_to_freq(note_or_freq)
+
+        # Se freq è 0 o negativa, crea un segmento di silenzio
+        if freq <= 0:
+             silence_samples = int(round(s_dur * FS))
+             if silence_samples > 0:
+                  segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+             continue # Passa alla prossima nota
+
+        # --- CORREZIONE: Usa renderer e render() ---
+        # Imposta i parametri sul renderer
+        renderer.set_params(freq, s_adsr, s_dur, s_vol, s_kind, s_pan)
+        # Chiama render() per ottenere l'array audio
+        note_audio = renderer.render()
+        # ----------------------------------------
+
+        # Aggiungi il segmento audio (o silenzio se render fallisce)
+        if note_audio is not None and note_audio.size > 0:
+            # Verifica che l'array restituito abbia la forma corretta (samples, 2)
+            if note_audio.ndim == 2 and note_audio.shape[1] == 2:
+                 segmenti_audio.append(note_audio)
+                 note_count += 1
+            else:
+                 print(f"Attenzione: NoteRenderer.render() ha restituito un array con forma inattesa {note_audio.shape} per freq={freq}. Aggiungo silenzio.")
+                 silence_samples = int(round(s_dur * FS))
+                 if silence_samples > 0: segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+        else:
+             # Se il rendering fallisce, aggiungi silenzio
+             silence_samples = int(round(s_dur * FS))
+             if silence_samples > 0:
+                  segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+
+    if not segmenti_audio:
+        print("Rendering fallito: nessun segmento audio generato.")
+        return np.array([], dtype=np.float32)
+
+    print(f"Rendering completato ({note_count} note suonate).")
+    # Concatena tutti i segmenti (note e silenzi)
+    try:
+        final_audio = np.concatenate(segmenti_audio, axis=0)
+    except ValueError as e:
+         print(f"Errore durante la concatenazione audio: {e}")
+         valid_segments = [seg for seg in segmenti_audio if seg.ndim == 2 and seg.shape[1] == 2 and seg.shape[0] > 0]
+         if not valid_segments: return np.array([], dtype=np.float32)
+         try:
+              final_audio = np.concatenate(valid_segments, axis=0)
+              print("   (Recupero concatenazione riuscito escludendo segmenti problematici)")
+         except ValueError:
+               print("   (Recupero concatenazione fallito)")
+               return np.array([], dtype=np.float32)
+
+    return final_audio
 def VisualizzaEsercitatiScala():
-    """ Versione Ibrida: Menu dinamico + Input manuale """
-    global SCALE_TYPES_DICT # Accedi al dizionario globale
+    """ Versione Finale Ibrida con gestione microtoni completa e indentazione corretta """
+    global SCALE_CATALOG, SCALE_TYPES_DICT
     suono_2 = impostazioni['suono_2']
 
-    print("\n--- Visualizza ed Esercitati sulle Scale (music21) ---")
+    print("\n--- Visualizza ed Esercitati sulle Scale (music21 - Catalogo) ---")
 
     # --- 1. Scegli Tonica ---
     if impostazioni['nomenclatura'] == 'latino':
-        mappa_note = {std: lat for std, lat in STD_TO_LATINO.items() if '#' not in lat and 'b' not in lat and len(std) == 1}
+        mappa_note = {std: lat for std, lat in STD_TO_LATINO.items() if len(std) <= 2}
     else:
         mappa_note = {std: anglo for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2}
     tonica_std_base = menu(d=mappa_note, keyslist=True, show=True, pager=12, ntf="Nota non valida", p="Scegli la TONICA della scala: ")
-    if tonica_std_base is None:
-        print("Operazione annullata.")
-        return # Esce dalla funzione
-    tonica_std_con_ottava = tonica_std_base + "4" # Aggiunge ottava per music21
+    if tonica_std_base is None: return
+    tonica_std_con_ottava = tonica_std_base + "4"
 
-    # --- 2. Scegli Tipo di Scala (Menu Dinamico + Manuale) ---
-    # Copia il dizionario e aggiungi l'opzione manuale per questo menu
-    scale_menu_dict = SCALE_TYPES_DICT.copy()
-    scale_menu_dict["manuale"] = ">> Inserisci nome manualmente..."
+    # --- 2. Scegli Tipo di Scala (dal Catalogo via Indice) ---
+    selected_key = menu(d=SCALE_TYPES_DICT, keyslist=True, show=False,
+                           pager=20, ntf="Tipo non valido",
+                           p=f"Filtra TIPO scala per {get_nota(tonica_std_base)} (o '...'): ")
+    # print(f"\nDEBUG (Dopo Selezione): menu() ha restituito: {selected_key!r}\n") # Debug
+    if selected_key is None: return
 
-    tipo_scala_key = menu(d=scale_menu_dict, keyslist=True, show=False,
-                           pager=15, ntf="Tipo non valido",
-                           p=f"Filtra TIPO scala per {get_nota(tonica_std_base)} (o scegli 'manuale'): ")
+    # Inizializza variabili fuori dal try per scope
+    usi_string = ""
+    nome_scala_display_base = ""
+    scala_m21 = None
+    note_scala_std_asc = []
+    note_scala_formattate_asc = []
+    note_scala_formattate_desc = [] # Definita qui
+    note_per_audio_asc = []
+    note_per_audio_desc = []
+    is_microtonal_scale = False
 
-    if tipo_scala_key is None:
-        print("Operazione annullata.")
-        return # Esce dalla funzione
-
-    if tipo_scala_key == "manuale":
-        tipo_scala_str_utente = dgt(f"Inserisci TIPO scala per {get_nota(tonica_std_base)} (notazione music21): ", kind="s").strip()
-        if not tipo_scala_str_utente:
-            print("Operazione annullata.")
-            return # Esce dalla funzione
-        tipo_scala_music21 = tipo_scala_str_utente # Prova a usarlo direttamente
-        nome_scala_display_base = tipo_scala_str_utente
-    else:
-        tipo_scala_music21 = tipo_scala_key # Chiave già pronta per music21
-        nome_scala_display_base = scale_menu_dict[tipo_scala_key] # Nome visualizzato
-
-    # --- 3. Genera la Scala con music21 ---
-    scala_m21 = None # Inizializza per il blocco except
-    try:
-        # Tenta di derivare la scala usando il nome fornito
-        scala_m21 = scale.AbstractScale.deriveByTonalityAndMode(pitch.Pitch(tonica_std_con_ottava), tipo_scala_music21)
-
-        # Fallback: Se derive non funziona, prova a cercare una classe Scale con quel nome
-        if not scala_m21:
-             nome_classe_scala = tipo_scala_music21.replace(" ", "").title().replace("Minor", "Minor").replace("Major", "Major") + "Scale"
-             # Correzioni comuni per i nomi delle classi
-             if nome_classe_scala == "BluesScale": nome_classe_scala = "MajorBluesScale" # O MinorBluesScale? Da decidere o chiedere
-             if nome_classe_scala == "WholeToneScale": nome_classe_scala = "WholeToneScale"
-             if nome_classe_scala == "ChromaticScale": nome_classe_scala = "ChromaticScale"
-
-             if hasattr(scale, nome_classe_scala):
-                  classe_scala = getattr(scale, nome_classe_scala)
-                  scala_m21 = classe_scala(pitch.Pitch(tonica_std_con_ottava)) # Istanzia la classe
-             else:
-                  # Tentativo finale con ricerca fuzzy (potrebbe essere lento/impreciso)
-                  matches = scale.fuzzySearch(tipo_scala_music21)
-                  if matches:
-                      scala_m21 = matches[0](pitch.Pitch(tonica_std_con_ottava))
-                  else:
-                      raise ValueError(f"Tipo di scala '{tipo_scala_music21}' non riconosciuto.")
-
-        # Otteniamo le note (oggetti Pitch) per un'ottava ascendente
-        # Usiamo pitchList per gestire meglio scale non di 7 note
-        pitches_asc = scala_m21.getRealization(pitch.Pitch(tonica_std_con_ottava), pitch.Pitch(tonica_std_base + "5"))
-
-
-        # Convertiamo le note nel nostro formato standard (SENZA ottava per MostraCorde)
-        note_scala_std_asc = []
-        note_scala_formattate_asc = []
-        for p in pitches_asc:
-            nota_str_m21 = p.name.replace('-', 'b')
-            nota_base_std = ''.join(filter(lambda c: not c.isdigit(), nota_str_m21))
-            # Aggiungiamo solo se non è un duplicato (importante per scale cromatiche/esatonali)
-            if nota_base_std not in note_scala_std_asc:
-                note_scala_std_asc.append(nota_base_std)
-                note_scala_formattate_asc.append(get_nota(nota_base_std))
-
-        # Generiamo le note per l'ascolto (CON ottava) - Ascendente
-        # Usiamo .nameWithOctave per avere l'ottava corretta da music21
-        note_per_audio_asc = [p.nameWithOctave.replace('-', 'b') for p in pitches_asc]
-
-        # Generiamo la versione discendente per l'ascolto
-        # Usiamo pitchList e direction=DESCENDING
-        pitches_desc = scala_m21.getRealization(pitch.Pitch(tonica_std_base + "5"), pitch.Pitch(tonica_std_con_ottava), direction=scale.Direction.DESCENDING)
-        note_per_audio_desc = [p.nameWithOctave.replace('-', 'b') for p in pitches_desc]
-
-
-    except Exception as e:
-        print(f"\nErrore nella generazione della scala con music21: {e}")
-        print(f"Tipo scala tentato: '{tipo_scala_music21}'")
-        key("Premi un tasto...")
-        return # Esce dalla funzione
-
-    # --- 4. Stampa Riepilogo ---
-    # Usa il nome inserito o selezionato dall'utente per coerenza
-    nome_scala_display = f"{get_nota(tonica_std_base)} {nome_scala_display_base}"
-    note_asc_str = " ".join(note_scala_formattate_asc)
-    # Calcola la stringa discendente per il display (senza ottava)
-    note_desc_str = " ".join([get_nota(''.join(filter(lambda c: not c.isdigit(), p.name.replace('-','b')))) for p in pitches_desc])
-
-    print(f"\nScala: {nome_scala_display}")
-    print(f"Note (Asc): {note_asc_str}")
-    # Stampiamo la discendente solo se diversa (per pulizia)
-    if note_asc_str != note_desc_str:
-         print(f"Note (Desc): {note_desc_str}")
-
-
-    # --- 5. Mostra su Manico ---
-    print("\nPuoi indicare una porzione di manico per la ricerca (es. 0.4)")
-    scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
-    maninf, mansup = 0, 21
-    if scelta_manico != "":
-        maninf, mansup = Manlimiti(scelta_manico)
-
-    print(f"\nPosizioni sul manico (Tasti {maninf}-{mansup}):")
-    # Usiamo le note senza ottava calcolate prima
-    for nota_base in note_scala_std_asc:
-        MostraCorde(nota_base, rp=False, maninf=maninf, mansup=mansup)
-
-    # --- 6. Loop Esercizio ---
-    print("\n--- Menu Esercizio Scala ---")
-    bpm = impostazioni['default_bpm']
-    loop_attivo = False
-    loop_count = 1
-    ultima_direzione = 'a'
-
-    # Cache audio (verrà generata al primo ascolto)
-    audio_data_asc = None
-    audio_data_desc = None
-
-    menu_esercizio = {
-        "a": "Ascolta ascendente",
-        "d": "Ascolta discendente",
-        "l": "Attiva/Disattiva Loop",
-        "b": "Imposta BPM",
-        "i": "Indietro"
-    }
-
-    menu_mostrato_iniziale = False
-    loop_messaggio_stampato = False
-
-    while True:
-        audio_to_play = None
-        dur_totale = 0.0
-
-        if loop_attivo:
-            if not loop_messaggio_stampato:
-                print("Loop ATTIVO. Premi 'L' per fermare.")
-                loop_messaggio_stampato = True
-
-            note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
-            print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}", end="\r", flush=True)
-
-            tasto = key(attesa=0.1)
-            if tasto and tasto.lower() == 'l':
-                loop_attivo = False; print("\nLoop disattivato."); sd.stop(); loop_messaggio_stampato = False; continue
-            else:
-                scelta = ultima_direzione
+    try: # <<<--- INIZIO TRY PRINCIPALE ---<<<
+        # --- Costruzione USI ---
+        if selected_key == "...": # Input manuale USI completo
+            usi_string = dgt(f"Inserisci USI completo (paradigm:tonic:id): ", kind="s").strip()
+            if not usi_string: return
+            try: nome_scala_display_base = usi_string.split(":", 2)[2]
+            except: nome_scala_display_base = usi_string # Fallback
         else:
-            loop_messaggio_stampato = False
-            prompt_scale = f"Note (Asc): {note_asc_str}"
-            if note_asc_str != note_desc_str: # Mostra desc solo se diversa
-                 prompt_scale += f" | (Desc): {note_desc_str}"
+            try:
+                paradigm, scale_id = selected_key.split(':', 1) # Separa paradigma da ID
+                # Recupera il nome amichevole per il display dal dizionario del menu
+                nome_scala_display_base = SCALE_TYPES_DICT.get(selected_key, scale_id) # Usa ID come fallback
 
-            if not menu_mostrato_iniziale:
-                print(f"Note (Asc): {note_asc_str}")
-                if note_asc_str != note_desc_str: print(f"Note (Desc): {note_desc_str}")
-                scelta = menu(d=menu_esercizio, keyslist=True, ntf="Scelta non valida", show=True, p="> ")
-                menu_mostrato_iniziale = True
-            else:
-                note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
-                direzione_str = "Asc" if ultima_direzione == 'a' else "Desc"
-                print(f"Note ({direzione_str}): {note_da_mostrare} (Premi '?' per aiuto)      ", end="\r", flush=True)
-                scelta = menu(d=menu_esercizio, keyslist=True, ntf="Scelta non valida", show=False, p="")
+                # Costruisci l'USI corretto aggiungendo la tonica scelta
+                usi_string = f"{paradigm}:{tonica_std_con_ottava}:{scale_id}"
 
-        # --- Logica di gestione scelte (a, d, l, b, i) ---
-        if scelta == 'i' or scelta is None:
-            if loop_attivo: loop_attivo = False; print("\nLoop disattivato."); sd.stop()
-            if menu_mostrato_iniziale and not loop_attivo: print(" " * 80, end="\r")
-            break
+            except ValueError:
+                # Questo errore ora significa che la chiave restituita da menu() non ha il formato atteso
+                # Non dovrebbe succedere se main() e menu() funzionano correttamente
+                print(f"Errore: Chiave selezione menu ('{selected_key}') non ha il formato 'paradigma:id'.")
+                key("Premi un tasto...")
+                return
+        # --- Istanziazione tramite Factory USI ---
+        scala_m21 = get_scale_from_usi(usi_string)
+        # La factory solleva eccezione se fallisce, quindi non serve controllare None qui
 
-        elif scelta == 'l':
-            loop_attivo = not loop_attivo
-            if loop_attivo: loop_count = 1; print(" " * 80, end="\r")
-            else: print("\nLoop disattivato."); sd.stop()
-            continue
-        elif scelta == 'b':
-            global archivio_modificato
-            print(" " * 80, end="\r")
-            nuovo_bpm = dgt(f"Nuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
-            if nuovo_bpm != bpm:
-                bpm = nuovo_bpm; impostazioni['default_bpm'] = bpm; archivio_modificato = True
-                print(f"BPM predefiniti aggiornati a {bpm}.")
-                audio_data_asc = None; audio_data_desc = None # Svuota cache
+        # --- 3. Estrazione delle Note ---
 
-        elif scelta == 'a':
+        # Definiamo la funzione helper interna
+        # (is_microtonal_scale è definita fuori ma resa nonlocal)
+        def process_pitch(p):
+            nonlocal is_microtonal_scale
+            if not isinstance(p, pitch.Pitch): return None, str(p), None
+            frequenza = p.frequency
+            nome_m21_base = p.name
+            nome_std_base_per_lookup = nome_m21_base.replace('-', 'b')
+            nota_visualizzata = get_nota(nome_std_base_per_lookup) # Ora dovrebbe dare 'MIb'
+            is_micro = False
+            if p.accidental and hasattr(p.accidental, 'alter') and p.accidental.alter not in [0.0, 1.0, -1.0, 2.0, -2.0]:
+                 is_micro = True; is_microtonal_scale = True
+            p_standard = pitch.Pitch(p.step + str(p.octave if p.octave is not None else 4))
+            if p.accidental and p.accidental.name in ['sharp', 'flat', 'double-sharp', 'double-flat']: p_standard.accidental = p.accidental
+            nota_base_per_manico = p_standard.name.replace('-','b')
+            nota_base_per_manico = ''.join(filter(lambda c: not c.isdigit(), nota_base_per_manico))
+            if frequenza is None and is_micro: print(f"Attenzione: Impossibile calcolare frequenza per {p.nameWithOctave}")
+            return nota_base_per_manico, nota_visualizzata, frequenza
+
+        # Liste *locali* per accumulare i risultati DENTRO il try principale
+        local_note_std_asc = []
+        local_note_formattate_asc = []
+        local_note_audio_asc = []
+        local_note_audio_desc = []
+        local_processed_display_asc = set()
+        local_processed_display_desc = set()
+        local_desc_notes_display = [] # Lista per il nome desc
+
+        # Determina estremi ottava (con try/except interno)
+        try: #<<<--- TRY INTERNO 1 ---<<<
+            p_start = scala_m21.getTonic() if hasattr(scala_m21, 'getTonic') else pitch.Pitch(tonica_std_con_ottava)
+            start_octave = p_start.octave if p_start.octave is not None else 4
+            end_octave = start_octave + 1
+            p_end = pitch.Pitch(p_start.step + str(end_octave))
+            p_start_desc = p_end
+            p_end_desc = p_start
+        except Exception as pitch_err: #<<<--- EXCEPT INTERNO 1 ---<<<
+             print(f"Errore nella definizione dell'intervallo di ottava: {pitch_err}")
+             p_start = pitch.Pitch(tonica_std_con_ottava)
+             p_end = pitch.Pitch(tonica_std_base + "5")
+             p_start_desc = p_end
+             p_end_desc = p_start
+
+        # Estrai pitches (con try/except interno)
+        pitches_asc = [] # Inizializza prima del try
+        pitches_desc = []# Inizializza prima del try
+        try: #<<<--- TRY INTERNO 2 ---<<<
+            if isinstance(scala_m21, scale.ScalaScale):
+                pitches_asc = scala_m21.pitches
+                if pitches_asc: pitches_desc = list(reversed(pitches_asc))
+            elif isinstance(scala_m21, scale.ConcreteScale):
+                pitches_asc = scala_m21.getPitches(p_start, p_end, direction=scale.Direction.ASCENDING)
+                if not pitches_asc: pitches_asc = scala_m21.pitches # Fallback
+                pitches_desc = scala_m21.getPitches(p_start_desc, p_end_desc, direction=scale.Direction.DESCENDING)
+                if not pitches_desc: # Fallback per desc
+                     pitches_base = scala_m21.pitches
+                     if pitches_base:
+                          corrected_base_pitches = []
+                          tonic_octave = p_start.octave if p_start.octave is not None else 4
+                          for p_base in pitches_base:
+                               octave_to_use = tonic_octave + 1 if p_base.pitchClass < p_start.pitchClass else tonic_octave
+                               corrected_base_pitches.append(pitch.Pitch(p_base.name + str(octave_to_use)))
+                          pitches_desc = list(reversed(corrected_base_pitches))
+                     elif pitches_asc: pitches_desc = list(reversed(pitches_asc))
+            else: print("Attenzione: Tipo di scala non riconosciuto per l'estrazione.")
+        except Exception as get_pitch_err: #<<<--- EXCEPT INTERNO 2 ---<<<
+             print(f"Errore durante l'estrazione delle note dalla scala: {get_pitch_err}")
+             # pitches_asc e pitches_desc rimangono liste vuote
+
+        # Processa pitches ascendenti (ora DENTRO il try principale)
+        if pitches_asc:
+            for p in pitches_asc:
+                result = process_pitch(p)
+                if result:
+                    nota_base_manico, nota_display, freq = result
+                    if nota_base_manico and nota_base_manico not in local_note_std_asc: local_note_std_asc.append(nota_base_manico)
+                    if nota_display not in local_processed_display_asc: local_note_formattate_asc.append(nota_display); local_processed_display_asc.add(nota_display)
+                    local_note_audio_asc.append(freq)
+        else: print("Attenzione: Nessuna nota ascendente estratta.")
+
+        # Processa pitches discendenti (ora DENTRO il try principale)
+        if pitches_desc:
+            for p in pitches_desc:
+                 result = process_pitch(p)
+                 if result:
+                      _, nota_display, freq = result
+                      local_note_audio_desc.append(freq)
+                      if nota_display not in local_processed_display_desc: local_desc_notes_display.append(nota_display); local_processed_display_desc.add(nota_display)
+        elif local_note_audio_asc: # Fallback audio
+             print("Info: Generazione audio discendente invertendo le frequenze ascendenti.")
+             local_note_audio_desc = list(reversed(local_note_audio_asc))
+        else: print("Attenzione: Nessuna nota discendente estratta.")
+
+        # Assegna i risultati alle variabili esterne solo se tutto è andato bene finora
+        note_scala_std_asc = local_note_std_asc
+        note_scala_formattate_asc = local_note_formattate_asc
+        note_per_audio_asc = local_note_audio_asc
+        note_per_audio_desc = local_note_audio_desc
+        note_scala_formattate_desc = local_desc_notes_display # Assegna la lista per il nome desc
+
+        # --- 4. Stampa Riepilogo (INDENTATO) ---
+        nome_scala_display = f"{get_nota(tonica_std_base)} {nome_scala_display_base}"
+        note_asc_str = " ".join(note_scala_formattate_asc)
+        note_desc_str = " ".join(note_scala_formattate_desc) # Usa la lista popolata
+
+        print(f"\nScala: {nome_scala_display}")
+        print(f"Note (Asc): {note_asc_str if note_asc_str else '(Nessuna nota trovata)'}")
+        if is_microtonal_scale:
+            print("INFO: Scala microtonale rilevata. L'audio userà le frequenze esatte (se calcolabili).")
+
+        if note_asc_str != note_desc_str and note_desc_str:
+             print(f"Note (Desc): {note_desc_str}")
+
+        # --- 5. Mostra su Manico (INDENTATO) ---
+        if is_microtonal_scale:
+             print("\nVisualizzazione sul manico approssimata per scale microtonali.")
+        if not note_scala_std_asc: # Se non ci sono note standard
+             print("\nImpossibile mostrare sul manico: nessuna nota standard generata.")
+        else:
+            print("\nPuoi indicare una porzione di manico...")
+            scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
+            maninf, mansup = 0, 21
+            if scelta_manico != "": maninf, mansup = Manlimiti(scelta_manico)
+            print(f"\nPosizioni sul manico (Tasti {maninf}-{mansup}):")
+            for nota_base in note_scala_std_asc: MostraCorde(nota_base, rp=False, maninf=maninf, mansup=mansup)
+
+        # --- 6. Loop Esercizio (INDENTATO) ---
+        if not note_per_audio_asc and not note_per_audio_desc:
+             print("\nNessuna nota audio generata per l'esercizio.")
+             key("Premi un tasto per tornare al menu...")
+             # Non usiamo 'return' qui, lasciamo che il blocco try finisca
+             # e stampi "Fine esercizio." prima di tornare al menu principale.
+        else:
+            print("\n--- Menu Esercizio Scala ---\n\tPremi '?' per aiuto.")
+            # ... (Tutto il codice del loop while True dell'esercizio va qui, indentato) ...
+            bpm = impostazioni['default_bpm']
+            loop_attivo = False
+            loop_count = 1
             ultima_direzione = 'a'
-            if not note_per_audio_asc: print("Note ascendenti non disponibili."); continue
-            if audio_data_asc is None:
-                audio_data_asc = render_scale_audio(note_per_audio_asc, suono_2, bpm)
-            audio_to_play = audio_data_asc
-            dur_totale = len(note_per_audio_asc) * (60.0 / bpm)
+            audio_data_asc = None
+            audio_data_desc = None
+            menu_esercizio = {"a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "i": "Indietro"}
+            menu_mostrato_iniziale = False
+            loop_messaggio_stampato = False
 
-        elif scelta == 'd':
-            ultima_direzione = 'd'
-            if not note_per_audio_desc: print("Note discendenti non disponibili."); continue
-            if audio_data_desc is None:
-                audio_data_desc = render_scale_audio(note_per_audio_desc, suono_2, bpm)
-            audio_to_play = audio_data_desc
-            dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
+            while True: # Inizio Loop Esercizio
+                audio_to_play = None
+                dur_totale = 0.0
+                scelta_raw = "" # Inizializza input grezzo
+                scelta = None   # Inizializza comando valido
+                if loop_attivo: # Modalità Loop
+                    # ... (codice loop attivo) ...
+                    if not loop_messaggio_stampato: print("Loop ATTIVO. Premi 'L' per fermare."); loop_messaggio_stampato = True
+                    note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
+                    print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}" + " "*10, end="\r", flush=True)
+                    tasto = key(attesa=0.1)
+                    if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop(); loop_messaggio_stampato = False; continue
+                    else: scelta = ultima_direzione
+                else: # Modalità Menu Interattivo
+                    # ... (codice menu interattivo, prompt, key(), gestione '?') ...
+                    loop_messaggio_stampato = False
+                    prompt_scale = f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}"
+                    if note_asc_str != note_desc_str and note_desc_str: prompt_scale += f" | (Desc): {note_desc_str}"
+                    if not menu_mostrato_iniziale:
+                        print(f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}")
+                        if note_asc_str != note_desc_str and note_desc_str: print(f"Note (Desc): {note_desc_str}")
+                        scelta = menu(d=menu_esercizio, keyslist=True, ntf="Scelta non valida", show=True, p="> ")
+                        menu_mostrato_iniziale = True
+                    else:
+                        note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
+                        direzione_str = "Asc" if ultima_direzione == 'a' else "Desc"
+                        print(f"Note ({direzione_str}): {note_da_mostrare if note_da_mostrare else '(vuota)'} (Premi '?' per aiuto)" + " "*20, end="\r", flush=True)
+                        scelta_raw = key().lower()
+                        scelta = scelta_raw if scelta_raw in menu_esercizio else None
+                        if scelta_raw == '?': menu(d=menu_esercizio, show=True, p="> "); continue
 
-        # --- Logica di riproduzione e attesa (resta identica) ---
-        if audio_to_play is not None and audio_to_play.size > 0:
-            if not loop_attivo:
-                print(" " * 80, end="\r")
-                print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
+                # --- Gestione Scelte Menu Esercizio ---
+                exit_pressed = (not loop_attivo and scelta_raw == chr(27))
+                if scelta == 'i' or exit_pressed:
+                    if loop_attivo: loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop()
+                    if menu_mostrato_iniziale and not loop_attivo: print(" " * 80, end="\r") # Pulisci riga note
+                    break
+                elif scelta == 'l': # ... (codice 'l') ...
+                    loop_attivo = not loop_attivo
+                    if loop_attivo: loop_count = 1; print(" " * 80, end="\r")
+                    else: print("\nLoop disattivato." + " "*30); sd.stop()
+                    continue
+                elif scelta == 'b': # ... (codice 'b') ...
+                    global archivio_modificato
+                    print(" " * 80, end="\r")
+                    nuovo_bpm = dgt(f"Nuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
+                    if nuovo_bpm != bpm:
+                        bpm = nuovo_bpm; impostazioni['default_bpm'] = bpm; archivio_modificato = True
+                        print(f"BPM predefiniti aggiornati a {bpm}.")
+                        audio_data_asc = None; audio_data_desc = None
+                elif scelta == 'a': # ... (codice 'a') ...
+                    ultima_direzione = 'a'
+                    valid_notes_asc = [f for f in note_per_audio_asc if f is not None]
+                    if not valid_notes_asc: print("\nNote ascendenti non disponibili per l'audio."); continue
+                    if audio_data_asc is None: audio_data_asc = render_scale_audio(note_per_audio_asc, suono_2, bpm)
+                    audio_to_play = audio_data_asc
+                    dur_totale = len(note_per_audio_asc) * (60.0 / bpm)
+                elif scelta == 'd': # ... (codice 'd') ...
+                    ultima_direzione = 'd'
+                    valid_notes_desc = [f for f in note_per_audio_desc if f is not None]
+                    if not valid_notes_desc: print("\nNote discendenti non disponibili per l'audio."); continue
+                    if audio_data_desc is None: audio_data_desc = render_scale_audio(note_per_audio_desc, suono_2, bpm)
+                    audio_to_play = audio_data_desc
+                    dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
+                elif scelta is None and not loop_attivo: # Input non valido
+                     print("\nComando non valido. Premi '?' per aiuto.")
+                     continue
 
-            sd.play(audio_to_play, samplerate=FS, blocking=False)
+                # --- Riproduzione Audio (indentato) ---
+                if audio_to_play is not None and audio_to_play.size > 0:
+                     # ... (codice sd.play e attesa loop/non loop) ...
+                    if not loop_attivo:
+                        print(" " * 80, end="\r")
+                        print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
+                    sd.play(audio_to_play, samplerate=FS, blocking=False)
+                    if loop_attivo:
+                        step = 0.05; passi_totali = int(dur_totale / step) if dur_totale > 0 else 0
+                        tempo_rimanente = dur_totale - (passi_totali * step)
+                        for _ in range(passi_totali):
+                            tasto = key(attesa=step)
+                            if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop fermato." + " "*30); sd.stop(); break
+                        if not loop_attivo: continue
+                        if tempo_rimanente > 0: aspetta(tempo_rimanente)
+                        loop_count += 1
+                    else:
+                        if dur_totale > 0: aspetta(dur_totale)
+                elif not loop_attivo: # Messaggio "Nessun audio"
+                     print(" " * 80, end="\r")
+                     print("Nessun audio da riprodurre per la selezione.")
+                     key("Premi un tasto...")
 
-            if loop_attivo:
-                step = 0.05; passi_totali = int(dur_totale / step); tempo_rimanente = dur_totale - (passi_totali * step)
-                for _ in range(passi_totali):
-                    tasto = key(attesa=step)
-                    if tasto and tasto.lower() == 'l':
-                        loop_attivo = False; print("\nLoop fermato."); sd.stop(); break
-                if not loop_attivo: continue
-                aspetta(tempo_rimanente)
-                loop_count += 1
-            else:
-                aspetta(dur_totale)
+            # --- Fine Loop Esercizio ---
+            # Pulisci l'ultima riga di stato prima di uscire dal loop esercizio
+            print(" " * 80, end="\r")
+            # Il break esce dal while True dell'esercizio
 
-    print(" " * 80, end="\r")
-    print("Fine esercizio.")
+
+        # Se l'esecuzione arriva qui, il blocco try è completato con successo
+        # (o il loop esercizio è terminato senza errori gravi)
+        print("Fine esercizio.") # Stampa "Fine esercizio" solo se non ci sono state eccezioni
+
+
+    # --- Blocchi except per il try principale (correttamente allineati) ---
+    except (InvalidUSIFormatError, UnknownScaleError, ScaleException) as e:
+        print(f"\nErrore nella generazione della scala: {e}")
+        key("Premi un tasto...")
+        # L'esecuzione termina qui e torna al menu principale
+    except Exception as e:
+        print(f"\nErrore imprevisto durante la generazione della scala: {e}")
+        if usi_string: print(f"USI tentato: '{usi_string}'")
+        key("Premi un tasto...")
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
-
-# (Riga 980 circa)
 
 def GestoreChordpedia():
     """Gestisce il DB degli accordi (Implementazione Fase 5 - Corretta)"""
     global archivio_modificato
-    print("\n--- La Chordpedia ---")
+    print("\n--- Tablature Accordi ---") 
     print("Gestore del database degli accordi.")
     
     mnaccordi = {
@@ -1281,8 +1467,6 @@ def GestoreChordpedia():
     # RIMOSSA: menu(d=mnaccordi, show=True) <-- Era qui
     
     while True:
-        # La chiamata 'menu' è ora solo DENTRO il loop
-        # Aggiungo show_on_filter=False per pulizia
         s = menu(d=mnaccordi, ntf="Non trovato", keyslist=True, show=True, show_on_filter=False)
         
         if s == "i" or s is None:
@@ -1437,25 +1621,26 @@ def TrovaPosizione():
         nota_std = CORDE[s]
         print(f"Sulla corda {s.split('.')[0]}, tasto {s.split('.')[1]}, si trova la nota: {get_nota(nota_std)}")
         
-        # Suoniamo la nota usando il motore "one-shot"
         suono_1 = impostazioni['suono_1']
         
-        # Calcola parametri
         freq = note_to_freq(nota_std)
         corda_idx_zero_based = 6 - int(s.split('.')[0])
         pan = -0.8 + (corda_idx_zero_based * 0.32)
         dur = suono_1['dur_accordi']
         
-        # Crea una singola voce
-        voice = Voice(fs=FS)
+        # Crea un singolo renderer
+        renderer = NoteRenderer(fs=FS)
         
-        # Imposta i parametri e attiva il render
-        voice.set_params(freq, suono_1['adsr'], dur, suono_1['volume'], suono_1['kind'], pan)
-        voice.trigger() # Questo ora pre-calcola l'audio
+        # Imposta i parametri
+        renderer.set_params(freq, suono_1['adsr'], dur, suono_1['volume'], suono_1['kind'], pan)
+        
+        # --- MODIFICA CHIAVE ---
+        # Renderizza la nota e la ottiene
+        note_audio = renderer.render()
         
         # Suona (non bloccante) sul buffer renderizzato
-        if voice.rendered_stereo_note.size > 0:
-            sd.play(voice.rendered_stereo_note, samplerate=FS, blocking=False)
+        if note_audio.size > 0:
+            sd.play(note_audio, samplerate=FS, blocking=False)
         
     elif s == "":
         print("Operazione annullata.")
@@ -1463,145 +1648,120 @@ def TrovaPosizione():
         print(f"Posizione '{s}' non valida. Formato richiesto: C.T (es. 6.3), tasti da 0 a 21.")
     
     key("Premi un tasto per tornare al menu...")
-
 def CostruttoreAccordi():
-    """ Versione Ibrida: Menu dinamico + Input manuale """
-    global CHORD_TYPES_DICT # Accedi al dizionario globale
+    """
+    Costruisce accordi usando music21.harmony.ChordSymbol secondo
+    le best practice definite nel documento tecnico. (Versione Completa)
+    """
+    global USER_CHORD_DICT # Accedi al dizionario globale corretto
 
-    print("\n--- Costruttore di Accordi Teorico (music21) ---")
+    print("\n--- Costruttore di Accordi Teorico (harmony.ChordSymbol) ---")
     print("Scopri quali note compongono qualsiasi accordo.")
 
     # --- 1. Scegli la Tonica ---
-    # Creiamo un dizionario {chiave_standard: valore_visualizzato}
     if impostazioni['nomenclatura'] == 'latino':
-        # Mostra DO, RE, MI... ma restituisce C, D, E...
-        mappa_note = {std: lat for std, lat in STD_TO_LATINO.items() if '#' not in lat and 'b' not in lat and len(std) == 1} # Solo naturali per ora
-        # TODO: Migliorare la visualizzazione/selezione di #/b per Latino
+        # Mappa {Standard: Latino} per il menu
+        mappa_note = {std: lat for std, lat in STD_TO_LATINO.items() if len(std) <= 2}
+        # TODO: Ordinare mappa_note per una visualizzazione migliore in Latino
     else:
-        # Mostra C, D, E... e restituisce C, D, E...
-        mappa_note = {std: anglo for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2} # Includi #/b
+        # Mappa {Standard: Anglo} per il menu
+        mappa_note = {std: anglo for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2}
 
-    # La chiamata a menu resta uguale, ma ora 'd' è costruito correttamente
-    tonica_std = menu(d=mappa_note, keyslist=True, show=True, # Mostra il menu con i valori corretti
+    tonica_std = menu(d=mappa_note, keyslist=True, show=True,
                         pager=12, ntf="Nota non valida", p="Scegli la TONICA: ")
     if tonica_std is None:
         print("Costruzione annullata.")
         return
 
-    # --- 2. Scegli il Tipo di Accordo (Menu Dinamico + Manuale) ---
-    # Usiamo il dizionario globale CHORD_TYPES_DICT generato all'avvio
-    # La chiave 'manuale' avrà come valore ">> Inserisci nome manualmente..."
-    tipo_accordo_key = menu(d=CHORD_TYPES_DICT, keyslist=True, show=False,
+    # --- 2. Scegli il Tipo di Accordo (dal Dizionario Introspezione) ---
+    # Usa il dizionario USER_CHORD_DICT popolato all'avvio
+    primary_shorthand = menu(d=USER_CHORD_DICT, keyslist=True, show=False,
                              pager=15, ntf="Tipo non valido",
-                             p=f"Filtra TIPO accordo per {get_nota(tonica_std)} (o scegli 'manuale'): ")
+                             p=f"Filtra TIPO accordo per {get_nota(tonica_std)} (o 'manuale'): ")
 
-    if tipo_accordo_key is None:
+    if primary_shorthand is None:
         print("Costruzione annullata.")
-        return # Esce dalla funzione
+        return
 
-    if tipo_accordo_key == "manuale":
-        # Chiedi input libero
-        tipo_accordo_str_utente = dgt(f"Inserisci TIPO accordo per {get_nota(tonica_std)} (notazione music21): ", kind="s").strip()
-        if not tipo_accordo_str_utente:
-            print("Costruzione annullata.")
-            return # Esce dalla funzione
-        # Per music21, spesso il nome base (major) è implicito o vuoto
-        if tipo_accordo_str_utente.lower() in ["major", "maggiore"]:
-            tipo_accordo_music21 = "" # music21 capisce "C" come C major
-        else:
-            tipo_accordo_music21 = tipo_accordo_str_utente # Prova a usarlo direttamente
-        nome_accordo_display_base = tipo_accordo_str_utente # Usiamo quello che ha scritto l'utente per il display
+    figure_string = "" # Inizializza per blocco except
+    nome_accordo_display_base = "" # Nome per visualizzazione
+    accordo_m21 = None # Oggetto music21
 
-    else:
-        # L'utente ha scelto dal menu, usiamo la chiave selezionata (che è già formattata per music21)
-        tipo_accordo_music21 = tipo_accordo_key
-        nome_accordo_display_base = CHORD_TYPES_DICT[tipo_accordo_key] # Nome visualizzato dal menu
-
-# --- 3. Crea l'Accordo con music21 (Metodo Unificato - Revisione Triadi) ---
-    nome_input_per_m21 = "" # Per tracciare cosa passiamo a music21
-    accordo_m21 = None      # Inizializza l'oggetto accordo
     try:
-        p = pitch.Pitch(tonica_std)
+        # --- Gestione Input Manuale vs. Menu ---
+        if primary_shorthand == "manuale":
+            user_figure = dgt(f"Inserisci simbolo accordo completo per {get_nota(tonica_std)} (es. m7, maj7, 7b9): ", kind="s").strip()
+            if not user_figure:
+                print("Costruzione annullata.")
+                return
+            # Crea la stringa completa (es. "C" + "m7")
+            figure_string = tonica_std + user_figure
+            nome_accordo_display_base = user_figure # Mostra ciò che l'utente ha scritto
+        else:
+            # Crea la stringa di figura usando la fondamentale e lo shorthand dal menu
+            figure_string = tonica_std + primary_shorthand
+            nome_accordo_display_base = USER_CHORD_DICT[primary_shorthand] # Prendi il nome leggibile
 
-        # --- Logica Specifica per Tipi Base ---
-        if tipo_accordo_music21 == "": # Major Triad
-            # Tentativo 1: Nome completo "C major" (più esplicito)
-            nome_input_per_m21 = p.name + " major"
-            accordo_m21 = chord.Chord(nome_input_per_m21)
-            # Fallback: Se "C major" non va, prova solo "C" (meno probabile ma per sicurezza)
-            if accordo_m21 is None or not accordo_m21.pitches:
-                 nome_input_per_m21 = p.name
-                 accordo_m21 = chord.Chord(nome_input_per_m21)
+        # --- Istanziazione tramite harmony.ChordSymbol (Metodo Corretto) ---
+        # print(f"DEBUG: Tentativo con figure_string='{figure_string}'") # Per debug
 
-        elif tipo_accordo_music21 == "m": # Minor Triad
-             # Tentativo 1: Abbreviazione "Cm"
-             nome_input_per_m21 = p.name + "m"
-             accordo_m21 = chord.Chord(nome_input_per_m21)
-             # Fallback: Se "Cm" non va, prova nome completo "C minor"
-             if accordo_m21 is None or not accordo_m21.pitches:
-                  nome_input_per_m21 = p.name + " minor"
-                  accordo_m21 = chord.Chord(nome_input_per_m21)
+        # Usiamo SEMPRE harmony.ChordSymbol
+        accordo_m21 = harmony.ChordSymbol(figure_string)
 
-        elif tipo_accordo_music21 == "dim": # Diminished Triad
-             # Tentativo 1: Abbreviazione "Cdim"
-             nome_input_per_m21 = p.name + "dim"
-             accordo_m21 = chord.Chord(nome_input_per_m21)
-             # Fallback: Se "Cdim" non va, prova nome completo "C diminished"
-             if accordo_m21 is None or not accordo_m21.pitches:
-                  nome_input_per_m21 = p.name + " diminished"
-                  accordo_m21 = chord.Chord(nome_input_per_m21)
-
-        elif tipo_accordo_music21 == "aug": # Augmented Triad
-             # Tentativo 1: Abbreviazione "Caug"
-             nome_input_per_m21 = p.name + "aug"
-             accordo_m21 = chord.Chord(nome_input_per_m21)
-             # Fallback: Se "Caug" non va, prova nome completo "C augmented"
-             if accordo_m21 is None or not accordo_m21.pitches:
-                  nome_input_per_m21 = p.name + " augmented"
-                  accordo_m21 = chord.Chord(nome_input_per_m21)
-
-        else: # Per tutti gli altri tipi (7, maj7, m7, dim7, 7b9...)
-             # Usa la notazione compatta standard Radice+Tipo
-             nome_input_per_m21 = p.name + tipo_accordo_music21
-             accordo_m21 = chord.Chord(nome_input_per_m21)
-             # Fallback specifico per dim7 se la notazione compatta fallisce
-             if (accordo_m21 is None or not accordo_m21.pitches) and tipo_accordo_music21 == "dim7":
-                  nome_input_per_m21 = p.name + " diminished seventh"
-                  accordo_m21 = chord.Chord(nome_input_per_m21)
-
-
-        # --- Verifica Finale ---
+        # Verifica robusta che l'oggetto sia stato creato e contenga note
+        # A volte ChordSymbol non dà errore ma non ha pitches se la stringa è ambigua
         if accordo_m21 is None or not accordo_m21.pitches:
-             # Se NESSUN tentativo ha prodotto un accordo con note, solleva errore
-             raise ValueError(f"Music21 non è riuscito a interpretare l'accordo.")
+             # Tentativo di fallback specifico per casi base se la forma compatta fallisce
+             # Questo codice ora è meno necessario dato che USER_CHORD_DICT usa le chiavi preferite,
+             # ma lo teniamo come ulteriore sicurezza.
+             if primary_shorthand == "": # Potrebbe essere "C major"
+                 figure_string_fallback = tonica_std + " major"
+                 accordo_m21 = harmony.ChordSymbol(figure_string_fallback)
+             elif primary_shorthand == "m": # Potrebbe essere "C minor"
+                 figure_string_fallback = tonica_std + " minor"
+                 accordo_m21 = harmony.ChordSymbol(figure_string_fallback)
+             elif primary_shorthand == "dim": # Potrebbe essere "C diminished"
+                 figure_string_fallback = tonica_std + " diminished"
+                 accordo_m21 = harmony.ChordSymbol(figure_string_fallback)
+             elif primary_shorthand == "aug": # Potrebbe essere "C augmented"
+                 figure_string_fallback = tonica_std + " augmented"
+                 accordo_m21 = harmony.ChordSymbol(figure_string_fallback)
 
-        # --- Se siamo qui, accordo_m21 è valido ---
-        note_accordo_obj = accordo_m21.pitches
+             # Se ANCHE il fallback fallisce, solleva l'errore
+             if accordo_m21 is None or not accordo_m21.pitches:
+                 raise ValueError(f"Music21 non è riuscito a interpretare la figura '{figure_string}'")
+        # --- Estrazione delle Note ---
+        note_accordo_obj = accordo_m21.pitches # Tupla di oggetti pitch.Pitch
 
-        # Converti le note nel nostro formato standard (C, C#, Db, etc.)
         note_accordo_std = []
         note_accordo_formattate = []
         for p_note in note_accordo_obj:
-            nota_str_m21 = p_note.name # music21 usa # e - per bemolle
-            nota_base_std = nota_str_m21.replace('-', 'b')
+            # Estrai nome e converti bemolle '-' in 'b'
+            nota_base_std = p_note.name.replace('-', 'b')
+            # Rimuovi l'ottava (non ci serve per MostraCorde)
             nota_base_std = ''.join(filter(lambda c: not c.isdigit(), nota_base_std))
+            # Aggiungi solo se non è un duplicato
             if nota_base_std not in note_accordo_std:
                  note_accordo_std.append(nota_base_std)
                  note_accordo_formattate.append(get_nota(nota_base_std))
 
     except Exception as e:
-        print(f"\nErrore nella creazione dell'accordo con music21: {e}")
-        if nome_input_per_m21: print(f"Ultimo input tentato per music21: '{nome_input_per_m21}'")
-        print(f"Verifica la correttezza del tipo inserito o selezionato.")
+        print(f"\nErrore durante la creazione dell'accordo: {e}")
+        if figure_string: print(f"Input tentato per music21: '{figure_string}'")
+        print(f"Verifica la correttezza della fondamentale e del tipo.")
         key("Premi un tasto...")
         return # Esce dalla funzione
+
     # --- 4. Mostra i Risultati ---
     nome_accordo_display = f"{get_nota(tonica_std)} {nome_accordo_display_base}"
     note_str = " - ".join(note_accordo_formattate)
-    print(f"\n--- Risultato Analisi (music21) ---")
+    print(f"\n--- Risultato Analisi (harmony.ChordSymbol) ---")
     print(f"Accordo: {nome_accordo_display}")
     print(f"Note componenti: {note_str}")
-    print("-----------------------------------")
+    # print(f"DEBUG: Oggetto music21: {accordo_m21} | Pitches: {accordo_m21.pitches}") # Per debug avanzato
+    print("---------------------------------------------")
+
+
     # --- 5. Mostra sul Manico ---
     print(f"\nEcco dove trovare queste note sul manico:")
     print("Puoi indicare una porzione di manico (es. 0.4)")
@@ -1615,22 +1775,33 @@ def CostruttoreAccordi():
 
     print("\nUsando queste posizioni, puoi trovare una diteggiatura e salvarla nella tua Chordpedia.")
     key("Premi un tasto per tornare al menu...")
-    return # Fine funzione
+    return
 def main():
-    global SCALE_TYPES_DICT, CHORD_TYPES_DICT, archivio_modificato, impostazioni
+    global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
     print(f"\nBenvenuto in Chitabry, l'App per familiarizzare con la Chitarra e studiare musica.")
     print(f"\tVersione: {VERSIONE}, di Gabriele Battaglia (IZ4APU)")
     
     carica_impostazioni()
+
     # --- POPOLA I DIZIONARI DINAMICI ---
     print("Analisi libreria music21 per scale e accordi...")
-    SCALE_TYPES_DICT = build_scale_dictionary()
-    CHORD_TYPES_DICT = build_chord_type_dictionary()
-    print(f"Trovati {len(SCALE_TYPES_DICT)} tipi di scale e {len(CHORD_TYPES_DICT)-1} tipi di accordi comuni.") # -1 per l'opzione manuale
+    SCALE_CATALOG = build_scale_catalog() # Chiama la funzione e popola il catalogo!
+    temp_scale_types = {}
+    for scale_info in SCALE_CATALOG: # Itera sul catalogo
+        prog_id = scale_info['programmatic_id']
+        paradigm = scale_info['paradigm']
+        friendly_name = scale_info['friendly_name']
+        unique_key = f"{paradigm}:{prog_id}" # Usa la chiave univoca
+        temp_scale_types[unique_key] = friendly_name # Mappa chiave -> nome
+
+    # Aggiungi l'opzione manuale all'inizio con chiave speciale "..."
+    SCALE_TYPES_DICT = {"...": ">> Inserisci USI manualmente..."}
+    SCALE_TYPES_DICT.update(temp_scale_types)
+    USER_CHORD_DICT = get_user_chord_dictionary() # <-- NUOVA CHIAMATA
+    print(f"Riconosciuti {len(SCALE_TYPES_DICT)} tipi di scale e {len(USER_CHORD_DICT)-1} tipi di accordi.") # -1 per 'manuale'
 
     num_accordi = len(impostazioni.get('chordpedia', {}))
-    num_scale = len(impostazioni.get('scale', {}))
-    print(f"La tua Chordpedia contiene {num_accordi} accordi e {num_scale} pattern di scale.")
+    print(f"Le tue Tablature Accordi contengono {num_accordi} diteggiature.") 
     print("\n--- Menu Principale ---")
     
     while True:
