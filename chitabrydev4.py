@@ -15,7 +15,7 @@ import sounddevice as sd
 import sys, json, re, inspect, random, threading, clitronomo
 
 # --- Costanti ---
-VERSIONE = "4.4.21 del 28 ottobre 2025."
+VERSIONE = "4.4.26 del 29 ottobre 2025."
 # --- Variabile Globale per il dizionario generato ---
 SCALE_CATALOG: list[Dict] = [] # Catalogo completo (lista di dizionari)
 USER_CHORD_DICT: Dict[str, str] = {}
@@ -272,17 +272,15 @@ def get_user_chord_dictionary() -> Dict[str, str]:
         processed_types.add(chord_type) # Segna il tipo canonico come processato
 
 
-    # Aggiungi l'opzione manuale separatamente
-    user_dict["manuale"] = ">> Inserisci nome manualmente..."
-
-    # Ritorna il dizionario ordinato per nome leggibile (valore)
-    # Mettiamo l'opzione manuale alla fine
-    manual_entry = user_dict.pop("manuale")
+    # --- MODIFICA CHIAVE ---
+    # Ordina il dizionario principale PER VALORE (nome leggibile)
     sorted_dict = dict(sorted(user_dict.items(), key=lambda item: item[1]))
-    sorted_dict["manuale"] = manual_entry # Riaggiungi alla fine
+
+    # Aggiungi l'opzione di ricerca fuzzy ALLA FINE con la chiave '...'
+    sorted_dict["..."] = ">> Cerca tipo di accordo..."
+    # --- FINE MODIFICA CHIAVE ---
 
     return sorted_dict
-
 def build_scale_catalog() -> list[Dict]:
     """
     Esegue l'introspezione di music21 per costruire un dizionario
@@ -1212,9 +1210,8 @@ def VisualizzaEsercitatiScala():
 
     # --- 2. Scegli Tipo di Scala (dal Catalogo via Indice) ---
     selected_key = menu(d=SCALE_TYPES_DICT, keyslist=True, show=False,
-                           pager=20, ntf="Tipo non valido",
-                           p=f"Filtra TIPO scala per {get_nota(tonica_std_base)} (o '...'): ")
-    # print(f"\nDEBUG (Dopo Selezione): menu() ha restituito: {selected_key!r}\n") # Debug
+                        pager=20, ntf="Tipo non valido",
+                        p=f"Filtra TIPO scala per {get_nota(tonica_std_base)} (o '...'): ")
     if selected_key is None: return
 
     # Inizializza variabili fuori dal try per scope
@@ -1238,52 +1235,36 @@ def VisualizzaEsercitatiScala():
                 "tipo di scala"
             )
             if selected_key_from_fuzzy is None: return # Annullato
-            # Sovrascrivi selected_key con il risultato della ricerca
             selected_key = selected_key_from_fuzzy
-            # Se la ricerca restituisce "...", significa che l'utente ha annullato anche lì
             if selected_key == "...":
-                 print("Annullato.")
-                 return
-
-        # --- Ora selected_key contiene la chiave corretta ("paradigma:id" o forse ancora "..."),
-        #     sia che provenga dal menu diretto o dalla ricerca fuzzy ---
+                print("Annullato.")
+                return
 
         # --- Costruzione USI e Nome Display ---
         try:
-            # Separa paradigma e id dalla chiave selezionata
             paradigm, scale_id = selected_key.split(':', 1)
-            # Recupera il nome amichevole per il display
-            nome_scala_display_base = SCALE_TYPES_DICT.get(selected_key, scale_id) # Usa ID come fallback
-
-            # Costruisci l'USI corretto aggiungendo la tonica scelta
+            nome_scala_display_base = SCALE_TYPES_DICT.get(selected_key, scale_id)
             usi_string = f"{paradigm}:{tonica_std_con_ottava}:{scale_id}"
-
         except ValueError:
-            # Questo errore ora cattura solo il caso in cui selected_key non abbia ":"
-            # (non dovrebbe succedere con le chiavi generate)
             print(f"Errore: Chiave selezione ('{selected_key}') malformata.")
             key("Premi un tasto...")
             return
 
         # --- Istanziazione tramite Factory USI ---
-        # print(f"DEBUG: Chiamo get_scale_from_usi con '{usi_string}'")
         scala_m21 = get_scale_from_usi(usi_string)
-        # La factory solleva eccezione se fallisce
 
         # --- 3. Estrazione delle Note ---
 
-        # Definiamo la funzione helper interna
-        # (is_microtonal_scale è definita fuori ma resa nonlocal)
         def process_pitch(p):
             nonlocal is_microtonal_scale
             if not isinstance(p, pitch.Pitch): return None, str(p), None
             frequenza = p.frequency
-            nome_m21_base = p.name
+            nome_m21_base = p.nameWithOctave
             nome_std_base_per_lookup = nome_m21_base.replace('-', 'b')
-            nota_visualizzata = get_nota(nome_std_base_per_lookup) # Ora dovrebbe dare 'MIb'
+            nota_visualizzata = get_nota(nome_std_base_per_lookup)
             is_micro = False
             if p.accidental and hasattr(p.accidental, 'alter') and p.accidental.alter not in [0.0, 1.0, -1.0, 2.0, -2.0]:
-                 is_micro = True; is_microtonal_scale = True
+                is_micro = True; is_microtonal_scale = True
             p_standard = pitch.Pitch(p.step + str(p.octave if p.octave is not None else 4))
             if p.accidental and p.accidental.name in ['sharp', 'flat', 'double-sharp', 'double-flat']: p_standard.accidental = p.accidental
             nota_base_per_manico = p_standard.name.replace('-','b')
@@ -1291,14 +1272,13 @@ def VisualizzaEsercitatiScala():
             if frequenza is None and is_micro: print(f"Attenzione: Impossibile calcolare frequenza per {p.nameWithOctave}")
             return nota_base_per_manico, nota_visualizzata, frequenza
 
-        # Liste *locali* per accumulare i risultati DENTRO il try principale
         local_note_std_asc = []
         local_note_formattate_asc = []
         local_note_audio_asc = []
         local_note_audio_desc = []
         local_processed_display_asc = set()
         local_processed_display_desc = set()
-        local_desc_notes_display = [] # Lista per il nome desc
+        local_desc_notes_display = []
 
         # Determina estremi ottava (con try/except interno)
         try: #<<<--- TRY INTERNO 1 ---<<<
@@ -1309,37 +1289,42 @@ def VisualizzaEsercitatiScala():
             p_start_desc = p_end
             p_end_desc = p_start
         except Exception as pitch_err: #<<<--- EXCEPT INTERNO 1 ---<<<
-             print(f"Errore nella definizione dell'intervallo di ottava: {pitch_err}")
-             p_start = pitch.Pitch(tonica_std_con_ottava)
-             p_end = pitch.Pitch(tonica_std_base + "5")
-             p_start_desc = p_end
-             p_end_desc = p_start
+            print(f"Errore nella definizione dell'intervallo di ottava: {pitch_err}")
+            p_start = pitch.Pitch(tonica_std_con_ottava)
+            p_end = pitch.Pitch(tonica_std_base + "5")
+            p_start_desc = p_end
+            p_end_desc = p_start
 
         # Estrai pitches (con try/except interno)
         pitches_asc = [] # Inizializza prima del try
         pitches_desc = []# Inizializza prima del try
         try: #<<<--- TRY INTERNO 2 ---<<<
+            
+            # --- INIZIO BLOCCO MODIFICATO ---
+            # Questa logica sostituisce tutti i tentativi precedenti.
+            # È più semplice e robusta.
+            
             if isinstance(scala_m21, scale.ScalaScale):
+                # .pitches per ScalaScale funziona e dà la lista completa
                 pitches_asc = scala_m21.pitches
-                if pitches_asc: pitches_desc = list(reversed(pitches_asc))
+                pitches_desc = list(reversed(pitches_asc))
+
             elif isinstance(scala_m21, scale.ConcreteScale):
-                pitches_asc = scala_m21.getPitches(p_start, p_end, direction=scale.Direction.ASCENDING)
-                if not pitches_asc: pitches_asc = scala_m21.pitches # Fallback
-                pitches_desc = scala_m21.getPitches(p_start_desc, p_end_desc, direction=scale.Direction.DESCENDING)
-                if not pitches_desc: # Fallback per desc
-                     pitches_base = scala_m21.pitches
-                     if pitches_base:
-                          corrected_base_pitches = []
-                          tonic_octave = p_start.octave if p_start.octave is not None else 4
-                          for p_base in pitches_base:
-                               octave_to_use = tonic_octave + 1 if p_base.pitchClass < p_start.pitchClass else tonic_octave
-                               corrected_base_pitches.append(pitch.Pitch(p_base.name + str(octave_to_use)))
-                          pitches_desc = list(reversed(corrected_base_pitches))
-                     elif pitches_asc: pitches_desc = list(reversed(pitches_asc))
-            else: print("Attenzione: Tipo di scala non riconosciuto per l'estrazione.")
+                # .pitches per ConcreteScale restituisce l'ottava (8 note, C4..C5)
+                # Questo evita getPitches() e il bug 'includePitchEnd'
+                # E sostituisce il tuo fallback buggato.
+                pitches_asc = scala_m21.pitches
+                
+                # La discesa è semplicemente l'inverso
+                pitches_desc = list(reversed(pitches_asc))
+
+            else: 
+                print("Attenzione: Tipo di scala non riconosciuto per l'estrazione.")
+            # --- FINE BLOCCO MODIFICATO ---
+
         except Exception as get_pitch_err: #<<<--- EXCEPT INTERNO 2 ---<<<
-             print(f"Errore durante l'estrazione delle note dalla scala: {get_pitch_err}")
-             # pitches_asc e pitches_desc rimangono liste vuote
+            print(f"Errore durante l'estrazione delle note dalla scala: {get_pitch_err}")
+            # pitches_asc e pitches_desc rimangono liste vuote
 
         # Processa pitches ascendenti (ora DENTRO il try principale)
         if pitches_asc:
@@ -1348,46 +1333,61 @@ def VisualizzaEsercitatiScala():
                 if result:
                     nota_base_manico, nota_display, freq = result
                     if nota_base_manico and nota_base_manico not in local_note_std_asc: local_note_std_asc.append(nota_base_manico)
-                    if nota_display not in local_processed_display_asc: local_note_formattate_asc.append(nota_display); local_processed_display_asc.add(nota_display)
+                    # De-duplicazione per la stampa
+                    if nota_display not in local_processed_display_asc: 
+                        local_note_formattate_asc.append(nota_display)
+                        local_processed_display_asc.add(nota_display)
+                    # L'audio prende tutte le note
                     local_note_audio_asc.append(freq)
-        else: print("Attenzione: Nessuna nota ascendente estratta.")
+        else: 
+            print("Attenzione: Nessuna nota ascendente estratta.")
+            
         if pitches_desc:
             for p in pitches_desc:
-                 result = process_pitch(p)
-                 if result:
-                      _, nota_display, freq = result
-                      local_note_audio_desc.append(freq)
-                      if nota_display not in local_processed_display_desc: local_desc_notes_display.append(nota_display); local_processed_display_desc.add(nota_display)
+                result = process_pitch(p)
+                if result:
+                    _, nota_display, freq = result
+                    # L'audio prende tutte le note (ora 8 corrette)
+                    local_note_audio_desc.append(freq)
+                    # De-duplicazione per la stampa
+                    if nota_display not in local_processed_display_desc: 
+                        local_desc_notes_display.append(nota_display)
+                        local_processed_display_desc.add(nota_display)
+        
         elif local_note_audio_asc: # Fallback audio
-             print("Info: Generazione audio discendente invertendo le frequenze ascendenti.")
-             local_note_audio_desc = list(reversed(local_note_audio_asc))
-        else: print("Attenzione: Nessuna nota discendente estratta.")
+            print("Info: Generazione audio discendente invertendo le frequenze ascendenti.")
+            local_note_audio_desc = list(reversed(local_note_audio_asc))
+            if local_note_formattate_asc:
+                local_desc_notes_display = list(reversed(local_note_formattate_asc))
+        else: 
+            print("Attenzione: Nessuna nota discendente estratta.")
 
-        # Assegna i risultati alle variabili esterne solo se tutto è andato bene finora
+        # Assegna i risultati alle variabili esterne
         note_scala_std_asc = local_note_std_asc
         note_scala_formattate_asc = local_note_formattate_asc
         note_per_audio_asc = local_note_audio_asc
         note_per_audio_desc = local_note_audio_desc
-        note_scala_formattate_desc = local_desc_notes_display # Assegna la lista per il nome desc
+        note_scala_formattate_desc = local_desc_notes_display
 
         # --- 4. Stampa Riepilogo (INDENTATO) ---
         nome_scala_display = f"{get_nota(tonica_std_base)} {nome_scala_display_base}"
         note_asc_str = " ".join(note_scala_formattate_asc)
-        note_desc_str = " ".join(note_scala_formattate_desc) # Usa la lista popolata
+        note_desc_str = " ".join(note_scala_formattate_desc) 
 
         print(f"\nScala: {nome_scala_display}")
         print(f"Note (Asc): {note_asc_str if note_asc_str else '(Nessuna nota trovata)'}")
         if is_microtonal_scale:
             print("INFO: Scala microtonale rilevata. L'audio userà le frequenze esatte (se calcolabili).")
 
+        # Ora le due stringhe dovrebbero essere l'inversa l'una dell'altra
         if note_asc_str != note_desc_str and note_desc_str:
-             print(f"Note (Desc): {note_desc_str}")
+            print(f"Note (Desc): {note_desc_str}")
 
         # --- 5. Mostra su Manico (INDENTATO) ---
         if is_microtonal_scale:
-             print("\nVisualizzazione sul manico approssimata per scale microtonali.")
+            print("\nVisualizzazione sul manico approssimata per scale microtonali.")
         if not note_scala_std_asc: # Se non ci sono note standard
-             print("\nImpossibile mostrare sul manico: nessuna nota standard generata.")
+            print("\nImpossibile mostrare sul manico: nessuna nota standard generata.")
         else:
             print("\nPuoi indicare una porzione di manico...")
             scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
@@ -1398,13 +1398,10 @@ def VisualizzaEsercitatiScala():
 
         # --- 6. Loop Esercizio (INDENTATO) ---
         if not note_per_audio_asc and not note_per_audio_desc:
-             print("\nNessuna nota audio generata per l'esercizio.")
-             key("Premi un tasto per tornare al menu...")
-             # Non usiamo 'return' qui, lasciamo che il blocco try finisca
-             # e stampi "Fine esercizio." prima di tornare al menu principale.
+            print("\nNessuna nota audio generata per l'esercizio.")
+            key("Premi un tasto per tornare al menu...")
         else:
             print("\n--- Menu Esercizio Scala ---\n\tPremi '?' per aiuto.")
-            # ... (Tutto il codice del loop while True dell'esercizio va qui, indentato) ...
             bpm = impostazioni['default_bpm']
             loop_attivo = False
             loop_count = 1
@@ -1421,7 +1418,6 @@ def VisualizzaEsercitatiScala():
                 scelta_raw = "" # Inizializza input grezzo
                 scelta = None   # Inizializza comando valido
                 if loop_attivo: # Modalità Loop
-                    # ... (codice loop attivo) ...
                     if not loop_messaggio_stampato: print("Loop ATTIVO. Premi 'L' per fermare."); loop_messaggio_stampato = True
                     note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
                     print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}" + " "*10, end="\r", flush=True)
@@ -1429,7 +1425,6 @@ def VisualizzaEsercitatiScala():
                     if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop(); loop_messaggio_stampato = False; continue
                     else: scelta = ultima_direzione
                 else: # Modalità Menu Interattivo
-                    # ... (codice menu interattivo, prompt, key(), gestione '?') ...
                     loop_messaggio_stampato = False
                     prompt_scale = f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}"
                     if note_asc_str != note_desc_str and note_desc_str: prompt_scale += f" | (Desc): {note_desc_str}"
@@ -1480,12 +1475,11 @@ def VisualizzaEsercitatiScala():
                     audio_to_play = audio_data_desc
                     dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
                 elif scelta is None and not loop_attivo: # Input non valido
-                     print("\nComando non valido. Premi '?' per aiuto.")
-                     continue
+                    print("\nComando non valido. Premi '?' per aiuto.")
+                    continue
 
                 # --- Riproduzione Audio (indentato) ---
                 if audio_to_play is not None and audio_to_play.size > 0:
-                     # ... (codice sd.play e attesa loop/non loop) ...
                     if not loop_attivo:
                         print(" " * 80, end="\r")
                         print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
@@ -1502,31 +1496,23 @@ def VisualizzaEsercitatiScala():
                     else:
                         if dur_totale > 0: aspetta(dur_totale)
                 elif not loop_attivo: # Messaggio "Nessun audio"
-                     print(" " * 80, end="\r")
-                     print("Nessun audio da riprodurre per la selezione.")
-                     key("Premi un tasto...")
+                    print(" " * 80, end="\r")
+                    print("Nessun audio da riprodurre per la selezione.")
+                    key("Premi un tasto...")
 
             # --- Fine Loop Esercizio ---
-            # Pulisci l'ultima riga di stato prima di uscire dal loop esercizio
             print(" " * 80, end="\r")
-            # Il break esce dal while True dell'esercizio
 
-
-        # Se l'esecuzione arriva qui, il blocco try è completato con successo
-        # (o il loop esercizio è terminato senza errori gravi)
-        print("Fine esercizio.") # Stampa "Fine esercizio" solo se non ci sono state eccezioni
-
+        print("Fine esercizio.") 
 
     # --- Blocchi except per il try principale (correttamente allineati) ---
     except (InvalidUSIFormatError, UnknownScaleError, ScaleException) as e:
         print(f"\nErrore nella generazione della scala: {e}")
         key("Premi un tasto...")
-        # L'esecuzione termina qui e torna al menu principale
     except Exception as e:
         print(f"\nErrore imprevisto durante la generazione della scala: {e}")
         if usi_string: print(f"USI tentato: '{usi_string}'")
         key("Premi un tasto...")
-
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
 
 def GestoreChordpedia():

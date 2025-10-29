@@ -1,9 +1,13 @@
-Da aggiornare per la versione chitabry4
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 2, di mercoledi' 11 marzo 2020.
+L'ultima revisione di questo documento e' la numero 3, di mercoledi' 29 ottobre 2025.
 A cura di Gabriele Battaglia.
 
-Chitabry e' un software ideato e realizzato dal sottoscritto, per aiutare tutti coloro che lo desiderano, ad approcciarsi al meraviglioso mondo della chitarra. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
+Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
+
+Nota: dalla versione 4 in poi, l'orizzonte di Chitabry si è notevolmente allargato. Grazie alla potente libreria `music21`, ora è un vero e proprio coltellino svizzero per la teoria musicale. La chitarra è un'opzione di visualizzazione, ma Chitabry vi potrà essere molto utile per studiare, costruire e ascoltare accordi e scale complesse, oltre che per esercitarvi live con il vostro strumento usando il prezioso Clitronomo.
+
+Clitronomo è una funzione così sofisticata di Chitabry che merita un manuale a parte. Lo trovate nel pacchetto con cui viene distribuito questo software, in Clitronomo.md
+
 Ogni segnalazione di bug, malfunzionamenti ed errori, nel programma o in questo manuale, sara' gradita, scrivetemi una e-mail ad gabriele.battaglia@gmail.com descrivendo con la massima precisione possibile cio' che riscontrate ed io cerchero' di aiutarvi come posso. Chiunque e' autorizzato ed incoraggiato a distribuire questo software cosi' com'e', senza garanzie e gratuitamente.
 E' vietato modificarne il codice senza espressa autorizzazione del sottoscritto. Se vi piace Chitabry, fatemelo sapere scrivendomi 2 righe. Grazie.
 Il sottoscritto non puo' essere ritenuto responsabile per alcun danno derivato dall'uso improprio di questo software.
@@ -12,45 +16,156 @@ Gabriele Battaglia.
 Chitabry puo' essere compilato sia per Windows che per MacOS, dovrebbe girare anche sotto Linux ma non ho la possibilita' di testarlo di persona.
 
 Come installare Chitabry.
-L'installazione e' un processo molto semplice. Salvate Chitabry.exe e Chitabryman.txt in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni. Poi lanciate l'eseguibile .exe, oppure aprite una finestra terminale nella cartella dove avete incollato l'eseguibile, digitate chitabry e premete invio.
-Alla conclusione del programma, la finestra si chiude automaticamente; se avevate aperto un terminale o prompt dei comandi, dovete chiuderlo digitando exit e battendo invio.
+L'installazione e' un processo molto semplice. Salvate Chitabry.exe (o l'eseguibile per il vostro sistema) e ChitabryMan.txt in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni.
+Poi lanciate l'eseguibile, oppure aprite una finestra terminale nella cartella dove avete incollato l'eseguibile, digitate `chitabry` (o il nome dell'eseguibile) e premete invio.
+
+Nota: Al primo avvio, Chitabry creerà automaticamente un file chiamato `chitabry-settings.json` nella stessa cartella. Questo file memorizza le vostre impostazioni, i suoni personalizzati e, soprattutto, il vostro database di accordi. Non cancellatelo\!
+
+Alla conclusione del programma (selezionando "Esci"), la finestra si chiude automaticamente; se avevate aperto un terminale o prompt dei comandi, dovete chiuderlo digitando exit e battendo invio.
 Prima di lanciare il software, vi consiglio di leggere questo manuale.
 
 Il menu' principale.
 Vediamo le scelte disponibili nel menu' principale e come funzionano.
-Partiamo col dire che Chitabry e' un'applicazione a console. Questo significa che non possiede una finestra con menu', pulsanti, campi di editazione ed altri controlli a cui si accede con tab e shift+tab come avviene nelle piu' comuni applicazioni. Da console significa che Chitabry apre una finestra singola, tipicamente a sfondo scuro, su cui compaiono i messaggi che il programma desidera far leggere all'utente. In fondo a questa finestra, sull'ultima riga c'e' un cursore, un trattino lampeggiante che indica dove compariranno le lettere che l'utente scrivera'. In questo modo, l'user, cioe' noi che usiamo l'App, dobbiamo scrivere dei comandi, quindi premere invio e Chitabry si incarichera' di fornirci le risposte appropriate.
-Percio', noi scriveremo un comando e potremo ascoltare, o leggere, la risposta del programma.
-Vediamo il primo comando utile. Digitando un "?", punto interrogativo, e premendo invio, Chitabry ci dara' la lista di tutti i comandi disponibili, cosi' se non ci ricordiamo cosa fare, il "?" potra' sempre venirci in soccorso.
-Un secondo comando molto importante e' rappresentato dalla "e"", indica a Chitabry che desideriamo chiuderlo; il programma infatti, non appena riceve la "e" termina la propria esecuzione e rilascia il controllo a Windows.
-Digitando la lettera "G", l'App mostrera' questa guida. Se vi viene piu' comodo, potrete leggervela col vostro editor di testi preferito, caricando il file Chitabryman.txt salvato assieme a chitabry.exe.
-Corda.Tasto, abbreviato nel menu' come C.T, indica a Chitabry che vogliamo sapere quale nota si trova in una determinata posizione sul manico della chitarra.
-Il comando va scritto inserendo il numero della corda, da 6, il MI grosso, ad 1, il MI cantino, seguito da un punto "." e poi dal numero del tasto.
-Nota: il tasto 0, cioe' nessun tasto premuto, indica la corda vuota, o libera. Percio', se vogliamo sapere a quale nota corrisponde il tasto 3 della corda 6, dovremo semplicemente scrivere: 6.3 seguito da invio e Chitabry docilmente ci rispondera':
-Sulla corda 6, tasto 3, si trova la nota: SOL2
-Quel, 2, dopo la nota SOL, specifica l'ottava di appartenenza: sul manico infatti, si trovano altri SOL che appartengono ad altre ottave.
-Allo stesso modo potremmo scrivere 3.13 e scoprire che, sulla terza corda, il tasto 13 produce la nota SOL#4. Che significa "#4"? Il 4 e' sempre l'ottava di appartenenza, questa volta 2 ottave sopra al nostro SOL di corda 6 tasto 3, mentre il simbolo "#" indica una nota diesis, cioe' in questo caso a meta' fra il SOL ed il LA.
-NomeNota. Ed ecco la funzione contraria rispetto a Corda.Tasto. Grazie a NomeNota, potremo dire una qualsiasi nota a Chitabry e il programma ci dara' la, o le, posizioni in cui questa nota si trova, sul manico della chitarra.
-Ad esempio potremmo voler conoscere la posizione di tutti i RE. Ci bastera' lanciare Chitabry e scrivere semplicemente RE, seguito da invio. Il programma rispondera':
-Nota RE trovata nelle seguenti posizioni sul manico:
-Corda 6, tasti: 10 11
-Corda 5, tasti: 5 6 17 18
-Corda 4, tasti: 0 1 12 13
-Corda 3, tasti: 7 8 19 20
-Corda 2, tasti: 3 4 15 16
-Corda 1, tasti: 10 11
-A questo punto sarebbe lecito chiedersi, perche' Chitabry individua delle coppie di tasti vicini, ad esempio i tasti 3 e 4 in corda 2? La risposta e' che anche un RE diesis e', in fondo, sempre un RE, e quindi Chitabry lo riporta fedelmente. Il tasto 4 di corda 2 e', per l'appunto, un RE diesis. Nel caso volessimo cercare solo i RE diesis ci bastera' scrivere RE#.
-E se desiderassimo conoscere la posizione di una nota appartenente ad un'ottava specifica? Semplice: bastera' scriverla dopo la nota, ad esempio MI3, oppure FA4, DO5 eccetera.
 
-Le SCALE.
-Questa funzione serve ad individuare le note appartenenti ad una data scala e ad indicarne le relative posizioni sul manico. Sara' possibile scegliere il tipo di scala, al momento della stesura di questo manuale, Chitabry ne conosce 6, dopo di che' viene chiesta la nota tonica, quella da cui parte ed arriva la scala, quindi, per finire, i limiti di manico entro cui cercare le note.
-Per scegliere la tipologia di scala, vi sara' sufficiente digitarne parte del nome: andra' benissimo ad esempio, "melo" per melodica, o arm per armonica. Nel caso in cui cio' che digiterete sia compreso nel nome di piu' scale, Chitabry scegliera' la prima che incontra nell'elenco.
-La tonica e' una qualsiasi delle 12 note, mentre i limiti di manico vanno indicati nel formato: primotasto punto secondo tasto. Se ad esempio si desidera cercare la scala entro i primi 4 tasti del manico, scriveremo 0.4, cioe' da corda libera al quarto tasto compreso. Se, alla richiesta di inserire dei limiti di manico premiamo semplicemente invio, Chitabry assumera' 0.21 come limiti predefiniti, il che' equivale a cercare in tutta l'estensione del manico dello strumento.
-Il risultato mostrato dalla funzione scale e' rappresentato dalle note trovate, incolonnate sulla sinistra della videata, ad inizio riga, seguite poi dalla o dalle posizioni in cui quella stessa nota e' presente sul manico. Nel caso in cui piu' di una posizione venga riportata per una stessa nota, sara' l'utente a decidere la piu' conveniente da includere nel proprio esercizio. Se le posizioni riportate sono troppe, si puo' chiedere a Chitabry di ripetere la ricerca della scala impostando dei limiti di manico piu' stretti.
+Chitabry e' un'applicazione a console. Questo significa che non possiede una finestra con pulsanti e mouse. Chitabry apre una finestra singola, tipicamente a sfondo scuro, su cui compaiono i messaggi e i menu.
+A differenza delle versioni precedenti, Chitabry ora utilizza un menu interattivo e filtrabile.
 
-IL PROMPT.
-Il prompt e' una sequenza di lettere e parole che si trova infondo allo schermo, subito prima del cursore lampeggiante. Esso finisce con il simbolo ">" maggiore di, ed ha la funzione di riepilogare i comandi che possono essere inseriti e che quindi Chitabry si aspetta di ricevere. Infatti il prompt e' ora una sequenza di questo tipo:
-(INVIO), I, NomeNota, C.T, S, M >
-Come potete leggere, si tratta proprio di un riassunto di ogni comando riconosciuto dal software: invio per chiudere, NomeNota per cercare una nota, C.T e' l'abbreviazione di Corda.Tasto e serve per cercare una nota partendo da una posizione conosciuta, la S per le scale e la m per il menu'.
+Alla richiesta di un input (ad esempio, "Filtra accordo:"), potete iniziare a digitare parte del nome di ciò che cercate. Chitabry restringerà la lista in tempo reale. Se premete Invio su un campo vuoto (o ESC), solitamente l'operazione viene annullata.
+Se dovete selezionare una voce formata da una sola nota, ad esempio C, per la nota DO nella scelta della tonica per un accordo o una scala, dopo aver digitato la C, premete invio. Attenzione che il sistema dei menù distingue fra maiuscole e minuscole.
+
+Questo sistema rende facilissimo trovare un tipo di scala o un accordo anche tra migliaia di opzioni\!
+
+Vediamo ora le singole voci del menu.
+
+-----
+
+ Accordi
+
+Questa è la vostra Chordpedia personale, il vostro database di diteggiature (o tablature) salvate. È pensata per la pratica sulla chitarra.
+
+Da qui potete:
+
+   Aggiungi un nuovo accordo: Vi verrà chiesto un nome (es. "DO MAJ") e una o più tablature (es. "X 3 2 0 1 0").
+   Rimuovi un accordo: Elimina un accordo (e tutte le sue tablature) dal database.
+   Vedi e gestisci accordi: Il cuore della funzione. Potete filtrare e selezionare un accordo salvato. Una volta scelto:
+       Se l'accordo ha più tablature, potete scegliere quale visualizzare.
+       Visualizza: Potete vederla per corda o per tasto.
+       Ascolta: Un player audio interattivo vi permetterà di sentire l'accordo.
+           Tasti 1-6: Suonano le singole corde (1 = MI cantino, 6 = MI grave).
+           Q: Pennata in giù (Strum "battere", dal grave all'acuto).
+           A: Pennata in su (Strum "levare", dall'acuto al grave).
+       Modifica/Rimuovi: Potete cambiare la tablatura o rimuoverla.
+
+-----
+
+ Costruttore Accordi
+
+Questa è la funzione teorica di Chitabry. Non si occupa di come suonate un accordo sulla chitarra, ma di quali note lo compongono. È uno strumento potentissimo per lo studio dell'armonia.
+
+Il processo è semplice:
+
+1.  Scegli la Tonica: Selezionate la nota fondamentale (es. "DO", "FA\", "SIb").
+2.  Scegli il Tipo: Si aprirà un menu filtrabile con decine di tipi di accordi (es. "Major", "Minor", "Dominant 13th", "Half-Diminished (m7b5)").
+       Suggerimento: Se non trovate il tipo, selezionate l'opzione `>> Cerca tipo di accordo...` (digitando `...` o filtrando) per una ricerca testuale completa.
+
+Chitabry vi mostrerà subito le note che compongono quell'accordo (es. DO Maggiore = DO4, MI4, SOL4).
+
+Subito dopo, si avvierà un player audio teorico per farvi ascoltare queste note:
+
+   Tasti 1-0: Suonano le singole note. La mappatura è ottimizzata per la tastiera:
+       Tasto 1: Nota più acuta (panning a sinistra).
+       Tasto 2, 3...: Note intermedie.
+       Tasto 9, 0: Note più gravi (panning a destra).
+   Q: Strum "giù" (dal grave all'acuto).
+   A: Strum "su" (dall'acuto al grave).
+
+-----
+
+ Metronomo
+
+Questa voce lancia Clitronomo, il metronomo testuale avanzato integrato in Chitabry. Per le sue molteplici funzioni (tempo, suddivisioni, accenti, pattern ritmici), vi rimandiamo al suo manuale dedicato `Clitronomo.md`.
+
+-----
+
+ Scale
+
+Simile al Costruttore Accordi, questa è la funzione teorica per lo studio delle scale. Utilizza l'enorme archivio di `music21` per darvi accesso a migliaia di scale da tutto il mondo.
+
+Il processo:
+
+1.  Scegli la Tonica: (Es. "LA").
+2.  Scegli il Tipo di Scala: Si aprirà un menu filtrabile con un elenco sterminato (es. "Major Scale", "Melodic Minor", "Hirajoshi", "Chromatic Scale").
+       Suggerimento: Usate il filtro o l'opzione `>> Inserisci USI manualmente...` (digitando `...`) per la ricerca testuale.
+
+Chitabry vi mostrerà:
+
+1.  Le note della scala: Sia in salita (Asc) che in discesa (Desc), se sono diverse.
+2.  Posizioni sul manico: Vi chiederà un range di tasti (es. `0.4` per i primi 4 tasti) e vi mostrerà tutte le posizioni delle note della scala in quel range.
+
+Infine, si aprirà il Menu Esercizio Scala:
+
+   A: Ascolta la scala ascendente.
+   D: Ascolta la scala discendente.
+   L: Attiva il loop (continua a suonare A o D finché non premete di nuovo L).
+   B: Cambia i BPM (Battiti Per Minuto) per l'esercizio.
+
+-----
+
+ Impostazioni
+
+Qui potete configurare alcuni parametri di Chitabry:
+
+   Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
+   Modifica suono 1 (Accordi): Permette di cambiare i parametri del suono usato per "Accordi" e "Costruttore Accordi" (tipo d'onda, ADSR, volume).
+   Modifica suono 2 (Scale): Permette di cambiare i parametri del suono usato per "Scale".
+
+-----
+
+ Nota sul manico
+
+Questa è la funzione contraria a "Trova Posizione". Serve per sapere dove si trova una nota specifica sul manico della chitarra.
+
+Vi verrà chiesta la nota da cercare (es. "SOL"). Potete anche specificare un range di tasti (es. `5.12`).
+Chitabry vi risponderà docilmente con un elenco di tutte le posizioni:
+
+```
+Nota SOL trovata nelle seguenti posizioni (tasti 5-12):
+Corda 6, tasti: 
+Corda 5, tasti: 10 
+Corda 4, tasti: 5 
+Corda 3, tasti: 12 
+...etc...
+```
+
+A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non "RE\"). Per cercare un diesis, digitate "RE#".
+
+-----
+
+ Trova Posizione
+
+Questa funzione, abbreviata in precedenza come C.T (Corda.Tasto), vi dice quale nota si trova in una determinata posizione sul manico.
+
+Vi verrà chiesto di inserire la posizione nel formato `Corda.Tasto`.
+
+   Il numero della corda va da 6 (la più spessa, MI grave) a 1 (la più sottile, MI cantino).
+   Il tasto 0 indica la corda suonata "a vuoto" (libera).
+
+Ad esempio, scrivendo `6.3` (terzo tasto della sesta corda), Chitabry risponderà:
+`Sulla corda 6, tasto 3, si trova la nota: SOL2`
+
+Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato\!
+
+-----
+
+ Guida
+
+Mostra questo manuale (il file Chitabryman.txt) direttamente nell'applicazione.
+
+ Esci
+
+Salva eventuali modifiche alle impostazioni o al database accordi e chiude l'applicazione.
+
+-----
 
 Ringraziamenti.
 Per questo lavoro impegnativo ringrazio in ordine del tutto casuale, le seguenti persone e chiedo anticipatamente perdono se ne ho dimenticata qualcuna:

@@ -1,18 +1,5 @@
 Appunti di sviluppo
 27/10
-Ti mostro un codice e ti espongo un problema.
-Ti chiedo di studiare approfonditamente la documentazione di music21 e stilare un vademecum per istruire una istanza di gemini sul come creare le stringhe per indicare gli accordi. Al momento, se indico una C, riporta correttamente C major ma dice che è formato da una sola nota, DO. Se indico Cm, accordo di DO minore, non lo riconosce.
-Vedi inoltre se è possibile migliorare le funzioni di introspezione della libreria affinché il menu con le scelte delle tipologie di accordi riporti tutti quelli conosciuti dalla libreria e non solo alcuni.
-Ecco il codice.
-prompt2 se il primo non va.
-Devo istruire un'istanza di gemini sull'uso della libreria python music21.
-Perciò sii sintetico con le spiegazioni, diretto, preciso e fornisci esempi di codice.
-Lo scopo è creare una routine di introspezione di music21 al fine di popolare un dizionario con tutte le tipologie di accordi riconosciuti dalla libreria. Poi presentare questo dizionario all'utente in modo che, step by step (struttura già pronta) possa scegliere una fondamentale ed una tipologia di accordo, quindi music21 si occuperà di fornire le note dell'accordo che verranno presentate all'utente.
-Abbiamo già le strutture pronte per catturare le note riportate da music21, quello che non riusciamo a fare è l'introspezione completa e soprattutto la creazione di una stringa nel formato corretto che individui l'accordo scelto.
-Studia profondamente la documentazione della libreria e insegna a gemini come scrivere codice per comunicare con essa.
-***
-Rapporto Tecnico sull'Introspezione e Utilizzo del Modulo music21.harmony
-Questo documento fornisce un'istruzione tecnica e sintetica sull'architettura della libreria music21, focalizzandosi sull'introspezione delle definizioni degli accordi e sulla corretta generazione di istanze di accordi a partire dalla fondamentale e dalla qualità.
 I. Architettura Fondamentale: La Dicotomia chord.Chord vs. harmony.ChordSymbol
 Un errore concettuale comune nell'utilizzo di music21 è confondere le due classi primarie che gestiscono gli accordi. La libreria opera una distinzione netta tra l'analisi di note esistenti e la generazione di note da un simbolo semantico.
 A. music21.chord.Chord: Il Contenitore Analitico
