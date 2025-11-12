@@ -1211,7 +1211,7 @@ def get_impostazioni_default():
         },
         "chordpedia": {},
     }
-def carica_impostazioni():
+def ctarica_impostazioni():
     """Carica le impostazioni da FILE_IMPOSTAZIONI.
     Se il file non esiste, lo crea con i valori di default.
     Gestisce anche l'aggiornamento di file vecchi.
