@@ -12,10 +12,10 @@ from typing import Dict
 from pathlib import Path
 import numpy as np
 import sounddevice as sd
-import sys, json, re, inspect, random, threading, clitronomo
+import sys, json, re, inspect, random, threading, clitronomo, midistudy
 
 # --- Costanti ---
-VERSIONE = "4.5.4 del 29 ottobre 2025."
+VERSIONE = "4.6.0 del 30 dicembre 2025."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -151,6 +151,7 @@ MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Flauto": "Consulta la diteggiatura del flauto traverso",
     "Metronomo": "Avvia Clitronomo",
+    "MidiStudy": "Analizza e studia file MIDI",
     "Scale": "Visualizza, esercitati e gestisci le scale",
     "Impostazioni": "Configura i suoni e la notazione delle note",
     "Nota sul manico": "Trova le posizioni di una nota sul manico",
@@ -2410,6 +2411,8 @@ def main():
             aspetta(0.5)
             clitronomo.main()
             print("\n--- Ritorno al Menu Principale di Chitabry ---")
+        elif scelta == "MidiStudy":
+            midistudy.MidiStudyMain()
         elif scelta == "Scale":
             VisualizzaEsercitatiScala()
         elif scelta == "Flauto":

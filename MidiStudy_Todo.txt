@@ -1,0 +1,19 @@
+# MidiStudy - Todo List
+# Modulo di analisi musicale per Chitabry
+# Data inizio: 30 Dicembre 2025
+
+[X] Creazione struttura file `midistudy.py`
+[X] Creazione Todo List
+[X] Integrazione menu in `Chitabry.py`
+[X] Refactoring Versione Chitabry (4.6.0)
+[X] Funzione: Scansione cartella per file .mid (Mine\Chitabry\midi)
+[X] Funzione: Caricamento e Analisi preliminare (Lista Tracce)
+[X] Funzione: Player Anteprima Traccia (Isolamento + Temp File)
+[X] Funzione: Estrazione Melodia (Logica Note/Durate)
+[ ] Funzione: Export CLI (Fix: Usare menu() come pager invece di loop custom)
+[X] Funzione: Export su file .txt
+[ ] Funzione: Player Avanzato (Sostituire os.startfile)
+    - [ ] Navigazione nota per nota (Avanti/Indietro)
+    - [ ] Play continuo / Stop
+    - [ ] Sintesi audio interna (usando NoteRenderer di Chitabry?)
+[ ] Test finale con file MIDI complesso (Pausini)
