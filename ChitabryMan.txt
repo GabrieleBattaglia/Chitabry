@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 3, di mercoledi' 29 ottobre 2025.
+L'ultima revisione di questo documento e' la numero 4, di domenica 4 gennaio 2026.
 A cura di Gabriele Battaglia.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
@@ -116,7 +116,7 @@ Infine, si aprirà il Menu Esercizio Scala:
 Qui potete configurare alcuni parametri di Chitabry:
 
    Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
-   Modifica suono 1 (Accordi): Permette di cambiare i parametri del suono usato per "Accordi" e "Costruttore Accordi" (tipo d'onda, ADSR, volume).
+   Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
    Modifica suono 2 (Scale): Permette di cambiare i parametri del suono usato per "Scale".
 
 -----

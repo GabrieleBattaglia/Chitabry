@@ -6,6 +6,7 @@
 
 from time import sleep as aspetta
 from scipy import signal
+from collections import deque
 from music21 import pitch, chord, scale, interval, harmony
 from GBUtils import dgt, manuale, menu, key
 from typing import Dict
@@ -15,7 +16,7 @@ import sounddevice as sd
 import sys, json, re, inspect, random, threading, clitronomo, midistudy
 
 # --- Costanti ---
-VERSIONE = "4.6.0 del 30 dicembre 2025."
+VERSIONE = "4.7.0 del 4 gennaio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -750,51 +751,240 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
     else:
         raise ScaleException(f"Paradigma USI sconosciuto: '{paradigm}'")
 
+#QF
+def _generate_harmonic_pluck(buffer_length_N, pluck_hardness_float):
+    """
+    Genera un "pluck" di eccitazione ibrido basato sulla sintesi additiva
+    dalla Tabella 1, lungo N campioni, scolpito dalla durezza.
+    
+    Questo sostituisce il metodo a rumore filtrato, che è inaffidabile
+    alle basse frequenze.
+    """
+    N = buffer_length_N
+    t = np.linspace(0., 1., N, endpoint=False) # Genera 1 ciclo di base
+    
+    # Dati dalla Tabella 1 (Amplitudini base normalizzate)
+    # n = 1,  2,    3,    4,    5,    6,    7,    8,    9,   10
+    base_amplitudes = np.array([
+        1.00, 0.15, 0.34, 0.30, 0.09, 0.03, 0.08, 0.03, 0.06, 0.04
+    ])
+    
+    # Usa pluck_hardness (0.1 morbido, 0.9 duro) per "scolpire" queste armoniche.
+    # Un plettro morbido (0.1) attenua molto le armoniche alte.
+    # Un plettro duro (0.9) le attenua poco.
+    
+    # Convertiamo [0.1, 0.9] in un fattore di attenuazione
+    # 0.1 -> 1.0 (attenuazione alta)
+    # 0.9 -> 0.1 (attenuazione bassa)
+    roll_off_strength = 1.0 - pluck_hardness_float 
+    
+    # Creiamo un array scalare: [1.0, strength, strength^2, strength^3, ...]
+    n = np.arange(0, len(base_amplitudes))
+    hardness_scalar = np.power(roll_off_strength, n)
+    
+    # Applichiamo la durezza alle ampiezze base
+    amplitudes = base_amplitudes * hardness_scalar
+    
+    waveform = np.zeros(N, dtype=np.float32)
+    
+    # Costruiamo il ciclo d'onda sommando le armoniche
+    for i in range(len(amplitudes)):
+        n_harmonic = i + 1
+        if amplitudes[i] > 0.001: # Ottimizzazione: salta armoniche troppo deboli
+            phase = 2 * np.pi * n_harmonic * t
+            waveform += amplitudes[i] * np.sin(phase)
+            
+    # Rimuovi DC offset (molto importante)
+    waveform -= np.mean(waveform)
+    
+    # Normalizza il pluck finale
+    max_val = np.max(np.abs(waveform))
+    if max_val > 0:
+        waveform /= max_val
+        
+    return waveform
+
+def _generate_filtered_pluck_burst(buffer_length_N, sample_rate, pluck_hardness=0.5):
+    """
+    Genera un burst di rumore filtrato realistico per l'eccitazione KS.
+    (Versione corretta con rimozione DC offset)
+    """
+    # Normalizza l'hardness in un range fisico
+    pluck_hardness = np.clip(pluck_hardness, 0.1, 0.9)
+    noise = np.random.normal(0, 0.5, buffer_length_N)
+    
+    # Mappa hardness a frequenza di cutoff
+    cutoff_freq = 1000 + (pluck_hardness * 9000)
+    nyquist = 0.5 * sample_rate
+    if cutoff_freq >= nyquist:  
+        cutoff_freq = nyquist - 1
+        
+    b, a = signal.butter(2, cutoff_freq / nyquist, btype='low')
+    filtered_noise = signal.lfilter(b, a, noise)
+    
+    decay = np.exp(-np.linspace(0, 5, buffer_length_N))
+    
+    burst = (filtered_noise * decay).astype(np.float32)
+    
+    # --- INIZIO CORREZIONE ---
+    # 1. Rimuovi qualsiasi DC offset dal burst
+    burst -= np.mean(burst)
+    
+    # 2. Normalizza di nuovo dopo la rimozione del DC
+    max_abs = np.max(np.abs(burst))
+    if max_abs > 0:
+        burst /= max_abs
+    # --- FINE CORREZIONE ---
+        
+    return burst
+
 class NoteRenderer:
     """
     Gestisce il rendering "one-shot" di una singola nota.
-    Pre-calcola l'audio (onda + envelope) e lo restituisce.
+    Usa l'algoritmo Karplus-Strong per suoni di chitarra (suono_1)
+    o la sintesi additiva standard per altri suoni (suono_2).
     """
     def __init__(self, fs=FS):
         self.fs = fs
         self.freq = 0.0
         self.vol = 0.0
-        self.pan_l, self.pan_r = 0.707, 0.707
-        self.adsr_list = [0, 0, 0, 0]
         self.dur = 0
-        self.kind = 1
-
-    # --- Oscillatori ---
-    def _get_wave_vector(self, freq, n_samples):
-        """Genera il vettore d'onda base."""
-        t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
-        phase_vector = 2 * np.pi * freq * t
+        self.pan_l, self.pan_r = 0.707, 0.707
         
-        if self.kind == 2: return signal.square(phase_vector)
-        elif self.kind == 3: return signal.sawtooth(phase_vector, 0.5)
-        elif self.kind == 4: return signal.sawtooth(phase_vector)
+        # Parametri legacy (per suono_2)
+        self.adsr_list = [0, 0, 0, 0]
+        self.kind = 0
+        
+        # Nuovi parametri (per suono_1)
+        self.pluck_hardness = 0.0
+        self.damping_factor = 0.0
+
+    # QUESTA è la firma corretta che accetta **kwargs
+    def set_params(self, freq, dur, vol, pan, **kwargs):
+        """
+        Memorizza i parametri per il rendering.
+        kwargs può contenere parametri legacy (adsr_list, kind)
+        o nuovi parametri (pluck_hardness, damping_factor).
+        """
+        self.freq = freq
+        self.dur = dur
+        self.vol = vol
+        
+        # Impostazioni Panning
+        pan_clipped = np.clip(pan, -1.0, 1.0)
+        pan_angle = pan_clipped * (np.pi / 4.0)
+        self.pan_l = np.cos(pan_angle + np.pi / 4.0)
+        self.pan_r = np.sin(pan_angle + np.pi / 4.0)
+        
+        # Resetta i flag
+        self.kind = 0
+        self.pluck_hardness = 0.0
+        
+        # Controlla quali parametri sono stati passati
+        if 'kind' in kwargs: # Chiamata Legacy (suono_2)
+            self.adsr_list = kwargs.get('adsr_list', [0,0,0,0])
+            self.kind = kwargs.get('kind', 1)
+        elif 'pluck_hardness' in kwargs: # Chiamata Karplus-Strong (suono_1)
+            self.pluck_hardness = kwargs.get('pluck_hardness', 0.5)
+            self.damping_factor = kwargs.get('damping_factor', 0.996)
+        else:
+            # Fallback se kwargs è vuoto (improbabile)
+            self.kind = 1 
+
+    def _render_karplus_strong(self, n_samples):
+        """
+        Implementazione avanzata di Karplus-Strong (Snippet 5).
+        """
+        # 1. Calcola la lunghezza del buffer
+        N = int(self.fs / self.freq)
+        if N <= 1:
+            return np.zeros(n_samples, dtype=np.float32) # Freq troppo alta
+            
+        # 2. Eccitazione (Usando il Blocco Helper 1)
+        pluck = _generate_harmonic_pluck(N, self.pluck_hardness)
+        buf = deque(pluck)
+        
+        samples = np.zeros(n_samples, dtype=np.float32)
+        
+        for i in range(n_samples):
+            # 3. Lettura del campione
+            samples[i] = buf[0]
+            
+            # 4. Filtro di Loop (KS Classico)
+            # Leggiamo i primi due campioni per l'averaging
+            avg = self.damping_factor * 0.5 * (buf[0] + buf[1])
+            
+            # 5. Feedback
+            buf.append(avg)
+            buf.popleft() # Mantiene la lunghezza N
+            
+        return samples
+
+    def _render_legacy_osc(self, n_samples):
+        """
+        Oscillatori semplici (il vecchio _get_wave_vector)
+        e inviluppo ADSR (la vecchia logica di render).
+        """
+        # 1. Genera onda base (Logica dal vecchio _get_wave_vector)
+        t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
+        phase_vector = 2 * np.pi * self.freq * t
+        
+        if self.kind == 2: wave = signal.square(phase_vector)
+        elif self.kind == 3: wave = signal.sawtooth(phase_vector, 0.5)
+        elif self.kind == 4: wave = signal.sawtooth(phase_vector)
         elif self.kind == 5:
             wave = np.zeros(n_samples, dtype=np.float32)
             for i, h_amp in enumerate(HARMONICS):
                 wave += np.sin((i + 1) * phase_vector) * h_amp
             max_val = np.max(np.abs(wave))
             if max_val > 0: wave /= max_val
-            return wave
-        else: # kind 1
-            return np.sin(phase_vector)
+        else: # kind 1 (default)
+            wave = np.sin(phase_vector)
+        
+        wave = wave.astype(np.float32)
+        
+        # 2. Applica inviluppo ADSR (Logica dal vecchio render())
+        a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
+        attack_frac = a_pct / 100.0
+        decay_frac = d_pct / 100.0
+        sustain_level = s_level_pct / 100.0
+        release_frac = r_pct / 100.0
+        
+        attack_samples = int(round(attack_frac * n_samples))
+        decay_samples = int(round(decay_frac * n_samples))
+        release_samples = int(round(release_frac * n_samples))
+        
+        sustain_samples = n_samples - (attack_samples + decay_samples + release_samples)
+        if sustain_samples < 0:
+            release_samples += sustain_samples
+            sustain_samples = 0
+            release_samples = max(0, release_samples)
 
-    # --- Configurazione ---
-    def set_params(self, freq, adsr_list, dur, vol, kind, pan):
-        """Memorizza i parametri per il rendering."""
-        self.freq = freq
-        self.vol = vol
-        self.adsr_list = adsr_list
-        self.dur = dur
-        self.kind = kind
-        pan_clipped = np.clip(pan, -1.0, 1.0)
-        pan_angle = pan_clipped * (np.pi / 4.0)
-        self.pan_l = np.cos(pan_angle + np.pi / 4.0)
-        self.pan_r = np.sin(pan_angle + np.pi / 4.0)
+        envelope = np.zeros(n_samples, dtype=np.float32)
+        current_pos = 0
+
+        if attack_samples > 0:
+            attack_samples = min(attack_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + attack_samples] = np.linspace(0., 1., attack_samples, dtype=np.float32)
+            current_pos += attack_samples
+        
+        if decay_samples > 0:
+            decay_samples = min(decay_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + decay_samples] = np.linspace(1., sustain_level, decay_samples, dtype=np.float32)
+            current_pos += decay_samples
+        
+        if sustain_samples > 0:
+            sustain_samples = min(sustain_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + sustain_samples] = sustain_level
+            current_pos += sustain_samples
+        
+        if release_samples > 0:
+            release_samples = min(release_samples, n_samples - current_pos)
+            if release_samples > 0:
+                envelope[current_pos : current_pos + release_samples] = np.linspace(sustain_level, 0., release_samples, dtype=np.float32)
+
+        wave *= envelope
+        return wave
 
     def render(self):
         """
@@ -803,56 +993,24 @@ class NoteRenderer:
         """
         empty_array = np.array([], dtype=np.float32)
 
-        if self.freq == 0.0:
+        if self.freq <= 0.0:
             return empty_array
 
         total_note_samples = int(round(self.dur * self.fs))
         if total_note_samples == 0:
             return empty_array
             
-        wave = self._get_wave_vector(self.freq, total_note_samples)
-        wave = wave.astype(np.float32)
-
-        a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
-        attack_frac = a_pct / 100.0
-        decay_frac = d_pct / 100.0
-        sustain_level = s_level_pct / 100.0
-        release_frac = r_pct / 100.0
-        
-        attack_samples = int(round(attack_frac * total_note_samples))
-        decay_samples = int(round(decay_frac * total_note_samples))
-        release_samples = int(round(release_frac * total_note_samples))
-        
-        sustain_samples = total_note_samples - (attack_samples + decay_samples + release_samples)
-        if sustain_samples < 0:
-            release_samples += sustain_samples
-            sustain_samples = 0
-            release_samples = max(0, release_samples)
-
-        envelope = np.zeros(total_note_samples, dtype=np.float32)
-        current_pos = 0
-
-        if attack_samples > 0:
-            attack_samples = min(attack_samples, total_note_samples - current_pos)
-            envelope[current_pos : current_pos + attack_samples] = np.linspace(0., 1., attack_samples, dtype=np.float32)
-            current_pos += attack_samples
-        
-        if decay_samples > 0:
-            decay_samples = min(decay_samples, total_note_samples - current_pos)
-            envelope[current_pos : current_pos + decay_samples] = np.linspace(1., sustain_level, decay_samples, dtype=np.float32)
-            current_pos += decay_samples
-        
-        if sustain_samples > 0:
-            sustain_samples = min(sustain_samples, total_note_samples - current_pos)
-            envelope[current_pos : current_pos + sustain_samples] = sustain_level
-            current_pos += sustain_samples
-        
-        if release_samples > 0:
-            release_samples = min(release_samples, total_note_samples - current_pos)
-            if release_samples > 0:
-                envelope[current_pos : current_pos + release_samples] = np.linspace(sustain_level, 0., release_samples, dtype=np.float32)
-        
-        wave *= envelope * self.vol
+        # --- ROUTING LOGIC ---
+        # Se pluck_hardness è stato impostato, usa KS (suono_1)
+        if self.pluck_hardness > 0:
+            wave = self._render_karplus_strong(total_note_samples)
+            # Nota: KS ha già il suo inviluppo, quindi non applichiamo ADSR
+        else:
+            # Altrimenti, usa il vecchio metodo (per suono_2)
+            wave = self._render_legacy_osc(total_note_samples)
+            
+        # Applica volume e panning
+        wave *= self.vol
         
         stereo_segment = np.zeros((total_note_samples, 2), dtype=np.float32)
         stereo_segment[:, 0] = wave * self.pan_l
@@ -867,11 +1025,11 @@ def get_impostazioni_default():
         "nomenclatura": "latino",
         "default_bpm": 60,
         "suono_1": {
-            "descrizione": "Suono per accordi (simil-chitarra)",
-            "kind": 3,
-            "adsr": [0.5, 99.0, 0.0, 0.5], 
-            "dur_accordi": 3.0, 
-            "volume": 0.35
+            "descrizione": "Suono per accordi (Karplus-Strong Pluck)",
+            "pluck_hardness": 0.2,    # Range 0.1 (morbido) - 0.9 (brillante)
+            "damping_factor": 0.998,  # Range 0.990 (corto) - 0.999 (lungo)
+            "dur_accordi": 9.0,   
+            "volume": 0.45
         },
         "suono_2": {
             "descrizione": "Suono per scale (simil-flauto)",
@@ -1000,13 +1158,13 @@ def Suona(tablatura):
     print("Tasti da 1 a 6, (A) pennata in levare, (Q) pennata in battere")
     print("ESC per uscire.")
     
+    #Q rimuovi i parametri non usati
     suono_1 = impostazioni['suono_1']
-    kind = suono_1['kind']
-    adsr_list = suono_1['adsr']
+    hardness = suono_1.get('pluck_hardness', 0.6)
+    damping = suono_1.get('damping_factor', 0.997)
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
     
-    # Crea 6 renderer (invece di 'voices')
     renderers = [NoteRenderer(fs=FS) for _ in range(6)]
     note_da_suonare = [] # Lista di booleani (se la corda suona)
     note_freq = [] # Lista delle frequenze
@@ -1028,8 +1186,9 @@ def Suona(tablatura):
         note_da_suonare.append(freq > 0) 
         
         # Imposta i parametri per questo renderer
-        renderers[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
-
+        renderers[i].set_params(freq, dur, vol, pan_val, 
+                                pluck_hardness=hardness, 
+                                damping_factor=damping)
     note_prompt_str = get_note_da_tablatura(tablatura)
     while True:
         print(f"Note: {note_prompt_str}): ",end="\r",flush=True)
@@ -1064,12 +1223,10 @@ def Suona(tablatura):
             for i in note_order:
                 if note_da_suonare[i]:
                     # Imposta i parametri corretti (necessario se cambiassero)
-                    renderers[i].set_params(note_freq[i], adsr_list, dur, vol, kind, note_pan[i])
-                    
-                    # --- MODIFICA CHIAVE ---
-                    # Renderizza la nota e la ottiene
+                    renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], 
+                                            pluck_hardness=hardness, 
+                                            damping_factor=damping)                    
                     note_data = renderers[i].render() 
-                    
                     if len(note_data) > note_duration_samples:
                         note_data = note_data[:note_duration_samples]
                     
@@ -1131,6 +1288,8 @@ def SuonaAccordoTeorico(note_pitch_list):
     adsr_list = suono_1['adsr']
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
+    hardness = suono_1.get('pluck_hardness', 0.6)
+    damping = suono_1.get('damping_factor', 0.997)
 
     # 4. Calcola Panning (Grave=+0.8 -> Acuto=-0.8)
     pan_values = []
@@ -1164,8 +1323,9 @@ def SuonaAccordoTeorico(note_pitch_list):
         
         # Configura il renderer
         pan_val = pan_values[i]
-        renderers[i].set_params(freq, adsr_list, dur, vol, kind, pan_val)
-        
+        renderers[i].set_params(freq, dur, vol, pan_val, 
+                                pluck_hardness=hardness, 
+                                damping_factor=damping)        
         # Stampa info nota (con tasto associato)
         tasto_associato = "N/A"
         for key_char, index in key_map.items():
@@ -1216,8 +1376,9 @@ def SuonaAccordoTeorico(note_pitch_list):
             for i in note_order:
                 if note_freqs[i] > 0:
                     # Riconfigura renderer (per sicurezza, anche se già fatto)
-                    renderers[i].set_params(note_freqs[i], adsr_list, dur, vol, kind, pan_values[i])
-                    
+                    renderers[i].set_params(freq, dur, vol, pan_val, 
+                                pluck_hardness=hardness, 
+                                damping_factor=damping)                    
                     # Renderizza la singola nota
                     note_data = renderers[i].render()
                     
@@ -1629,7 +1790,6 @@ def render_scale_audio(note_list, suono_params, bpm):
     if s_dur <= 0:
         print("Errore: Durata nota non valida (BPM troppo alti?).")
         return np.array([], dtype=np.float32)
-
     # --- CORREZIONE: Usa NoteRenderer ---
     renderer = NoteRenderer(fs=FS)
     # ------------------------------------
@@ -1651,13 +1811,12 @@ def render_scale_audio(note_list, suono_params, bpm):
                   segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
              continue # Passa alla prossima nota
 
-        # --- CORREZIONE: Usa renderer e render() ---
         # Imposta i parametri sul renderer
-        renderer.set_params(freq, s_adsr, s_dur, s_vol, s_kind, s_pan)
+        renderer.set_params(freq, s_dur, s_vol, s_pan, 
+                            adsr_list=s_adsr, 
+                            kind=s_kind)
         # Chiama render() per ottenere l'array audio
-        note_audio = renderer.render()
-        # ----------------------------------------
-
+        note_audio = renderer.render() 
         # Aggiungi il segmento audio (o silenzio se render fallisce)
         if note_audio is not None and note_audio.size > 0:
             # Verifica che l'array restituito abbia la forma corretta (samples, 2)
@@ -2063,42 +2222,70 @@ def GestoreChordpedia():
 def ModificaSuono(suono_key):
     """
     Funzione helper per modificare i parametri di 'suono_1' o 'suono_2'.
+    Gestisce i diversi parametri per ogni tipo di suono.
     """
     global archivio_modificato
     
     suono = impostazioni[suono_key]
     print(f"\n--- Modifica {suono['descrizione']} ---")
 
-    # 1. Modifica Tipo di Onda (Kind)
-    onda_prompt = f"Onda (1=Sin, 2=Quadra, 3=Tri, 4=Saw, 5=String) (attuale: {suono['kind']}): "
-    suono['kind'] = dgt(onda_prompt, kind='i', imin=1, imax=5, default=suono['kind'])
-
-    # 2. Modifica ADSR
-    print("Inserisci i valori ADSR (premi Invio per confermare il valore attuale):")
-    labels_adsr = ["Attacco % (tempo)", "Decadimento % (tempo)", "Sustain Livello % (vol)", "Rilascio % (tempo)"]
-    vecchio_adsr = suono['adsr']
-    nuovo_adsr = []
-    
-    for i in range(4):
-        val = dgt(f"{labels_adsr[i]} (attuale: {vecchio_adsr[i]}): ", 
-                    kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[i])
-        nuovo_adsr.append(val)
-    
-    # Validazione somma ADSR
-    somma_adr = nuovo_adsr[0] + nuovo_adsr[1] + nuovo_adsr[3]
-    if somma_adr > 100.0:
-        print(f"ATTENZIONE: La somma di Attacco, Decadimento e Rilascio ({somma_adr}%) supera 100%.")
-        print("Questo potrebbe non essere supportato. ADSR non modificato.")
-        suono['adsr'] = vecchio_adsr # Ripristina
-    else:
-        suono['adsr'] = nuovo_adsr
-
-    # 3. Modifica Durata (solo per suono 1)
+    # --- Logica Condizionale ---
     if suono_key == 'suono_1':
-        dur_prompt = f"Durata suono accordi (sec) (attuale: {suono['dur_accordi']}): "
-        suono['dur_accordi'] = dgt(dur_prompt, kind='f', fmin=0.1, fmax=10.0, default=suono['dur_accordi'])
+        # --- Parametri Karplus-Strong (suono_1) ---
+        
+        # 1. Modifica pluck_hardness (scalato 1-10)
+        current_hardness_float = suono.get('pluck_hardness', 0.6)
+        # Mappa inversa: [0.1, 0.9] -> [1, 10]
+        current_hardness_int = int(round(1 + (np.clip(current_hardness_float, 0.1, 0.9) - 0.1) * (9.0 / 0.8)))
+        
+        hardness_prompt = f"Durezza plettro (1=morbido, 10=brillante) (attuale: {current_hardness_int}): "
+        new_hardness_int = dgt(hardness_prompt, kind='i', imin=1, imax=10, default=current_hardness_int)
+        
+        # Mappa [1, 10] -> [0.1, 0.9] e salva il float
+        suono['pluck_hardness'] = 0.1 + (new_hardness_int - 1) * (0.8 / 9.0)
 
-    # 4. Modifica Volume (Aggiunto)
+        # 2. Modifica damping_factor (scalato 1-10)
+        current_damping_float = suono.get('damping_factor', 0.997)
+        # Mappa inversa: [0.990, 0.999] -> [1, 10]
+        current_damping_int = int(round(1 + (np.clip(current_damping_float, 0.990, 0.999) - 0.990) / 0.001))
+
+        damping_prompt = f"Sustain (1=corto, 10=lungo) (attuale: {current_damping_int}): "
+        new_damping_int = dgt(damping_prompt, kind='i', imin=1, imax=10, default=current_damping_int)
+
+        # Mappa [1, 10] -> [0.990, 0.999] e salva il float
+        suono['damping_factor'] = 0.990 + (new_damping_int - 1) * 0.001
+
+        # 3. Modifica Durata Massima (come prima)
+        dur_prompt = f"Durata max accordi (sec) (attuale: {suono['dur_accordi']}): "
+        suono['dur_accordi'] = dgt(dur_prompt, kind='f', fmin=0.1, fmax=10.0, default=suono['dur_accordi'])
+    
+    elif suono_key == 'suono_2':
+        # --- Parametri Legacy (suono_2) ---
+        
+        # 1. Modifica Tipo di Onda (Kind)
+        onda_prompt = f"Onda (1=Sin, 2=Quadra, 3=Tri, 4=Saw, 5=String) (attuale: {suono['kind']}): "
+        suono['kind'] = dgt(onda_prompt, kind='i', imin=1, imax=5, default=suono['kind'])
+
+        # 2. Modifica ADSR
+        print("Inserisci i valori ADSR (premi Invio per confermare il valore attuale):")
+        labels_adsr = ["Attacco % (tempo)", "Decadimento % (tempo)", "Sustain Livello % (vol)", "Rilascio % (tempo)"]
+        vecchio_adsr = suono['adsr']
+        nuovo_adsr = []
+        
+        for i in range(4):
+            val = dgt(f"{labels_adsr[i]} (attuale: {vecchio_adsr[i]}): ", 
+                        kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[i])
+            nuovo_adsr.append(val)
+        
+        # Validazione somma ADSR
+        somma_adr = nuovo_adsr[0] + nuovo_adsr[1] + nuovo_adsr[3]
+        if somma_adr > 100.0:
+            print(f"ATTENZIONE: La somma di Attacco, Decadimento e Rilascio ({somma_adr}%) supera 100%.")
+            print("ADSR non modificato.")
+        else:
+            suono['adsr'] = nuovo_adsr
+
+    # --- Parametro Comune (Volume) ---
     vol_prompt = f"Volume (0.0 - 1.0) (attuale: {suono['volume']}): "
     suono['volume'] = dgt(vol_prompt, kind='f', fmin=0.0, fmax=1.0, default=suono['volume'])
 
@@ -2204,14 +2391,17 @@ def TrovaPosizione():
         corda_idx_zero_based = 6 - int(s.split('.')[0])
         pan = -0.8 + (corda_idx_zero_based * 0.32)
         dur = suono_1['dur_accordi']
+        vol = suono_1['volume'] 
         
         # Crea un singolo renderer
+        hardness = suono_1.get('pluck_hardness', 0.6)
+        damping = suono_1.get('damping_factor', 0.997)        
         renderer = NoteRenderer(fs=FS)
         
         # Imposta i parametri
-        renderer.set_params(freq, suono_1['adsr'], dur, suono_1['volume'], suono_1['kind'], pan)
-        
-        # --- MODIFICA CHIAVE ---
+        renderer.set_params(freq, dur, vol, pan, 
+                            pluck_hardness=hardness, 
+                            damping_factor=damping)        
         # Renderizza la nota e la ottiene
         note_audio = renderer.render()
         

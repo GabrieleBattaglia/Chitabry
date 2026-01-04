@@ -1,0 +1,18 @@
+Chitabry - ChangeLog
+====================
+
+Versione 4.7.0 (4 gennaio 2026)
+--------------------------------
+*   **Merge Funzionalità:** Unificato il codice di sviluppo (chitabrydev6) con il ramo principale. Ora Chitabry include sia le funzioni MIDI che il nuovo motore audio.
+*   **Nuovo Motore Audio (Karplus-Strong):**
+    *   Sostituita la sintesi additiva per il suono della chitarra con l'algoritmo a modelli fisici Karplus-Strong.
+    *   Il suono è ora generato simulando la fisica di una corda pizzicata, offrendo un realismo nettamente superiore.
+    *   Aggiunta simulazione della "Durezza del Plettro" (Pluck Hardness) e del "Sustain" (Smorzamento) nelle impostazioni.
+*   **Impostazioni:**
+    *   Aggiornato il menu "Modifica Suono 1" per esporre i nuovi parametri fisici (Durezza, Sustain) al posto dei vecchi ADSR.
+    *   Il "Suono 2" (Scale) mantiene il motore legacy per suoni più semplici (simil-flauto).
+*   **Cleanup:** Rimossi file obsoleti di sviluppo.
+
+Versione 4.6.0 (30 dicembre 2025)
+--------------------------------
+*   Versione precedente con integrazione iniziale modulo MIDI e music21.
