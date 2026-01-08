@@ -1,134 +1,60 @@
-Analisi Traccia: Violin (128 note)
-File Origine: E:\git\Mine\Chitabry\midi\StarTrek TNG Theme for violin.mid
-------------------------------
-F4 (1/2 (Metà))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (1/2 (Metà))
-G#4 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-F5 (3/4 (Metà puntata))
-PAUSA (1/8 (Ottavo))
-G#4 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (3/8 (Quarto puntato))
-Eb5 (3/8 (Quarto puntato))
-D5 (3/8 (Quarto puntato))
-D5 (1/8 (Ottavo))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (3/4 (Metà puntata))
-F4 (1/2 (Metà))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (1/2 (Metà))
-G#4 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-F5 (3/4 (Metà puntata))
-PAUSA (1/8 (Ottavo))
-G#4 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (3/8 (Quarto puntato))
-Eb5 (3/8 (Quarto puntato))
-D5 (3/8 (Quarto puntato))
-D5 (1/8 (Ottavo))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (3/4 (Metà puntata))
-A5 (3/4 (Metà puntata))
-F#5 (1/2 (Metà))
-D5 (1/8 (Ottavo))
-B5 (1/8 (Ottavo))
-A5 (3/4 (Metà puntata))
-F#5 (3/4 (Metà puntata))
-A5 (3/8 (Quarto puntato))
-B5 (3/8 (Quarto puntato))
-C#6 (3/8 (Quarto puntato))
-B5 (3/8 (Quarto puntato))
-A5 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-A5 (1/8 (Ottavo))
-G5 (4.50 QL)
-F5 (1/2 (Metà))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (1/2 (Metà))
-G#4 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-F5 (3/4 (Metà puntata))
-PAUSA (1/8 (Ottavo))
-G#4 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (1/8 (Ottavo))
-G5 (1/8 (Ottavo))
-Eb5 (1/8 (Ottavo))
-F5 (3/8 (Quarto puntato))
-Eb5 (3/8 (Quarto puntato))
-D5 (1/2 (Metà))
-Bb4 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-C5 (3/4 (Metà puntata))
-F#5 (3/4 (Metà puntata))
-Eb5 (1/2 (Metà))
-B4 (1/8 (Ottavo))
-G#5 (1/8 (Ottavo))
-F#5 (3/4 (Metà puntata))
-Eb5 (3/4 (Metà puntata))
-F#5 (3/8 (Quarto puntato))
-G#5 (3/8 (Quarto puntato))
-Bb5 (3/8 (Quarto puntato))
-G#5 (3/8 (Quarto puntato))
-F#5 (1/8 (Ottavo))
-B4 (1/8 (Ottavo))
-F#5 (1/8 (Ottavo))
-E5 (4.50 QL)
-E5 (1/2 (Metà))
-D5 (1/8 (Ottavo))
-C5 (1/8 (Ottavo))
-D5 (1/2 (Metà))
-A4 (1/8 (Ottavo))
-F#5 (1/8 (Ottavo))
-E5 (1/8 (Ottavo))
-PAUSA (1/8 (Ottavo))
-C5 (1/8 (Ottavo))
-D5 (4.50 QL)
-E5 (3/8 (Quarto puntato))
-F#5 (3/8 (Quarto puntato))
-G5 (3/8 (Quarto puntato))
-F5 (3/8 (Quarto puntato))
-F5 (1/8 (Ottavo))
-E5 (1/8 (Ottavo))
-C5 (1/8 (Ottavo))
-D5 (1/2 (Metà))
-A5 (1/8 (Ottavo))
-D6 (1/8 (Ottavo))
-PAUSA (3/8 (Quarto puntato))
-D4 (1/2 (Metà))
-G4 (1/8 (Ottavo))
-B4 (1/8 (Ottavo))
-A4 (1/2 (Metà))
-F4 (1/8 (Ottavo))
-E5 (1/8 (Ottavo))
-D5 (3/4 (Metà puntata))
-PAUSA (1/8 (Ottavo))
-F4 (1/8 (Ottavo))
-C5 (1/8 (Ottavo))
-D5 (1/8 (Ottavo))
-E5 (1/8 (Ottavo))
-C5 (1/8 (Ottavo))
-D5 (3/8 (Quarto puntato))
-E5 (3/8 (Quarto puntato))
-F5 (3/8 (Quarto puntato))
-Eb5 (3/8 (Quarto puntato))
-G5 (3/8 (Quarto puntato))
-G3 (Accordo) (1/8 (Ottavo))
-G3 (Accordo) (1/8 (Ottavo))
-G3 (Accordo) (1/8 (Ottavo))
-G3 (Accordo) (1/8 (Ottavo))
-PAUSA (2.50 QL)
+MidiStudy Analisi - 0.3 (Alpha) del 6 gennaio 2026
+File: StarTrek TNG Theme for violin.mid
+Traccia: 1/1 - Violin (128 note)
+Parametri: BPM=120.0, Tempo=6/8, Tonalità=B- major
+Nomenclatura: LATINO
+========================================
+
+B01: FA4 /2 | BB4 /8 | RE5 /8
+B02: DO5 /2 | SOL#4 /8 | SOL5 /8
+B03: FA5 /2.
+B04: PAUSA /8 | SOL#4 /8 | EB5 /8 | FA5 /8 | SOL5 /8 | EB5 /8
+B05: FA5 /4. | EB5 /4.
+B06: RE5 /4. | RE5 /8 | BB4 /8 | RE5 /8
+B07: DO5 /2.
+B08: FA4 /2 | BB4 /8 | RE5 /8
+B09: DO5 /2 | SOL#4 /8 | SOL5 /8
+B10: FA5 /2.
+B11: PAUSA /8 | SOL#4 /8 | EB5 /8 | FA5 /8 | SOL5 /8 | EB5 /8
+B12: FA5 /4. | EB5 /4.
+B13: RE5 /4. | RE5 /8 | BB4 /8 | RE5 /8
+B14: DO5 /2.
+B15: LA5 /2.
+B16: FA#5 /2 | RE5 /8 | SI5 /8
+B17: LA5 /2.
+B18: FA#5 /2.
+B19: LA5 /4. | SI5 /4.
+B20: DO#6 /4. | SI5 /4.
+B21: LA5 /8 | RE5 /8 | LA5 /8 | SOL5 /4. ~
+B22: SOL5 /2.
+B23: FA5 /2 | BB4 /8 | RE5 /8
+B24: DO5 /2 | SOL#4 /8 | SOL5 /8
+B25: FA5 /2.
+B26: PAUSA /8 | SOL#4 /8 | EB5 /8 | FA5 /8 | SOL5 /8 | EB5 /8
+B27: FA5 /4. | EB5 /4.
+B28: RE5 /2 | BB4 /8 | RE5 /8
+B29: DO5 /2.
+B30: FA#5 /2.
+B31: EB5 /2 | SI4 /8 | SOL#5 /8
+B32: FA#5 /2.
+B33: EB5 /2.
+B34: FA#5 /4. | SOL#5 /4.
+B35: BB5 /4. | SOL#5 /4.
+B36: FA#5 /8 | SI4 /8 | FA#5 /8 | MI5 /4. ~
+B37: MI5 /2.
+B38: MI5 /2 | RE5 /8 | DO5 /8
+B39: RE5 /2 | LA4 /8 | FA#5 /8
+B40: MI5 /8 | PAUSA /8 | DO5 /8 | RE5 /4. ~
+B41: RE5 /2.
+B42: MI5 /4. | FA#5 /4.
+B43: SOL5 /4. | FA5 /4.
+B44: FA5 /8 | MI5 /8 | DO5 /8 | RE5 /4. ~
+B45: RE5 /8 | LA5 /8 | RE6 /8 | PAUSA /4.
+B46: RE4 /2 | SOL4 /8 | SI4 /8
+B47: LA4 /2 | FA4 /8 | MI5 /8
+B48: RE5 /2.
+B49: PAUSA /8 | FA4 /8 | DO5 /8 | RE5 /8 | MI5 /8 | DO5 /8
+B50: RE5 /4. | MI5 /4.
+B51: FA5 /4. | EB5 /4.
+B52: SOL5 /4. | [SOL3 SOL4] /8 | [SOL3 SOL4] /8 | [SOL3 SOL4] /8
+B53: [SOL3 SOL4] /8 | PAUSA /2.50

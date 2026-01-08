@@ -1,5 +1,5 @@
-﻿# Chitabry - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 2.5 Pro
-# Data concepimento: venerdÃ¬ 7 febbraio 2020.
+# Chitabry - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 2.5 Pro
+# Data concepimento: venerdì 7 febbraio 2020.
 # 28 giugno 2024 copiato su Github
 # 22 ottobre 2025, versione 4 con importante refactoring
 # 27 ottobre ora usiamo music21
@@ -13,17 +13,17 @@ from typing import Dict
 from pathlib import Path
 import numpy as np
 import sounddevice as sd
-import sys, json, re, inspect, random, threading, clitronomo, midistudy, GBAudio
+import sys, json, re, inspect, random, threading, clitronomo, midistudy
 
 # --- Costanti ---
-VERSIONE = "4.8.7 del 6 gennaio 2026."
+VERSIONE = "4.8.0 del 6 gennaio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
 Benvenuto nel modulo di diteggiatura del Flauto Traverso.
 
 Questo assistente descrive la posizione delle dita per ogni nota.
-La nomenclatura usata per le chiavi Ã¨ la seguente:
+La nomenclatura usata per le chiavi è la seguente:
 
 MANO SINISTRA (MS):
 - Pollice: PS-Si (leva grande), PS-Sib (leva piccola)
@@ -88,8 +88,8 @@ _FLAUTO_MAPPE_NOTE = {
 
 
 # La tavola di diteggiatura completa.
-# La chiave Ã¨ la nota in formato standard (music21)
-# Il valore Ã¨ un dizionario con le chiavi da premere,
+# La chiave è la nota in formato standard (music21)
+# Il valore è un dizionario con le chiavi da premere,
 # consigli (per ottava 3) e alternative.
 _DITEGGIATURE_FLAUTO = {
     # --- PRIMA OTTAVA (Utente '1') ---
@@ -127,8 +127,8 @@ _DITEGGIATURE_FLAUTO = {
     'C#6': {'keys': ('MS-La', 'AS-Sol', 'mS-Sol#', 'mD-Mib'), 'consigli': "Flusso d'aria molto veloce e stretto."},
     'D6':  {'keys': ('PS-Si', 'MS-La', 'AS-Sol', 'mD-Mib'), 'consigli': 'Supporto diaframmatico intenso.'},
     'D#6': {'keys': ('PS-Si', 'IS-Do', 'MS-La', 'AS-Sol', 'mS-Sol#', 'ID-Fa', 'MD-Mi', 'AD-Re', 'mD-Mib'), 'consigli': 'Molto supporto, apertura labiale minima.'},
-    'E6':  {'keys': ('PS-Si', 'IS-Do', 'MS-La', 'ID-Fa', 'MD-Mi', 'mD-Mib'), 'consigli': "Lo 'Split E' aiuta la stabilitÃ ."},
-    'F6':  {'keys': ('PS-Si', 'IS-Do', 'AS-Sol', 'ID-Fa', 'mD-Mib'), 'consigli': "Dirigere l'aria leggermente piÃ¹ in alto."},
+    'E6':  {'keys': ('PS-Si', 'IS-Do', 'MS-La', 'ID-Fa', 'MD-Mi', 'mD-Mib'), 'consigli': "Lo 'Split E' aiuta la stabilità."},
+    'F6':  {'keys': ('PS-Si', 'IS-Do', 'AS-Sol', 'ID-Fa', 'mD-Mib'), 'consigli': "Dirigere l'aria leggermente più in alto."},
     'F#6': {'keys': ('PS-Si', 'IS-Do', 'AS-Sol', 'AD-Re', 'mD-Mib'), 'consigli': "Non usare il pollice Sib. Flusso d'aria molto rapido."},
     'G6':  {'keys': ('IS-Do', 'MS-La', 'AS-Sol', 'mD-Mib'), 'consigli': 'Molto stabile, mantenere il supporto.'},
     'G#6': {'keys': ('MS-La', 'AS-Sol', 'mS-Sol#', 'mD-Mib'), 'consigli': 'Tende a essere crescente, rilassare l\'imboccatura.'},
@@ -145,7 +145,7 @@ USER_CHORD_DICT: Dict[str, str] = {}
 SCALE_TYPES_DICT: Dict[str, str] = {}
 FILE_IMPOSTAZIONI = "chitabry-settings.json"
 archivio_modificato = False
-impostazioni = {} # ConterrÃ  l'intera configurazione caricata/default
+impostazioni = {} # Conterrà l'intera configurazione caricata/default
 
 MAINMENU = {
     "Accordi": "Gestisci le tue Tablature Accordi (salvate)",
@@ -161,9 +161,29 @@ MAINMENU = {
     "Esci": "Salva ed esci dall'applicazione"
 }
 
-# --- Motore Audio Live ---
-# Spostato nel modulo GBAudio.py
-
+# --- Motore Audio Live (per Accordi e C.T.) ---
+FS = 22050 # Frequenza di campionamento (Hz)
+BLOCK_SIZE = 256 # Blocchi audio
+HARMONICS = [1, 0.5, 0.33, 0.25, 0.2, 0.17, 0.14, 0.125, 0.11, 0.1, 0.09, 0.08, 0.07]
+def note_to_freq(note):
+    """Converte la notazione (es. "C4") in frequenza (Hz)."""
+    if isinstance(note, (int, float)): return float(note)
+    if isinstance(note, str):
+        note_lower = note.lower()
+        if note_lower == 'p': return 0.0 # Restituisce 0 per pausa
+        match = re.match(r"^([a-g])([#b]?)(\d)$", note_lower)
+        if not match: return 0.0 # Nota non valida
+        note_letter, accidental, octave_str = match.groups()
+        try: octave = int(octave_str)
+        except ValueError: return 0.0
+        note_base = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
+        semitone = note_base[note_letter]
+        if accidental == '#': semitone += 1
+        elif accidental == 'b': semitone -= 1
+        midi_num = 12 + semitone + 12 * octave
+        freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
+        return freq
+    return 0.0
 
 #QF
 def _formatta_mano_flauto(mano: str, dita: set) -> str:
@@ -180,7 +200,7 @@ def _formatta_mano_flauto(mano: str, dita: set) -> str:
     if not dita_ordinate:
         return f"Nessun dito della mano {mano}."
 
-    # Casi speciali per descrizioni piÃ¹ naturali
+    # Casi speciali per descrizioni più naturali
     dita_principali_sx = {'Pollice', 'Indice', 'Medio', 'Anulare', 'Mignolo'}
     dita_principali_dx = {'Indice', 'Medio', 'Anulare', 'Mignolo'}
 
@@ -240,7 +260,7 @@ def _genera_descrizione_flauto(keys_tuple: tuple) -> str:
          if 'mD-Mib' in keys_tuple: mignolo_dx_desc.append("leva Mib")
          
          if mignolo_dx_desc:
-             return desc_base + f", piÃ¹ il Mignolo destro (su {', '.join(mignolo_dx_desc)})."
+             return desc_base + f", più il Mignolo destro (su {', '.join(mignolo_dx_desc)})."
          else:
              return desc_base + "."
     
@@ -319,7 +339,7 @@ def GestoreFlauto():
                     print(desc_alt)
 
         except ValueError:
-            # Il messaggio di errore qui Ã¨ corretto, perchÃ© l'input Ã¨ '#'
+            # Il messaggio di errore qui è corretto, perché l'input è '#'
             print("Errore: formato non valido. Inserire OTTAVA NOTA (es. '2 FA#').")
         except Exception as e:
             print(f"Errore imprevisto: {e}")
@@ -331,7 +351,7 @@ def visualizza_note_su_manico(lista_note: list[str], maninf: int = 0, mansup: in
     """
     
     # 1. Costruisce una struttura dati {corda: [tasti...]}
-    #    Questo dizionario conterrÃ  solo le note che ci interessano.
+    #    Questo dizionario conterrà solo le note che ci interessano.
     manico_filtrato = {
         6: [], 5: [], 4: [], 3: [], 2: [], 1: []
     }
@@ -492,15 +512,15 @@ class ScaleException(Exception):
     pass
 
 class InvalidUSIFormatError(ScaleException):
-    """Sollevata quando una stringa USI non Ã¨ nel formato atteso."""
+    """Sollevata quando una stringa USI non è nel formato atteso."""
     def __init__(self, usi_string):
         message = (
-            f"La stringa USI '{usi_string}' non Ã¨ valida. "
-            "Il formato atteso Ã¨ 'paradigm:tonic:scale_id'."
+            f"La stringa USI '{usi_string}' non è valida. "
+            "Il formato atteso è 'paradigm:tonic:scale_id'."
         )
         super().__init__(message)
 class UnknownScaleError(ScaleException):
-    """Sollevata quando uno scale_id non puÃ² essere trovato o istanziato."""
+    """Sollevata quando uno scale_id non può essere trovato o istanziato."""
     def __init__(self, paradigm, scale_id):
         message = (
             f"Impossibile trovare/istanziare la scala con id '{scale_id}' "
@@ -547,9 +567,9 @@ def get_user_chord_dictionary() -> Dict[str, str]:
     dizionario pulito di tipi di accordi per l'interfaccia utente.
 
     Ritorna:
-        Dict[str, str]: Un dizionario dove la chiave Ã¨
+        Dict[str, str]: Un dizionario dove la chiave è
         l'abbreviazione (shorthand) primaria usata per la costruzione
-        e il valore Ã¨ il nome leggibile per il menu.
+        e il valore è il nome leggibile per il menu.
     """
     user_dict = {}
     processed_types = set() # Per evitare duplicati dovuti a shorthand non unici
@@ -557,22 +577,22 @@ def get_user_chord_dictionary() -> Dict[str, str]:
     # Itera sull'elenco master dei tipi di accordo canonici
     for chord_type in harmony.CHORD_TYPES:
 
-        # Salta tipi giÃ  processati (se getCurrentAbbreviationFor non Ã¨ univoco)
+        # Salta tipi già processati (se getCurrentAbbreviationFor non è univoco)
         if chord_type in processed_types:
             continue
 
         # 1. Ottiene l'abbreviazione "preferita" dalla libreria -> CHIAVE
         primary_shorthand = harmony.getCurrentAbbreviationFor(chord_type)
 
-        # Evita di sovrascrivere una chiave giÃ  assegnata (es. '' per major)
-        # Diamo prioritÃ  alla prima assegnazione trovata (che di solito Ã¨ quella corretta)
+        # Evita di sovrascrivere una chiave già assegnata (es. '' per major)
+        # Diamo priorità alla prima assegnazione trovata (che di solito è quella corretta)
         if primary_shorthand in user_dict:
              continue
 
         # 2. Pulisce il nome canonico per la visualizzazione -> VALORE
         readable_name = chord_type.replace('-', ' ').title()
 
-        # Correzioni specifiche per leggibilitÃ 
+        # Correzioni specifiche per leggibilità
         if primary_shorthand == '' and chord_type == 'major':
             readable_name = 'Major' # Triade Maggiore
         elif primary_shorthand == 'm' and chord_type == 'minor':
@@ -582,10 +602,10 @@ def get_user_chord_dictionary() -> Dict[str, str]:
         elif primary_shorthand == 'aug' and chord_type == 'augmented':
             readable_name = 'Augmented' # Triade Aumentata
         elif primary_shorthand == 'm7b5':
-             readable_name = 'Half-Diminished (m7b5)' # PiÃ¹ chiaro
+             readable_name = 'Half-Diminished (m7b5)' # Più chiaro
         elif chord_type == 'power':
              readable_name = 'Power Chord (5)'
-        # Aggiungi altre correzioni se necessario per migliorare la leggibilitÃ 
+        # Aggiungi altre correzioni se necessario per migliorare la leggibilità
 
         user_dict[primary_shorthand] = readable_name
         processed_types.add(chord_type) # Segna il tipo canonico come processato
@@ -616,7 +636,7 @@ def build_scale_catalog() -> list[Dict]:
     print("   Analisi classi ConcreteScale...")
     try:
         # Usiamo scale.Scale come base per la ricorsione iniziale,
-        # _find_scale_subclasses filtrerÃ  per ConcreteScale e non astratte.
+        # _find_scale_subclasses filtrerà per ConcreteScale e non astratte.
         concrete_classes = _find_scale_subclasses(scale.Scale)
 
         for cls in sorted(list(concrete_classes), key=lambda x: x.__name__):
@@ -626,7 +646,7 @@ def build_scale_catalog() -> list[Dict]:
                     'programmatic_id': prog_id,
                     'friendly_name': _format_friendly_name(prog_id, 'concrete'),
                     'paradigm': 'concrete'
-                    # 'class': cls # Rimosso per semplicitÃ 
+                    # 'class': cls # Rimosso per semplicità
                 })
                 processed_ids.add(prog_id)
     except Exception as e:
@@ -661,7 +681,7 @@ def build_scale_catalog() -> list[Dict]:
                         'programmatic_id': prog_id,
                         'friendly_name': description if description else friendly_name_raw,
                         'paradigm': 'scala'
-                        # 'class': scale.scala.ScalaScale # Rimosso per semplicitÃ 
+                        # 'class': scale.scala.ScalaScale # Rimosso per semplicità
                     })
                     processed_ids.add(prog_id)
             except Exception as path_error:
@@ -732,8 +752,272 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
         raise ScaleException(f"Paradigma USI sconosciuto: '{paradigm}'")
 
 #QF
-# Motore Audio spostato in GBAudio.py
+def _generate_harmonic_pluck(buffer_length_N, pluck_hardness_float):
+    """
+    Genera un "pluck" di eccitazione ibrido basato sulla sintesi additiva
+    dalla Tabella 1, lungo N campioni, scolpito dalla durezza.
+    
+    Questo sostituisce il metodo a rumore filtrato, che è inaffidabile
+    alle basse frequenze.
+    """
+    N = buffer_length_N
+    t = np.linspace(0., 1., N, endpoint=False) # Genera 1 ciclo di base
+    
+    # Dati dalla Tabella 1 (Amplitudini base normalizzate)
+    # n = 1,  2,    3,    4,    5,    6,    7,    8,    9,   10
+    base_amplitudes = np.array([
+        1.00, 0.15, 0.34, 0.30, 0.09, 0.03, 0.08, 0.03, 0.06, 0.04
+    ])
+    
+    # Usa pluck_hardness (0.1 morbido, 0.9 duro) per "scolpire" queste armoniche.
+    # Un plettro morbido (0.1) attenua molto le armoniche alte.
+    # Un plettro duro (0.9) le attenua poco.
+    
+    # Convertiamo [0.1, 0.9] in un fattore di attenuazione
+    # 0.1 -> 1.0 (attenuazione alta)
+    # 0.9 -> 0.1 (attenuazione bassa)
+    roll_off_strength = 1.0 - pluck_hardness_float 
+    
+    # Creiamo un array scalare: [1.0, strength, strength^2, strength^3, ...]
+    n = np.arange(0, len(base_amplitudes))
+    hardness_scalar = np.power(roll_off_strength, n)
+    
+    # Applichiamo la durezza alle ampiezze base
+    amplitudes = base_amplitudes * hardness_scalar
+    
+    waveform = np.zeros(N, dtype=np.float32)
+    
+    # Costruiamo il ciclo d'onda sommando le armoniche
+    for i in range(len(amplitudes)):
+        n_harmonic = i + 1
+        if amplitudes[i] > 0.001: # Ottimizzazione: salta armoniche troppo deboli
+            phase = 2 * np.pi * n_harmonic * t
+            waveform += amplitudes[i] * np.sin(phase)
+            
+    # Rimuovi DC offset (molto importante)
+    waveform -= np.mean(waveform)
+    
+    # Normalizza il pluck finale
+    max_val = np.max(np.abs(waveform))
+    if max_val > 0:
+        waveform /= max_val
+        
+    return waveform
 
+def _generate_filtered_pluck_burst(buffer_length_N, sample_rate, pluck_hardness=0.5):
+    """
+    Genera un burst di rumore filtrato realistico per l'eccitazione KS.
+    (Versione corretta con rimozione DC offset)
+    """
+    # Normalizza l'hardness in un range fisico
+    pluck_hardness = np.clip(pluck_hardness, 0.1, 0.9)
+    noise = np.random.normal(0, 0.5, buffer_length_N)
+    
+    # Mappa hardness a frequenza di cutoff
+    cutoff_freq = 1000 + (pluck_hardness * 9000)
+    nyquist = 0.5 * sample_rate
+    if cutoff_freq >= nyquist:  
+        cutoff_freq = nyquist - 1
+        
+    b, a = signal.butter(2, cutoff_freq / nyquist, btype='low')
+    filtered_noise = signal.lfilter(b, a, noise)
+    
+    decay = np.exp(-np.linspace(0, 5, buffer_length_N))
+    
+    burst = (filtered_noise * decay).astype(np.float32)
+    
+    # --- INIZIO CORREZIONE ---
+    # 1. Rimuovi qualsiasi DC offset dal burst
+    burst -= np.mean(burst)
+    
+    # 2. Normalizza di nuovo dopo la rimozione del DC
+    max_abs = np.max(np.abs(burst))
+    if max_abs > 0:
+        burst /= max_abs
+    # --- FINE CORREZIONE ---
+        
+    return burst
+
+class NoteRenderer:
+    """
+    Gestisce il rendering "one-shot" di una singola nota.
+    Usa l'algoritmo Karplus-Strong per suoni di chitarra (suono_1)
+    o la sintesi additiva standard per altri suoni (suono_2).
+    """
+    def __init__(self, fs=FS):
+        self.fs = fs
+        self.freq = 0.0
+        self.vol = 0.0
+        self.dur = 0
+        self.pan_l, self.pan_r = 0.707, 0.707
+        
+        # Parametri legacy (per suono_2)
+        self.adsr_list = [0, 0, 0, 0]
+        self.kind = 0
+        
+        # Nuovi parametri (per suono_1)
+        self.pluck_hardness = 0.0
+        self.damping_factor = 0.0
+
+    # QUESTA è la firma corretta che accetta **kwargs
+    def set_params(self, freq, dur, vol, pan, **kwargs):
+        """
+        Memorizza i parametri per il rendering.
+        kwargs può contenere parametri legacy (adsr_list, kind)
+        o nuovi parametri (pluck_hardness, damping_factor).
+        """
+        self.freq = freq
+        self.dur = dur
+        self.vol = vol
+        
+        # Impostazioni Panning
+        pan_clipped = np.clip(pan, -1.0, 1.0)
+        pan_angle = pan_clipped * (np.pi / 4.0)
+        self.pan_l = np.cos(pan_angle + np.pi / 4.0)
+        self.pan_r = np.sin(pan_angle + np.pi / 4.0)
+        
+        # Resetta i flag
+        self.kind = 0
+        self.pluck_hardness = 0.0
+        
+        # Controlla quali parametri sono stati passati
+        if 'kind' in kwargs: # Chiamata Legacy (suono_2)
+            self.adsr_list = kwargs.get('adsr_list', [0,0,0,0])
+            self.kind = kwargs.get('kind', 1)
+        elif 'pluck_hardness' in kwargs: # Chiamata Karplus-Strong (suono_1)
+            self.pluck_hardness = kwargs.get('pluck_hardness', 0.5)
+            self.damping_factor = kwargs.get('damping_factor', 0.996)
+        else:
+            # Fallback se kwargs è vuoto (improbabile)
+            self.kind = 1 
+
+    def _render_karplus_strong(self, n_samples):
+        """
+        Implementazione avanzata di Karplus-Strong (Snippet 5).
+        """
+        # 1. Calcola la lunghezza del buffer
+        N = int(self.fs / self.freq)
+        if N <= 1:
+            return np.zeros(n_samples, dtype=np.float32) # Freq troppo alta
+            
+        # 2. Eccitazione (Usando il Blocco Helper 1)
+        pluck = _generate_harmonic_pluck(N, self.pluck_hardness)
+        buf = deque(pluck)
+        
+        samples = np.zeros(n_samples, dtype=np.float32)
+        
+        for i in range(n_samples):
+            # 3. Lettura del campione
+            samples[i] = buf[0]
+            
+            # 4. Filtro di Loop (KS Classico)
+            # Leggiamo i primi due campioni per l'averaging
+            avg = self.damping_factor * 0.5 * (buf[0] + buf[1])
+            
+            # 5. Feedback
+            buf.append(avg)
+            buf.popleft() # Mantiene la lunghezza N
+            
+        return samples
+
+    def _render_legacy_osc(self, n_samples):
+        """
+        Oscillatori semplici (il vecchio _get_wave_vector)
+        e inviluppo ADSR (la vecchia logica di render).
+        """
+        # 1. Genera onda base (Logica dal vecchio _get_wave_vector)
+        t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
+        phase_vector = 2 * np.pi * self.freq * t
+        
+        if self.kind == 2: wave = signal.square(phase_vector)
+        elif self.kind == 3: wave = signal.sawtooth(phase_vector, 0.5)
+        elif self.kind == 4: wave = signal.sawtooth(phase_vector)
+        elif self.kind == 5:
+            wave = np.zeros(n_samples, dtype=np.float32)
+            for i, h_amp in enumerate(HARMONICS):
+                wave += np.sin((i + 1) * phase_vector) * h_amp
+            max_val = np.max(np.abs(wave))
+            if max_val > 0: wave /= max_val
+        else: # kind 1 (default)
+            wave = np.sin(phase_vector)
+        
+        wave = wave.astype(np.float32)
+        
+        # 2. Applica inviluppo ADSR (Logica dal vecchio render())
+        a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
+        attack_frac = a_pct / 100.0
+        decay_frac = d_pct / 100.0
+        sustain_level = s_level_pct / 100.0
+        release_frac = r_pct / 100.0
+        
+        attack_samples = int(round(attack_frac * n_samples))
+        decay_samples = int(round(decay_frac * n_samples))
+        release_samples = int(round(release_frac * n_samples))
+        
+        sustain_samples = n_samples - (attack_samples + decay_samples + release_samples)
+        if sustain_samples < 0:
+            release_samples += sustain_samples
+            sustain_samples = 0
+            release_samples = max(0, release_samples)
+
+        envelope = np.zeros(n_samples, dtype=np.float32)
+        current_pos = 0
+
+        if attack_samples > 0:
+            attack_samples = min(attack_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + attack_samples] = np.linspace(0., 1., attack_samples, dtype=np.float32)
+            current_pos += attack_samples
+        
+        if decay_samples > 0:
+            decay_samples = min(decay_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + decay_samples] = np.linspace(1., sustain_level, decay_samples, dtype=np.float32)
+            current_pos += decay_samples
+        
+        if sustain_samples > 0:
+            sustain_samples = min(sustain_samples, n_samples - current_pos)
+            envelope[current_pos : current_pos + sustain_samples] = sustain_level
+            current_pos += sustain_samples
+        
+        if release_samples > 0:
+            release_samples = min(release_samples, n_samples - current_pos)
+            if release_samples > 0:
+                envelope[current_pos : current_pos + release_samples] = np.linspace(sustain_level, 0., release_samples, dtype=np.float32)
+
+        wave *= envelope
+        return wave
+
+    def render(self):
+        """
+        Pre-calcola l'intera nota (onda + envelope) e 
+        RESTITUISCE l'array stereo.
+        """
+        empty_array = np.array([], dtype=np.float32)
+
+        if self.freq <= 0.0:
+            return empty_array
+
+        total_note_samples = int(round(self.dur * self.fs))
+        if total_note_samples == 0:
+            return empty_array
+            
+        # --- ROUTING LOGIC ---
+        # Se pluck_hardness è stato impostato, usa KS (suono_1)
+        if self.pluck_hardness > 0:
+            wave = self._render_karplus_strong(total_note_samples)
+            # Nota: KS ha già il suo inviluppo, quindi non applichiamo ADSR
+        else:
+            # Altrimenti, usa il vecchio metodo (per suono_2)
+            wave = self._render_legacy_osc(total_note_samples)
+            
+        # Applica volume e panning
+        wave *= self.vol
+        
+        stereo_segment = np.zeros((total_note_samples, 2), dtype=np.float32)
+        stereo_segment[:, 0] = wave * self.pan_l
+        stereo_segment[:, 1] = wave * self.pan_r
+        
+        return stereo_segment
+# --- Fine Motore Audio Live ---
 
 def get_impostazioni_default():
     """Restituisce la struttura dati di default per un nuovo file JSON."""
@@ -800,7 +1084,7 @@ def carica_impostazioni():
         archivio_modificato = True 
         salva_impostazioni() # Salviamo subito il file creato
     except json.JSONDecodeError:
-        print(f"Errore: Il file '{FILE_IMPOSTAZIONI}' Ã¨ corrotto o malformato.")
+        print(f"Errore: Il file '{FILE_IMPOSTAZIONI}' è corrotto o malformato.")
         print("Uscita dall'applicazione.")
         sys.exit(1)
     except Exception as e:
@@ -832,7 +1116,7 @@ def get_nota(nota_std_music21):
     preservando i simboli microtonali (~, `` , ~~, ``` ``) alla fine.
     """
     if not isinstance(nota_std_music21, str):
-        return str(nota_std_music21) # Restituisci come stringa se non Ã¨ una stringa
+        return str(nota_std_music21) # Restituisci come stringa se non è una stringa
 
     # Mappa di conversione base
     if impostazioni['nomenclatura'] == 'latino':
@@ -851,12 +1135,12 @@ def get_nota(nota_std_music21):
         base_name_std = base_name_std[:-1]
 
     # Estrai simboli microtonali (~, ``, ~~, ``` ``) alla fine
-    possible_micros = ["~~", "``", "~", "`"] # Ordina dal piÃ¹ lungo al piÃ¹ corto
+    possible_micros = ["~~", "``", "~", "`"] # Ordina dal più lungo al più corto
     for micro in possible_micros:
         if base_name_std.endswith(micro):
             micro_suffix = micro
             base_name_std = base_name_std[:-len(micro)] # Rimuovi il suffisso
-            break # Trovato il suffisso piÃ¹ lungo
+            break # Trovato il suffisso più lungo
 
     # Ora base_name_std contiene solo la nota e l'alterazione standard (es. "C#", "Eb", "G")
     # Traduci la parte standard
@@ -881,8 +1165,7 @@ def Suona(tablatura):
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
     
-    # Crea 6 renderer (invece di 'voices')
-    renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(6)]
+    renderers = [NoteRenderer(fs=FS) for _ in range(6)]
     note_da_suonare = [] # Lista di booleani (se la corda suona)
     note_freq = [] # Lista delle frequenze
     note_pan = [] # Lista dei pan
@@ -918,10 +1201,10 @@ def Suona(tablatura):
                 # Renderizza la nota ORA
                 note_audio = renderers[corda_idx_py].render()
                 if note_audio.size > 0:
-                    sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+                    sd.play(note_audio, samplerate=FS, blocking=False)
                     
         elif scelta == chr(27): # ESC
-            print("Uscita dal menÃ¹ ascolto.")
+            print("Uscita dal menù ascolto.")
             sd.stop() 
             break 
             
@@ -962,7 +1245,7 @@ def Suona(tablatura):
             if max_val > 1.0:
                 mix_buffer /= max_val
             
-            sd.play(mix_buffer, samplerate=GBAudio.FS, blocking=False)
+            sd.play(mix_buffer, samplerate=FS, blocking=False)
             
         else:
             print("Comando non valido. Premi 1-6, A, Q o ESC.")
@@ -977,7 +1260,7 @@ def SuonaAccordoTeorico(note_pitch_list):
         print("Nessuna nota da suonare.")
         return
 
-    # 1. Ordina le note dalla piÃ¹ grave alla piÃ¹ acuta
+    # 1. Ordina le note dalla più grave alla più acuta
     try:
         sorted_pitches = sorted(note_pitch_list, key=lambda p: p.frequency if p and p.frequency is not None else float('inf'))
     except Exception as e:
@@ -992,7 +1275,7 @@ def SuonaAccordoTeorico(note_pitch_list):
 
     # 2. Limita a un massimo di 10 note
     if len(sorted_pitches) > 10:
-        print(f"Attenzione: L'accordo ha {len(sorted_pitches)} note. Suono solo le 10 piÃ¹ gravi.")
+        print(f"Attenzione: L'accordo ha {len(sorted_pitches)} note. Suono solo le 10 più gravi.")
         pitches_to_play = sorted_pitches[:10]
     else:
         pitches_to_play = sorted_pitches
@@ -1015,7 +1298,7 @@ def SuonaAccordoTeorico(note_pitch_list):
     elif num_notes > 1:
         pan_step = 1.6 / (num_notes - 1) # Range totale 1.6
         for i in range(num_notes):
-            pan = -0.8 + (i * pan_step) # Parte da -0.8 (sx) per la nota piÃ¹ grave (i=0)
+            pan = -0.8 + (i * pan_step) # Parte da -0.8 (sx) per la nota più grave (i=0)
             pan_values.append(np.clip(pan, -0.8, 0.8))
     # 5. Mappa tasti 1..9, 0 (MODIFICATO: 1=Grave, 0=Acuta)
     # Segue il layout della tastiera: 1, 2, 3...0
@@ -1023,12 +1306,12 @@ def SuonaAccordoTeorico(note_pitch_list):
     if num_notes >= 10:
         key_map['0'] = 9 # Tasto '0' -> indice 9 (decima nota)            key_map[tasto_char] = target_index
     # 6. Prepara Renderers e dati note
-    renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_notes)]
+    renderers = [NoteRenderer(fs=FS) for _ in range(num_notes)]
     note_freqs = []
     note_names_display = []
     
     print("\n--- Player Accordo Teorico ---")
-    print(f"Suono {num_notes} note (ordinate dalla piÃ¹ grave alla piÃ¹ acuta):")
+    print(f"Suono {num_notes} note (ordinate dalla più grave alla più acuta):")
 
     for i, p in enumerate(pitches_to_play):
         freq = p.frequency if p and p.frequency is not None else 0.0
@@ -1053,7 +1336,7 @@ def SuonaAccordoTeorico(note_pitch_list):
 
     # 7. Loop Interattivo
     print("\nPremi tasti 1-0 per note singole.")
-    print("Q = Strum GiÃ¹ (Grave->Acuta / Dx->Sx)")
+    print("Q = Strum Giù (Grave->Acuta / Dx->Sx)")
     print("A = Strum Su (Acuta->Grave / Sx->Dx)")
     print("ESC = Esci")
 
@@ -1069,7 +1352,7 @@ def SuonaAccordoTeorico(note_pitch_list):
                 if note_freqs[note_idx] > 0:
                     note_audio = renderers[note_idx].render()
                     if note_audio.size > 0:
-                        sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+                        sd.play(note_audio, samplerate=FS, blocking=False)
                 else:
                     print("Nota non valida o senza frequenza.")
             else:
@@ -1082,7 +1365,7 @@ def SuonaAccordoTeorico(note_pitch_list):
 
         elif scelta == 'q' or scelta == 'a': # Strum
             sd.stop()
-            strum_delay_sec = 0.05 # PiÃ¹ veloce per accordi
+            strum_delay_sec = 0.05 # Più veloce per accordi
             strum_delay_samples = int(strum_delay_sec * FS)
             note_duration_samples = int(dur * FS)
 
@@ -1092,7 +1375,7 @@ def SuonaAccordoTeorico(note_pitch_list):
             current_delay_samples = 0
             for i in note_order:
                 if note_freqs[i] > 0:
-                    # Riconfigura renderer (per sicurezza, anche se giÃ  fatto)
+                    # Riconfigura renderer (per sicurezza, anche se già fatto)
                     renderers[i].set_params(freq, dur, vol, pan_val, 
                                 pluck_hardness=hardness, 
                                 damping_factor=damping)                    
@@ -1114,7 +1397,7 @@ def SuonaAccordoTeorico(note_pitch_list):
                     if end_pos > total_samples:
                         end_pos = total_samples
                         samples_to_mix = end_pos - start_pos
-                        if samples_to_mix <= 0: continue # Non c'Ã¨ spazio
+                        if samples_to_mix <= 0: continue # Non c'è spazio
                         note_data_segment = note_data_segment[:samples_to_mix]
 
                     # Mixa
@@ -1128,7 +1411,7 @@ def SuonaAccordoTeorico(note_pitch_list):
             if max_val > 1.0:
                 mix_buffer /= max_val
             
-            sd.play(mix_buffer, samplerate=GBAudio.FS, blocking=False)
+            sd.play(mix_buffer, samplerate=FS, blocking=False)
 
         else:
             print("Comando non valido.")
@@ -1136,7 +1419,7 @@ def SuonaAccordoTeorico(note_pitch_list):
     return # Fine funzione SuonaAccordoTeorico
 
 def Barre(t):
-    """Riceve la tablatura e restituisce il capotasto del barrÃ¨, se lo trova."""
+    """Riceve la tablatura e restituisce il capotasto del barrè, se lo trova."""
     # (Logica identica all'originale)
     if "0" in t: return 0
     tasti_premuti = [int(fret) for fret in t if fret not in 'X']
@@ -1168,7 +1451,7 @@ def VediTablaturaPerTasto(t):
                 risultato[tasto] += str(c) + ", "
             if j == "X": stopate.append(c)
             c -= 1
-        if tasto > 0 and tasto == int(bar): risultato[tasto] = risultato[tasto] + "BarrÃ¨!"
+        if tasto > 0 and tasto == int(bar): risultato[tasto] = risultato[tasto] + "Barrè!"
         if risultato[tasto][-2:] == ", ": risultato[tasto] = risultato[tasto][:-2] + "."
     for k, v in risultato.items():
         if len(v) > 0:
@@ -1192,7 +1475,7 @@ def VediTablaturaPerCorda(t):
     """Mostra la tablatura ordinata per corda."""
     print("\nTablatura per corda:")
     bar = Barre(t)
-    if int(bar) > 0: print(f"BarrÃ¨ al tasto {bar}")
+    if int(bar) > 0: print(f"Barrè al tasto {bar}")
     it = 0
     for corda in range(6, 0, -1):
         j = t[it]
@@ -1260,7 +1543,7 @@ def DaTablaturaAStringa(t):
 def RimuoviAccordi():
     """Rimuove un accordo da impostazioni['chordpedia']"""
     global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilitÃ 
+    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
     
     cancello_accordo = dgt(prompt="\nInserisci l'esatto nome dell'accordo da eliminare: >", kind="s", smax=64).upper()
     if len(chordpedia) > 0:
@@ -1271,13 +1554,13 @@ def RimuoviAccordi():
         else:
             print("Nome accordo non presente in Chordpedia")
     else:
-        print("Il Database degli accordi Ã¨ giÃ  vuoto.")
+        print("Il Database degli accordi è già vuoto.")
     return
 
 def VediAccordi():
     """Permette di visualizzare, gestire e ascoltare gli accordi."""
     global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilitÃ 
+    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
     l = len(chordpedia)
     if l == 0:
         print("\nArchivio vuoto, prima aggiungi qualche accordo.")
@@ -1301,7 +1584,7 @@ def VediAccordi():
         
         # --- Fine Ottimizzazione ---
 
-        # Da qui, la logica Ã¨ identica, ma usa 'trovato_accordo'
+        # Da qui, la logica è identica, ma usa 'trovato_accordo'
         
         # Gestione tablature multiple
         if len(chordpedia[trovato_accordo]) > 1:
@@ -1322,9 +1605,9 @@ def VediAccordi():
             
             tablatura_scelta_idx = int(tablatura_scelta_key) # L'indice menu (da 1)
         else:
-            tablatura_scelta_idx = 1 # C'Ã¨ solo una tablatura (indice 1)
+            tablatura_scelta_idx = 1 # C'è solo una tablatura (indice 1)
         
-        # L'indice della lista in Python Ã¨ (scelta - 1)
+        # L'indice della lista in Python è (scelta - 1)
         tablatura_scelta_py_idx = tablatura_scelta_idx - 1
         tablatura_corrente = chordpedia[trovato_accordo][tablatura_scelta_py_idx]
         print(f"\nAccordo {trovato_accordo}, tablatura {tablatura_scelta_idx} Tab: {DaTablaturaAStringa(chordpedia[trovato_accordo][tablatura_scelta_py_idx])}")
@@ -1358,7 +1641,7 @@ def VediAccordi():
             elif s == "r":
                 if len(chordpedia[trovato_accordo]) == 1:
                     print("\nNon puoi rimuovere l'ultima tablatura.")
-                    print("Rimuovi invece l'intero accordo dal menÃ¹ precedente.")
+                    print("Rimuovi invece l'intero accordo dal menù precedente.")
                 else:
                     del chordpedia[trovato_accordo][tablatura_scelta_py_idx]
                     print(f"Rimozione effettuata. Ora {trovato_accordo} ha {len(chordpedia[trovato_accordo])} tablature.")
@@ -1382,7 +1665,7 @@ def VediAccordi():
 def Aggiungiaccordo():
     """Aggiunge un nuovo accordo a impostazioni['chordpedia']"""
     global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilitÃ 
+    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
     
     print("\nAggiungi un nuovo accordo alla collezione")
     while True:
@@ -1391,11 +1674,11 @@ def Aggiungiaccordo():
             print("Aggiunta annullata.")
             return
         if nuovo_nome_accordo not in chordpedia.keys(): break
-        print("GiÃ  presente della collezione. Riprova con un nome diverso.")
+        print("Già presente della collezione. Riprova con un nome diverso.")
     
     nuova_lista_tablature = []
     print("Inserisci la tablatura: 6 valori (Tasto o X) separati da spazi")
-    print("Dalla corda 6 (la piÃ¹ spessa) alla corda 1 (la piÃ¹ sottile).")
+    print("Dalla corda 6 (la più spessa) alla corda 1 (la più sottile).")
     print("Es: '0 2 2 1 0 0' (E Maggiore)")
     print("Concludi con un INVIO a vuoto.")
     
@@ -1416,7 +1699,7 @@ def Aggiungiaccordo():
 def Manlimiti(s):
     """
     Riceve stringa "N.N", restituisce 2 int per i limiti del manico.
-    (Logica identica all'originale, ma piÃ¹ robusta)
+    (Logica identica all'originale, ma più robusta)
     """
     if "." not in s or " " in s:
         print("Errore: formato non valido. Usare N.N (es. 0.4).")
@@ -1491,6 +1774,85 @@ def MostraCorde(nota_std, rp=False, maninf=0, mansup=21):
 
 # --- Logica di Gestione Scale (Fase 6) ---
 
+def render_scale_audio(note_list, suono_params, bpm):
+    """
+    Usa la classe NoteRenderer per generare un array audio per una scala.
+    Accetta una lista di stringhe nota (es. "C4") o frequenze (float).
+    """
+    print("Rendering audio scala...")
+
+    s_kind = suono_params['kind']
+    s_adsr = suono_params['adsr']
+    s_vol = suono_params['volume']
+    s_dur = 60.0 / bpm # Durata di ogni nota
+    s_pan = 0.0 # Pan centrale per le scale
+
+    if s_dur <= 0:
+        print("Errore: Durata nota non valida (BPM troppo alti?).")
+        return np.array([], dtype=np.float32)
+    # --- CORREZIONE: Usa NoteRenderer ---
+    renderer = NoteRenderer(fs=FS)
+    # ------------------------------------
+    segmenti_audio = []
+    note_count = 0
+
+    for note_or_freq in note_list:
+        freq = 0.0
+        if isinstance(note_or_freq, (int, float)):
+            if note_or_freq is not None and note_or_freq > 0:
+                 freq = float(note_or_freq)
+        elif isinstance(note_or_freq, str):
+            freq = note_to_freq(note_or_freq)
+
+        # Se freq è 0 o negativa, crea un segmento di silenzio
+        if freq <= 0:
+             silence_samples = int(round(s_dur * FS))
+             if silence_samples > 0:
+                  segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+             continue # Passa alla prossima nota
+
+        # Imposta i parametri sul renderer
+        renderer.set_params(freq, s_dur, s_vol, s_pan, 
+                            adsr_list=s_adsr, 
+                            kind=s_kind)
+        # Chiama render() per ottenere l'array audio
+        note_audio = renderer.render() 
+        # Aggiungi il segmento audio (o silenzio se render fallisce)
+        if note_audio is not None and note_audio.size > 0:
+            # Verifica che l'array restituito abbia la forma corretta (samples, 2)
+            if note_audio.ndim == 2 and note_audio.shape[1] == 2:
+                 segmenti_audio.append(note_audio)
+                 note_count += 1
+            else:
+                 print(f"Attenzione: NoteRenderer.render() ha restituito un array con forma inattesa {note_audio.shape} per freq={freq}. Aggiungo silenzio.")
+                 silence_samples = int(round(s_dur * FS))
+                 if silence_samples > 0: segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+        else:
+             # Se il rendering fallisce, aggiungi silenzio
+             silence_samples = int(round(s_dur * FS))
+             if silence_samples > 0:
+                  segmenti_audio.append(np.zeros((silence_samples, 2), dtype=np.float32))
+
+    if not segmenti_audio:
+        print("Rendering fallito: nessun segmento audio generato.")
+        return np.array([], dtype=np.float32)
+
+    print(f"Rendering completato ({note_count} note suonate).")
+    # Concatena tutti i segmenti (note e silenzi)
+    try:
+        final_audio = np.concatenate(segmenti_audio, axis=0)
+    except ValueError as e:
+         print(f"Errore durante la concatenazione audio: {e}")
+         valid_segments = [seg for seg in segmenti_audio if seg.ndim == 2 and seg.shape[1] == 2 and seg.shape[0] > 0]
+         if not valid_segments: return np.array([], dtype=np.float32)
+         try:
+              final_audio = np.concatenate(valid_segments, axis=0)
+              print("   (Recupero concatenazione riuscito escludendo segmenti problematici)")
+         except ValueError:
+               print("   (Recupero concatenazione fallito)")
+               return np.array([], dtype=np.float32)
+
+    return final_audio
 def VisualizzaEsercitatiScala():
     """ Versione Finale Ibrida con gestione microtoni completa e indentazione corretta """
     global SCALE_CATALOG, SCALE_TYPES_DICT
@@ -1509,7 +1871,7 @@ def VisualizzaEsercitatiScala():
         mappa_toniche = {anglo: std for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2 and std in NOTE_STD}
     
     # Chiama menu() con keyslist=True.
-    # MostrerÃ  le chiavi ('DO', 'RE'... o 'C', 'D'...)
+    # Mostrerà le chiavi ('DO', 'RE'... o 'C', 'D'...)
     tonica_scelta_display = menu(d=mappa_toniche, keyslist=True, show=True, 
                                  pager=12, ntf="Nota non valida", 
                                  p="Scegli la TONICA della scala: ")
@@ -1613,10 +1975,10 @@ def VisualizzaEsercitatiScala():
             
             # --- INIZIO BLOCCO MODIFICATO ---
             # Questa logica sostituisce tutti i tentativi precedenti.
-            # Ãˆ piÃ¹ semplice e robusta.
+            # È più semplice e robusta.
             
             if isinstance(scala_m21, scale.ScalaScale):
-                # .pitches per ScalaScale funziona e dÃ  la lista completa
+                # .pitches per ScalaScale funziona e dà la lista completa
                 pitches_asc = scala_m21.pitches
                 pitches_desc = list(reversed(pitches_asc))
 
@@ -1626,7 +1988,7 @@ def VisualizzaEsercitatiScala():
                 # E sostituisce il tuo fallback buggato.
                 pitches_asc = scala_m21.pitches
                 
-                # La discesa Ã¨ semplicemente l'inverso
+                # La discesa è semplicemente l'inverso
                 pitches_desc = list(reversed(pitches_asc))
 
             else: 
@@ -1688,7 +2050,7 @@ def VisualizzaEsercitatiScala():
         print(f"\nScala: {nome_scala_display}")
         print(f"Note (Asc): {note_asc_str if note_asc_str else '(Nessuna nota trovata)'}")
         if is_microtonal_scale:
-            print("INFO: Scala microtonale rilevata. L'audio userÃ  le frequenze esatte (se calcolabili).")
+            print("INFO: Scala microtonale rilevata. L'audio userà le frequenze esatte (se calcolabili).")
 
         # Ora le due stringhe dovrebbero essere l'inversa l'una dell'altra
         if note_asc_str != note_desc_str and note_desc_str:
@@ -1727,14 +2089,14 @@ def VisualizzaEsercitatiScala():
                 dur_totale = 0.0
                 scelta_raw = "" # Inizializza input grezzo
                 scelta = None   # Inizializza comando valido
-                if loop_attivo: # ModalitÃ  Loop
+                if loop_attivo: # Modalità Loop
                     if not loop_messaggio_stampato: print("Loop ATTIVO. Premi 'L' per fermare."); loop_messaggio_stampato = True
                     note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
                     print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}" + " "*10, end="\r", flush=True)
                     tasto = key(attesa=0.1)
                     if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop(); loop_messaggio_stampato = False; continue
                     else: scelta = ultima_direzione
-                else: # ModalitÃ  Menu Interattivo
+                else: # Modalità Menu Interattivo
                     loop_messaggio_stampato = False
                     prompt_scale = f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}"
                     if note_asc_str != note_desc_str and note_desc_str: prompt_scale += f" | (Desc): {note_desc_str}"
@@ -1774,14 +2136,14 @@ def VisualizzaEsercitatiScala():
                     ultima_direzione = 'a'
                     valid_notes_asc = [f for f in note_per_audio_asc if f is not None]
                     if not valid_notes_asc: print("\nNote ascendenti non disponibili per l'audio."); continue
-                    if audio_data_asc is None: audio_data_asc = GBAudio.render_scale_audio(note_per_audio_asc, suono_2, bpm)
+                    if audio_data_asc is None: audio_data_asc = render_scale_audio(note_per_audio_asc, suono_2, bpm)
                     audio_to_play = audio_data_asc
                     dur_totale = len(note_per_audio_asc) * (60.0 / bpm)
                 elif scelta == 'd': # ... (codice 'd') ...
                     ultima_direzione = 'd'
                     valid_notes_desc = [f for f in note_per_audio_desc if f is not None]
                     if not valid_notes_desc: print("\nNote discendenti non disponibili per l'audio."); continue
-                    if audio_data_desc is None: audio_data_desc = GBAudio.render_scale_audio(note_per_audio_desc, suono_2, bpm)
+                    if audio_data_desc is None: audio_data_desc = render_scale_audio(note_per_audio_desc, suono_2, bpm)
                     audio_to_play = audio_data_desc
                     dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
                 elif scelta is None and not loop_attivo: # Input non valido
@@ -1793,7 +2155,7 @@ def VisualizzaEsercitatiScala():
                     if not loop_attivo:
                         print(" " * 80, end="\r")
                         print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
-                    sd.play(audio_to_play, samplerate=GBAudio.FS, blocking=False)
+                    sd.play(audio_to_play, samplerate=FS, blocking=False)
                     if loop_attivo:
                         step = 0.05; passi_totali = int(dur_totale / step) if dur_totale > 0 else 0
                         tempo_rimanente = dur_totale - (passi_totali * step)
@@ -1998,7 +2360,7 @@ def TrovaNota():
     if s_nota in mappa_inversa:
         nota_std = mappa_inversa[s_nota]
     else:
-        print(f"'{s_nota}' non Ã¨ un nome di nota valido in questa nomenclatura.")
+        print(f"'{s_nota}' non è un nome di nota valido in questa nomenclatura.")
         key("Premi un tasto...")
         return
         
@@ -2045,7 +2407,7 @@ def TrovaPosizione():
         
         # Suona (non bloccante) sul buffer renderizzato
         if note_audio.size > 0:
-            sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+            sd.play(note_audio, samplerate=FS, blocking=False)
         
     elif s == "":
         print("Operazione annullata.")
@@ -2074,7 +2436,7 @@ def CostruttoreAccordi():
         mappa_toniche = {anglo: std for std, anglo in STD_TO_ANGLO.items() if len(std) <= 2 and std in NOTE_STD}
 
     # Chiama menu() con keyslist=True.
-    # MostrerÃ  le chiavi ('DO', 'RE'... o 'C', 'D'...)
+    # Mostrerà le chiavi ('DO', 'RE'... o 'C', 'D'...)
     tonica_scelta_display = menu(d=mappa_toniche, keyslist=True, show=True,
                                  pager=12, ntf="Nota non valida", p="Scegli la TONICA: ")
     
@@ -2133,7 +2495,7 @@ def CostruttoreAccordi():
               elif primary_shorthand == "aug": figure_string_fallback = tonica_std + " augmented"; accordo_m21 = harmony.ChordSymbol(figure_string_fallback)
 
               if accordo_m21 is None or not accordo_m21.pitches:
-                  raise ValueError(f"Music21 non Ã¨ riuscito a interpretare la figura '{figure_string}'")
+                  raise ValueError(f"Music21 non è riuscito a interpretare la figura '{figure_string}'")
 
         # --- Estrazione delle Note ---
         note_accordo_obj = accordo_m21.pitches # Tupla di oggetti pitch.Pitch
@@ -2148,7 +2510,7 @@ def CostruttoreAccordi():
             # Formattazione per la stampa (con ottava)
             nota_formattata_con_oct = get_nota(p_note.nameWithOctave.replace('-', 'b'))
 
-            # Aggiungi solo se non Ã¨ un duplicato (per manico e stampa base)
+            # Aggiungi solo se non è un duplicato (per manico e stampa base)
             if nota_base_std_no_oct not in note_accordo_std:
                 note_accordo_std.append(nota_base_std_no_oct)
             if nota_formattata_con_oct not in note_accordo_formattate:    
@@ -2189,7 +2551,7 @@ def CostruttoreAccordi():
         print(f"\n({num_note} note > 6) Visualizzazione sul manico non mostrata per accordi complessi.")
 
     # --- 6. Passa al Player Audio Teorico ---
-    # Passiamo la lista originale di oggetti Pitch (note_accordo_obj) che contiene le ottave corrette ed Ã¨ ordinata come generata da music21.
+    # Passiamo la lista originale di oggetti Pitch (note_accordo_obj) che contiene le ottave corrette ed è ordinata come generata da music21.
     if note_accordo_obj: # Assicurati che ci siano note prima di chiamare il player
         SuonaAccordoTeorico(note_accordo_obj)
     else:

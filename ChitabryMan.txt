@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 4, di domenica 4 gennaio 2026.
+L'ultima revisione di questo documento e' la numero 5, di martedì 6 gennaio 2026.
 A cura di Gabriele Battaglia.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
@@ -84,6 +84,35 @@ Subito dopo, si avvierà un player audio teorico per farvi ascoltare queste note
  Metronomo
 
 Questa voce lancia Clitronomo, il metronomo testuale avanzato integrato in Chitabry. Per le sue molteplici funzioni (tempo, suddivisioni, accenti, pattern ritmici), vi rimandiamo al suo manuale dedicato `Clitronomo.md`.
+
+-----
+
+ MidiStudy
+
+Il nuovo modulo per l'analisi e lo studio di file MIDI. Permette di esplorare brani musicali, isolare le singole tracce (es. voce, pianoforte) e analizzarle battuta per battuta in un formato accessibile.
+
+Funzionamento:
+1.  Chitabry cerca i file `.mid` o `.midi` nella cartella `Mine\Chitabry\midi`. Copiate qui i vostri brani!
+2.  Selezionate un file dal menu.
+3.  Scegliete una traccia da studiare.
+    - Usate l'opzione `0` per ascoltare il brano intero con il player di sistema.
+4.  Nel menu di studio traccia, potete:
+    - (a) Ascoltare l'anteprima della traccia isolata (usa il player di sistema).
+    - (e) Aprire il Visualizzatore Interattivo.
+    - (s) Salvare l'analisi completa in un file di testo `.txt`.
+
+Visualizzatore Interattivo:
+Pensato per l'accessibilità (screen reader e Braille), mostra una battuta alla volta nel prompt.
+- **Frecce DX/SX** (o SPAZIO/B): Battuta successiva / precedente.
+- **SPAZIO**: Suona la battuta corrente.
+- **INVIO**: Avvia/Ferma la riproduzione continua (suona e avanza). Interrompibile con qualsiasi tasto.
+- **P**: Cambia il suono (Synth/Flauto o Chitarra).
+- **ESC** (o Q): Esce.
+
+Notazione:
+- Durate: `/4` (Quarto), `/8` (Ottavo), `/16` (Sedicesimo).
+- Accordi: Note racchiuse tra parentesi quadre, es. `[DO4 MI4 SOL4]`.
+- Legature: Il simbolo `~` a fine riga indica che l'ultima nota continua nella battuta successiva.
 
 -----
 
