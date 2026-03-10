@@ -16,7 +16,7 @@ def migra_impostazioni():
     Rimuove 'kind' e 'adsr' da 'suono_1'.
     Aggiunge 'pluck_hardness' e 'damping_factor' a 'suono_1'.
     """
-    print(f"--- Migratore Impostazioni Chitabry ---")
+    print("--- Migratore Impostazioni Chitabry ---")
     
     # --- 1. Controllo Esistenza File ---
     if not os.path.exists(FILE_IMPOSTAZIONI):
@@ -103,7 +103,7 @@ def migra_impostazioni():
     try:
         with open(FILE_IMPOSTAZIONI, 'w', encoding='utf-8') as f:
             json.dump(impostazioni, f, indent=4, ensure_ascii=False)
-        print(f"\nMigrazione completata con successo!")
+        print("\nMigrazione completata con successo!")
         print(f"File '{FILE_IMPOSTAZIONI}' aggiornato.")
     except IOError as e:
         print(f"ERRORE: Impossibile salvare il file aggiornato: {e}")

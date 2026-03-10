@@ -4,7 +4,9 @@
 
 import numpy as np
 import sounddevice as sd
-import threading, time, json
+import threading
+import time
+import json
 
 VERSION="2.0.1 - ottobre 2025"
 SAMPLE_RATE = 44100 
@@ -392,7 +394,7 @@ class Metronome:
             self.is_dirty = True
             self._request_buffer_rebuild()
         else:
-            print(f"\nValore BPM non valido.")
+            print("\nValore BPM non valido.")
     def set_subdivision(self, level_code):
         """
         Imposta il livello di suddivisione per ogni beat.
@@ -992,7 +994,7 @@ def main():
                 else:
                     raise ValueError("Formato non valido")
             except (ValueError, IndexError):
-                print(f"Formato non valido per il tempo. Usa t <num>/<den>, es: t 4/4")
+                print("Formato non valido per il tempo. Usa t <num>/<den>, es: t 4/4")
         elif command in ('0', '1', '2', '3'):
             try:
                 code = int(command)

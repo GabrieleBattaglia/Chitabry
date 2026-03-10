@@ -4,7 +4,6 @@
 # Data creazione: 6 gennaio 2026
 
 import numpy as np
-import sounddevice as sd
 from scipy import signal
 from collections import deque
 import re

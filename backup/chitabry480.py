@@ -7,13 +7,18 @@
 from time import sleep as aspetta
 from scipy import signal
 from collections import deque
-from music21 import pitch, chord, scale, interval, harmony
+from music21 import pitch, scale, harmony
 from GBUtils import dgt, manuale, menu, key
 from typing import Dict
 from pathlib import Path
 import numpy as np
 import sounddevice as sd
-import sys, json, re, inspect, random, threading, clitronomo, midistudy
+import sys
+import json
+import re
+import inspect
+import clitronomo
+import midistudy
 
 # --- Costanti ---
 VERSIONE = "4.8.0 del 6 gennaio 2026."
@@ -1752,7 +1757,7 @@ def MostraCorde(nota_std, rp=False, maninf=0, mansup=21):
         
     posizioni = []
     for k, v in CORDE.items():
-        ks = k.split("."); 
+        ks = k.split(".") 
         ks1 = int(ks[1]) # Tasto
         
         # Filtra per manico
@@ -2519,14 +2524,14 @@ def CostruttoreAccordi():
     except Exception as e:
         print(f"\nErrore durante la creazione dell'accordo: {e}")
         if figure_string: print(f"Input tentato per music21: '{figure_string}'")
-        print(f"Verifica la correttezza della fondamentale e del tipo.")
+        print("Verifica la correttezza della fondamentale e del tipo.")
         key("Premi un tasto...")
         return # Esce dalla funzione
 
     # --- 4. Mostra i Risultati ---
     nome_accordo_display = f"{get_nota(tonica_std)} {nome_accordo_display_base}"
     note_str = " - ".join(note_accordo_formattate)
-    print(f"\n--- Risultato Analisi (harmony.ChordSymbol) ---")
+    print("\n--- Risultato Analisi (harmony.ChordSymbol) ---")
     print(f"Accordo: {nome_accordo_display}")
     print(f"Note componenti: {note_str}")
     print("---------------------------------------------")
@@ -2559,7 +2564,7 @@ def CostruttoreAccordi():
         key("Premi un tasto per tornare al menu...")
 def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
-    print(f"\nBenvenuto in Chitabry, l'App per familiarizzare con la Chitarra e studiare musica.")
+    print("\nBenvenuto in Chitabry, l'App per familiarizzare con la Chitarra e studiare musica.")
     print(f"\tVersione: {VERSIONE}, di Gabriele Battaglia (IZ4APU)")
     
     carica_impostazioni()

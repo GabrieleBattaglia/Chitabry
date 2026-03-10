@@ -7,8 +7,8 @@ import json
 import time
 import numpy as np
 import sounddevice as sd
-from music21 import converter, midi, stream, note, chord, meter, tempo, key as m21key
-from GBUtils import dgt, menu, key
+from music21 import converter, stream, note, chord, meter, tempo, key as m21key
+from GBUtils import menu, key
 from fractions import Fraction
 import GBAudio
 
