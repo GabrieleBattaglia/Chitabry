@@ -156,17 +156,17 @@ def get_metadata(part):
     ks = flat_part.getElementsByClass(m21key.KeySignature)
     if ks:
         try: key_sig = ks[0].asKey().name
-        except: key_sig = f"{ks[0].sharps} accidenti"
+        except Exception: key_sig = f"{ks[0].sharps} accidenti"
     mm = flat_part.getElementsByClass(tempo.MetronomeMark)
     if mm:
         try: bpm = str(mm[0].getQuarterBPM())
-        except: pass
+        except Exception: pass
     return bpm, time_sig, key_sig
 
 def genera_lista_eventi_per_battute(part):
     output_lines = []
     try: measures = part.makeMeasures()
-    except: measures = part
+    except Exception: measures = part
     measure_list = measures.getElementsByClass(stream.Measure)
     if not measure_list:
         output_lines.append("(Nessuna suddivisione in battute rilevata)")

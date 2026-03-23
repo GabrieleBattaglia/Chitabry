@@ -18,9 +18,10 @@ import inspect
 import clitronomo
 import midistudy
 import GBAudio
+from GBAudio import FS, NoteRenderer, note_to_freq
 
 # --- Costanti ---
-VERSIONE = "4.8.7 del 6 gennaio 2026."
+VERSIONE = "4.8.8 del 23 marzo 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -155,7 +156,7 @@ MAINMENU = {
     "Accordi": "Gestisci le tue Tablature Accordi (salvate)",
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Flauto": "Consulta la diteggiatura del flauto traverso",
-    "Metronomo": "Avvia Clitronomo",
+    "Metronomo": "Avvia il Metronomo",
     "MidiStudy": "Analizza e studia file MIDI",
     "Scale": "Visualizza, esercitati e gestisci le scale",
     "Impostazioni": "Configura i suoni e la notazione delle note",
@@ -424,7 +425,7 @@ def fuzzy_search_and_select(search_dict: Dict, search_prompt: str, item_type: st
         # Mostra risultati numerati (1-20)
         print(f"\nRisultati trovati per '{search_term}':")
         match_list = list(matches.items()) # Converti in lista per indicizzazione numerica
-        for i, (key, display_name) in enumerate(match_list):
+        for i, (k_elem, display_name) in enumerate(match_list):
             print(f" {i+1}: {display_name}")
 
         # Chiedi selezione numerica
@@ -989,7 +990,7 @@ def SuonaAccordoTeorico(note_pitch_list):
         # Fallback: prova a usare l'ordinamento predefinito se la frequenza fallisce
         try:
             sorted_pitches = sorted(note_pitch_list)
-        except:
+        except TypeError:
              print("Impossibile ordinare le note.")
              return
 
@@ -1005,8 +1006,8 @@ def SuonaAccordoTeorico(note_pitch_list):
 
     # 3. Prepara parametri audio (da suono_1)
     suono_1 = impostazioni['suono_1']
-    kind = suono_1['kind']
-    adsr_list = suono_1['adsr']
+    suono_1['kind']
+    suono_1['adsr']
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
     hardness = suono_1.get('pluck_hardness', 0.6)
@@ -1332,7 +1333,7 @@ def VediAccordi():
         tablatura_scelta_py_idx = tablatura_scelta_idx - 1
         tablatura_corrente = chordpedia[trovato_accordo][tablatura_scelta_py_idx]
         print(f"\nAccordo {trovato_accordo}, tablatura {tablatura_scelta_idx} Tab: {DaTablaturaAStringa(chordpedia[trovato_accordo][tablatura_scelta_py_idx])}")
-        note_accordo_str = get_note_da_tablatura(tablatura_corrente)
+        get_note_da_tablatura(tablatura_corrente)
         # Menu gestione singola tablatura
         mn_gestione_tablatura = {
             "c": "Visualizza in ordine di corda",
@@ -1600,15 +1601,11 @@ def VisualizzaEsercitatiScala():
             p_start = scala_m21.getTonic() if hasattr(scala_m21, 'getTonic') else pitch.Pitch(tonica_std_con_ottava)
             start_octave = p_start.octave if p_start.octave is not None else 4
             end_octave = start_octave + 1
-            p_end = pitch.Pitch(p_start.step + str(end_octave))
-            p_start_desc = p_end
-            p_end_desc = p_start
+            pitch.Pitch(p_start.step + str(end_octave))
         except Exception as pitch_err: #<<<--- EXCEPT INTERNO 1 ---<<<
             print(f"Errore nella definizione dell'intervallo di ottava: {pitch_err}")
             p_start = pitch.Pitch(tonica_std_con_ottava)
-            p_end = pitch.Pitch(tonica_std_base + "5")
-            p_start_desc = p_end
-            p_end_desc = p_start
+            pitch.Pitch(tonica_std_base + "5")
 
         # Estrai pitches (con try/except interno)
         pitches_asc = [] # Inizializza prima del try
@@ -2239,7 +2236,7 @@ def main():
         elif scelta == "Costruttore Accordi": # <-- NUOVO BLOCCO
             CostruttoreAccordi()
         elif scelta == "Metronomo":
-            print("\nAvvio di Clitronomo...")
+            print("\nAvvio del Metronomo...")
             aspetta(0.5)
             clitronomo.main()
             print("\n--- Ritorno al Menu Principale di Chitabry ---")

@@ -1,4 +1,4 @@
-# CLITRONOMO BY GABRIELE BATTAGLIA
+# METRONOMO BY GABRIELE BATTAGLIA
 # Un metronomo da riga di comando.
 # Data di concepimento 9 settembre 2025.
 
@@ -8,7 +8,6 @@ import threading
 import time
 import json
 
-VERSION="2.0.1 - ottobre 2025"
 SAMPLE_RATE = 44100 
 COMANDI = {
     'g', 's', 'b', '?', '0', '1', '2', '3',
@@ -22,7 +21,7 @@ COMANDI = {
     'p', 'pa', 'pc',
 }
 HELP_STRING = """
---- Menu Comandi Clitronomo ---
+--- Menu Comandi Metronomo ---
 
 >> CONTROLLO
   g           - Avvia il metronomo
@@ -139,7 +138,7 @@ class Metronome:
         self.bpm_increment_per_measure = 0.0
     def display_status(self, preset_manager):
         """Mostra una tabella riassuntiva di tutte le impostazioni correnti."""
-        print("\n--- Stato Attuale Clitronomo ---")
+        print("\n--- Stato Attuale Metronomo ---")
         
         # Stato del Preset
         preset_id_str = str(self.current_preset_id) if self.current_preset_id else "Default"
@@ -894,8 +893,8 @@ def main():
         clitronomo.set_state(last_state, last_id)
 
     clitronomo.display_status(preset_manager)
-    print("\n--- CLITRONOMO ---")
-    print(f"Versione {VERSION}\n\t by Gabriele Battaglia IZ4APU\n")
+    print("\n--- METRONOMO ---")
+    print("\t by Gabriele Battaglia IZ4APU\n")
     print("\t\t--- Digita '?' per la lista dei comandi.")
     
     while True:
@@ -1024,7 +1023,7 @@ def main():
 
             # Se l'utente non ha annullato, esci dal programma
             clitronomo.stop()
-            print("Salvataggio stato e chiusura di Clitronomo...")
+            print("Salvataggio stato e chiusura del Metronomo...")
             preset_manager.set_last_used(clitronomo.current_preset_id)
             break
         

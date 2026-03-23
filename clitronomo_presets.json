@@ -1,5 +1,5 @@
 {
- "last_preset_id": "3",
+ "last_preset_id": "9",
  "presets": {
   "4": {
    "name": "ID4 walter ritmato basso",
@@ -251,6 +251,36 @@
     "config_subdivision": {
      "beep_duration_ms": 14,
      "volume_perc": 90,
+     "attack_ms": 2,
+     "decay_ms": 8,
+     "frequency_hz": 1030.0
+    },
+    "program": []
+   }
+  },
+  "9": {
+   "name": "ID9 Handpan",
+   "state": {
+    "bpm": 90,
+    "time_signature": "4/4",
+    "subdivision_level": 0,
+    "config_accento": {
+     "beep_duration_ms": 25,
+     "volume_perc": 50,
+     "attack_ms": 2,
+     "decay_ms": 13,
+     "frequency_hz": 1340
+    },
+    "config_tick": {
+     "beep_duration_ms": 25,
+     "volume_perc": 25,
+     "attack_ms": 2,
+     "decay_ms": 13,
+     "frequency_hz": 340
+    },
+    "config_subdivision": {
+     "beep_duration_ms": 10,
+     "volume_perc": 15,
      "attack_ms": 2,
      "decay_ms": 8,
      "frequency_hz": 1030.0
