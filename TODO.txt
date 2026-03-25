@@ -1,0 +1,10 @@
+# Chitabry - Todo List
+# =====================
+
+## Prossimi Interventi
+*   [ ] **Auto-update:** Importare e integrare da `GBUtils` le due funzioni per la gestione dell'aggiornamento automatico.
+*   [ ] **Metronomo - Sovrapposizioni:** Implementare controlli per impedire la programmazione di segmenti audio sovrapposti.
+*   [ ] **Metronomo - UX:** Semplificare la logica di programmazione del metronomo per renderla più intuitiva.
+
+---
+*Aggiornato il 23 marzo 2026*

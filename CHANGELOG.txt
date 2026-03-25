@@ -1,6 +1,17 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 4.8.8 (23 marzo 2026)
+--------------------------------
+*   **Rebranding Metronomo:** Rinominati i riferimenti a "Clitronomo" in "Metronomo" nelle stampe a video e nei menu.
+*   **Versione Unificata:** Rimossa la versione specifica del metronomo a favore di quella globale di Chitabry.
+*   **Qualità del Codice:** 
+    *   Refactoring e fix linting con Ruff.
+    *   Risolto shadowing della variabile `key`.
+    *   Sostituiti `bare except` con eccezioni specifiche.
+    *   Fix import `note_to_freq`.
+*   **Distribuzione:** Configurato PyInstaller per build in formato cartella (`onedir`).
+
 Versione 4.7.0 (4 gennaio 2026)
 --------------------------------
 *   **Merge Funzionalità:** Unificato il codice di sviluppo (chitabrydev6) con il ramo principale. Ora Chitabry include sia le funzioni MIDI che il nuovo motore audio.
