@@ -2200,9 +2200,34 @@ def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
     print("\nBenvenuto in Chitabry, l'App per familiarizzare con la Chitarra e studiare musica.")
     print(f"\tVersione: {VERSIONE}, di Gabriele Battaglia (IZ4APU)")
-    
-    carica_impostazioni()
 
+    import sys
+    from GBUtils import update_checker, perform_update, enter_escape
+
+    # Auto-Updater
+    if getattr(sys, 'frozen', False):
+        api_url = "https://api.github.com/repos/GabrieleBattaglia/Chitabry/releases/latest"
+        print("Ricerca aggiornamenti in corso...")
+        has_update, new_ver, dl_url, changelog = update_checker(VERSIONE, api_url)
+        if has_update:
+            if dl_url:
+                print("\n*** AGGIORNAMENTO DISPONIBILE ***")
+                print(f"E' disponibile la nuova versione {new_ver}! (Attuale: {VERSIONE})")
+                if enter_escape("Desideri scaricare e installare l'aggiornamento ora? (INVIO per si', ESC per ignorare): "):
+                    print("Download dell'aggiornamento in corso. Attendere prego...")
+                    if perform_update(dl_url, "Chitabry"):
+                        print("Aggiornamento pronto. Chitabry si chiudera' per l'installazione...")
+                        sys.exit(0)
+                    else:
+                        print("Si e' verificato un errore durante la preparazione dell'aggiornamento.")
+            else:
+                print("\n*** AGGIORNAMENTO DISPONIBILE ***")
+                print(f"E' disponibile la nuova versione {new_ver}, ma i file di installazione non sono ancora pronti per il download.")
+                print("Riprova piu' tardi.")
+        else:
+            print(f"Hai gia' l'ultima versione disponibile ({VERSIONE})!")
+
+    carica_impostazioni()
     # --- POPOLA I DIZIONARI DINAMICI ---
     print("Analisi libreria music21 per scale e accordi...")
     SCALE_CATALOG = build_scale_catalog() # Chiama la funzione e popola il catalogo!
