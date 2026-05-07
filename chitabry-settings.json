@@ -3236,5 +3236,107 @@
             ]
         ]
     },
-    "default_bpm": 230
+    "default_bpm": 230,
+    "strumenti": {
+        "Chitarra Standard": {
+            "accordatura": [
+                "E2",
+                "A2",
+                "D3",
+                "G3",
+                "B3",
+                "E4"
+            ],
+            "tasti": 21
+        },
+        "Ukulele soprano": {
+            "accordatura": [
+                "G4",
+                "C4",
+                "E4",
+                "A4"
+            ],
+            "tasti": 12
+        },
+        "Ukulele Concerto": {
+            "accordatura": [
+                "G4",
+                "C4",
+                "E4",
+                "A4"
+            ],
+            "tasti": 15
+        },
+        "Ukulele Tenore": {
+            "accordatura": [
+                "G4",
+                "C4",
+                "E4",
+                "A4"
+            ],
+            "tasti": 18
+        },
+        "Basso 4 corde": {
+            "accordatura": [
+                "E1",
+                "A1",
+                "D2",
+                "G2"
+            ],
+            "tasti": 24
+        },
+        "Basso 5 corde": {
+            "accordatura": [
+                "B0",
+                "E1",
+                "A1",
+                "D2",
+                "G2"
+            ],
+            "tasti": 24
+        },
+        "Mandolino": {
+            "accordatura": [
+                "G3",
+                "D4",
+                "A4",
+                "E5"
+            ],
+            "tasti": 20
+        },
+        "Banjo Bluegrass": {
+            "accordatura": [
+                "G4",
+                "D3",
+                "G3",
+                "B3",
+                "D4"
+            ],
+            "tasti": 22
+        },
+        "Chitarra 7 corde": {
+            "accordatura": [
+                "B1",
+                "E2",
+                "A2",
+                "D3",
+                "G3",
+                "B3",
+                "E4"
+            ],
+            "tasti": 24
+        },
+        "Guitalele": {
+            "accordatura": [
+                "A2",
+                "D3",
+                "G3",
+                "C4",
+                "E4",
+                "A4"
+            ],
+            "tasti": 17
+        }
+    },
+    "strumento_attivo": "Guitalele"
 }

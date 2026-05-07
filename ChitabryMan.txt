@@ -144,6 +144,7 @@ Infine, si aprirà il Menu Esercizio Scala:
 
 Qui potete configurare alcuni parametri di Chitabry:
 
+   Gestisci Strumenti: Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino). Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento (specificando numero di corde, nota di ogni corda vuota e numero di tasti) oppure eliminare strumenti non più usati.
    Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
    Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
    Modifica suono 2 (Scale): Permette di cambiare i parametri del suono usato per "Scale".

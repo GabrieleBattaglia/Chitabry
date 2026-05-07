@@ -1,0 +1,54 @@
+=== PIANO DI SVILUPPO CHITABRY (MIGRAZIONE MULTI-STRUMENTO) ===
+
+### OBIETTIVO DEL PROGETTO
+Svincolare Chitabry dalla sua natura hardcoded "Chitarra Standard" per renderlo un'applicazione agnostica capace di supportare un numero arbitrario di corde, tasti e accordature (es. Ukulele, Basso, Mandolino, Banjo).
+
+### PASSI COMPLETATI (In data 7 maggio 2026)
+1.  **Refactoring Struttura Manico:**
+    *   Creato modulo `strumento.py` con `build_fretboard_data` flessibile (numero corde, accordatura, tasti dinamici).
+    *   Sostituiti tutti i riferimenti hardcoded (es. 6 corde, 22 tasti) con le variabili globali `NUM_CORDE` e `NUM_TASTI`.
+
+2.  **Gestione Configurazione (chitabry-settings.json):**
+    *   Creata struttura JSON per ospitare una rubrica di `strumenti` e una chiave `strumento_attivo`.
+    *   Implementata logica di auto-migrazione dei vecchi file JSON.
+
+3.  **Menu Impostazioni Interattivo:**
+    *   Aggiunto sottomenu "Gestisci Strumenti" per selezionare lo strumento attivo, aggiungerne di nuovi (inserimento nota vuota per corda flessibile tramite prompt) ed eliminarli.
+    *   Test testuali: rimosso l'uso della parola "chitarra" dai messaggi hardcoded a schermo. 
+    
+4.  **Adattamento Player Audio Live:**
+    *   Il player live `Suona()` mappa i tasti `1-0` dinamicamente alla quantità di corde dello strumento.
+    *   Se lo strumento ha più di 10 corde, l'utente suona le prime 10 con i numeri, ma le strum (A/Q) suonano correttamente tutto l'accordo.
+    *   Panning generato proceduralmente (Grave=DX -> Acuto=SX) in base al numero di corde.
+
+5.  **Pulizia e Release:**
+    *   Eseguito check con ruff limitato agli errori di logica (risolti shadow variables e undefined names).
+    *   Aggiornata `VERSIONE` a `4.9.0` in `Chitabry.py`.
+    *   Aggiornato file di manuale `ChitabryMan.txt`.
+
+6.  **Inizio Lavori su Motore Dinamico Diteggiature (Chordpedia 2.0):**
+    *   Acquisiti appunti di logica per Constraint Satisfaction Problem (CSP).
+    *   Aggiunta libreria `python-constraint` e salvato in `requirements.txt`.
+    *   Creato nuovo file `generatore_accordi.py` isolato.
+    *   Implementata architettura base: HarmonicParser, InstrumentModel e AccordoSolver.
+    *   Implementata e testata con successo la Funzione di Costo (Scoring) con preferenza per note a vuoto, stretch ridotto e divieto di corde mute intermedie.
+    *   Test di generazione ("E Major" su Chitarra) restituisce correttamente centinaia di soluzioni ordinate, con le "open chord" al primo posto.
+
+### PASSI DA FARE (Sessione Futura)
+Il prossimo traguardo è sostituire la vecchia Chordpedia statica.
+1.  **Sostituzione Chordpedia nel codice principale:**
+    *   Importare `generatore_accordi.py` in `Chitabry.py`.
+    *   Rimuovere le logiche legacy in cui l'utente digita la tablatura manualmente (o convertirle in una modalità opzionale "Custom Tab").
+    *   Quando l'utente seleziona "Costruttore Accordi" e inserisce un tipo (es. "C Major"), richiamare il `AccordoSolver` per quello specifico strumento.
+    *   Prendere la "Top X" (es. Top 5 o Top 10) soluzioni generate dall'algoritmo e mostrarle a schermo in un comodo Menu interattivo.
+    *   Permettere all'utente di suonare la tablatura generata e decidere di salvarla nella sua collezione (oppure salvarle in automatico se lo si desidera).
+    
+2.  **Gestione Barré nell'output dell'Algoritmo (Opzionale/Avanzato):**
+    *   Attualmente l'algoritmo calcola le note necessarie, ma non indica *come* le dita si incastrano o se c'è un barrè. Implementare logica di deduzione del barrè (es. "Se 3 o più corde condividono lo stesso tasto minimo, si fa barrè") per arricchire la visualizzazione e penalizzare le varianti eccessivamente complesse.
+
+3.  **UI/UX Revision:**
+    *   Garantire che la visualizzazione delle nuove tablature autogenerate non "rompa" l'impaginazione Braille.
+
+### NOTE PER LO SVILUPPATORE
+- Il file principale su cui lavorare è `generatore_accordi.py` per le rifiniture del calcolo del punteggio.
+- Esegui `python generatore_accordi.py` per testare modifiche allo scoring, prima di importarlo in `Chitabry.py`.
