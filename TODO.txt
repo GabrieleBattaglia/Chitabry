@@ -1,10 +1,24 @@
 # Chitabry - Todo List
 # =====================
 
-## Prossimi Interventi
+## Completati Recentemente (v5.0.0 Alpha)
+*   [X] Sostituzione completa Chordpedia con generatore CSP on-demand (`AccordoSolver`).
+*   [X] Calcolo metadati accordi: Difficoltà Generale (%), Difficoltà Stretch (%) e numero tasti.
+*   [X] Calcolo formattazione anatomica dita e barré per accessibilità (Braille).
+*   [X] Implementazione vincolo biomeccanico numero di dita (max 4 dita separate o forme standard barré/piccolo barré).
+*   [X] Riformattato menu Costruttore Accordi per layout pulito e stringato.
+*   [X] Bugfix del player Karplus-Strong per gli accordi (rimozione vecchie chiavi 'kind' e 'adsr').
+*   [X] Rimozione di tutto il codice legacy relativo al salvataggio manuale e gestione tabellare.
+
+## Prossimi Interventi (Bugfix & UX - Prossima Sessione)
+*   [ ] Test approfonditi sul campo: verifica e correzione di eventuali errori residui nel motore e nei metadati generati.
+*   [ ] Eventuali raffinamenti logici sui punteggi e sulla prioritizzazione forme.
+
+## Prossimi Interventi (Altre funzionalità)
 *   [ ] **Auto-update:** Importare e integrare da `GBUtils` le due funzioni per la gestione dell'aggiornamento automatico.
 *   [ ] **Metronomo - Sovrapposizioni:** Implementare controlli per impedire la programmazione di segmenti audio sovrapposti.
 *   [ ] **Metronomo - UX:** Semplificare la logica di programmazione del metronomo per renderla più intuitiva.
+*   [ ] **UI/UX Revision Generale:** Garantire che l'impaginazione di tutte le nuove interfacce resti perfettamente Braille-friendly e coerente con la v5.
 
 ---
-*Aggiornato il 23 marzo 2026*
+*Aggiornato l'8 maggio 2026*

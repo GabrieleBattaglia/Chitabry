@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "4.8.8 del 23 marzo 2026."
+VERSIONE = "5.0.0 Alpha dell'8 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -154,8 +154,7 @@ archivio_modificato = False
 impostazioni = {} # Conterrà l'intera configurazione caricata/default
 
 MAINMENU = {
-    "Accordi": "Gestisci le tue Tablature Accordi (salvate)",
-    "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
+        "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Flauto": "Consulta la diteggiatura del flauto traverso",
     "Metronomo": "Avvia il Metronomo",
     "MidiStudy": "Analizza e studia file MIDI",
@@ -1030,8 +1029,6 @@ def SuonaAccordoTeorico(note_pitch_list):
 
     # 3. Prepara parametri audio (da suono_1)
     suono_1 = impostazioni['suono_1']
-    suono_1['kind']
-    suono_1['adsr']
     dur = suono_1['dur_accordi']
     vol = suono_1['volume']
     hardness = suono_1.get('pluck_hardness', 0.6)
@@ -1163,284 +1160,6 @@ def SuonaAccordoTeorico(note_pitch_list):
             print("Comando non valido.")
 
     return # Fine funzione SuonaAccordoTeorico
-
-def Barre(t):
-    """Riceve la tablatura e restituisce il capotasto del barrè, se lo trova."""
-    # (Logica identica all'originale)
-    if "0" in t: return 0
-    tasti_premuti = [int(fret) for fret in t if fret not in 'X']
-    if len(tasti_premuti) < 2:
-        return 0
-    conteggio_tasti = {}
-    for tasto in tasti_premuti:
-        if tasto in conteggio_tasti:
-            conteggio_tasti[tasto] += 1
-        else:
-            conteggio_tasti[tasto] = 1
-    for k, v in conteggio_tasti.items():
-        if v > 0 and k <= min(list(conteggio_tasti.keys())):
-            return k
-    return 0
-
-def VediTablaturaPerTasto(t):
-    """Mostra la tablatura ordinata per tasto."""
-    # (Logica identica all'originale)
-    print("\nTablatura per tasto:")
-    risultato = {}
-    bar = Barre(t)
-    for tasto in range(0, 22):
-        risultato[tasto] = ""
-        c = 6
-        stopate = []
-        for j in t:
-            if j != "X" and tasto == int(j):
-                risultato[tasto] += str(c) + ", "
-            if j == "X": stopate.append(c)
-            c -= 1
-        if tasto > 0 and tasto == int(bar): risultato[tasto] = risultato[tasto] + "Barrè!"
-        if risultato[tasto][-2:] == ", ": risultato[tasto] = risultato[tasto][:-2] + "."
-    for k, v in risultato.items():
-        if len(v) > 0:
-            if len(v) > 2: crd = "corde"
-            else: crd = "corda"
-            if k == 0 and len(v) >= 1: k1 = f"Corde aperte: {v}"
-            elif k == 0 and len(v) <= 2: k1 = f"Corda aperta: {v}"
-            else: k1 = f"Tasto {k}, {crd}: {v}"
-            print(k1)
-    if len(stopate) > 0:
-        stp = ''
-        for j in stopate:
-            stp += f"{j}, "
-        stp = stp[:-2] + "."
-        if len(stopate) > 1: k2 = f"Corde stoppate: {stp}"
-        else: k2 = f"Corda stoppata: {stp}"
-        print(k2)
-    return
-
-def VediTablaturaPerCorda(t):
-    """Mostra la tablatura ordinata per corda."""
-    print("\nTablatura per corda:")
-    bar = Barre(t)
-    if int(bar) > 0: print(f"Barrè al tasto {bar}")
-    it = 0
-    for corda in range(NUM_CORDE, 0, -1):
-        j = t[it]
-        if j.isdigit() and int(j) >= 1 and int(j) <= 24:
-            # --- MODIFICA FASE 5: Usa get_nota() ---
-            nota_std = CORDE[f'{corda}.{j}']
-            y = get_nota(nota_std[:-1]) # Rimuove l'ottava
-            # --- Fine Modifica ---
-            print(f"Corda {corda}, tasto {j}, {y}.")
-        elif j.isdigit() and int(j) == 0:
-            # --- MODIFICA FASE 5: Usa get_nota() ---
-            nota_std = CORDE[f'{corda}.0']
-            y = get_nota(nota_std[:-1]) # Rimuove l'ottava
-            # --- Fine Modifica ---
-            print(f"Corda {corda} libera, {y}.")
-        elif j == "X":
-            print(f"Corda {corda} stoppata.")
-        it += 1
-    return
-
-# (Riga 355 circa, dopo VediTablaturaPerCorda)
-
-def get_note_da_tablatura(t):
-    """
-    Data una tablatura (lista), restituisce una stringa
-    con i nomi delle note (usando la nomenclatura attuale).
-    """
-    note = []
-    it = 0
-    for corda in range(NUM_CORDE, 0, -1):
-        j = t[it]
-        if j.isdigit() and f"{corda}.{j}" in CORDE:
-            nota_std = CORDE[f'{corda}.{j}']
-            nota_formattata = get_nota(nota_std[:-1]) # Rimuove l'ottava
-            note.append(nota_formattata)
-        elif j == "X":
-            note.append("X")
-        it += 1
-    
-    # Restituisce una stringa formattata (es. MI LA RE SOL SI MI)
-    return " ".join(reversed(note)) # Le corde sono 6-1, le note 1-6
-
-def InserisciTablatura(nuova_lista_tablature, nuovo_nome_accordo):
-    """Chiede all'utente una nuova tablatura (6 valori)."""
-    # (Logica identica all'originale)
-    while True:
-        tbl = dgt(prompt=f"Tablatura: ({len(nuova_lista_tablature) + 1}) - {nuovo_nome_accordo} (Tab: ", kind="s", smax=19).upper()
-        if tbl == "": return ""
-        stbl = tbl.split(" ")
-        if len(stbl) == 6: break
-        print("Non sono stati inseriti sei valori, riprova.")
-    return stbl
-
-def DaTablaturaAStringa(t):
-    """Trasforma una lista di 6 valori in tablatura (stringa)."""
-    # (Logica identica all'originale)
-    s = ''
-    for j in t:
-        if j.isdigit():
-            if int(j) >= 0 and int(j) <= 9: s += j
-            else: s += " " + j
-        else: s += j.upper()
-    return s
-
-def RimuoviAccordi():
-    """Rimuove un accordo da impostazioni['chordpedia']"""
-    global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
-    
-    cancello_accordo = dgt(prompt="\nInserisci l'esatto nome dell'accordo da eliminare: >", kind="s", smax=64).upper()
-    if len(chordpedia) > 0:
-        if cancello_accordo in chordpedia.keys():
-            del chordpedia[cancello_accordo]
-            archivio_modificato = True
-            print(f"{cancello_accordo} eliminato. Ora l'archivio ne contiene {len(chordpedia)}.")
-        else:
-            print("Nome accordo non presente in Chordpedia")
-    else:
-        print("Il Database degli accordi è già vuoto.")
-    return
-
-def VediAccordi():
-    """Permette di visualizzare, gestire e ascoltare gli accordi."""
-    global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
-    l = len(chordpedia)
-    if l == 0:
-        print("\nArchivio vuoto, prima aggiungi qualche accordo.")
-        return
-
-    print(f"\nVisualizza uno dei {l} accordi presenti nella chordpedia.")
-    print("Usa il menu interattivo per filtrare e scegliere l'accordo.")
-    
-    # --- OTTIMIZZAZIONE FASE 5: Sostituzione loop 'key()' con 'menu()' ---
-    # Creiamo un dizionario {nome: nome} per la funzione menu
-    d_accordi = {k: k for k in chordpedia.keys()}
-    
-    while True: # Loop di consultazione
-        trovato_accordo = menu(d=d_accordi, keyslist=True, show=False, pager=20, 
-                               show_on_filter=True, ntf="Accordo non trovato", 
-                               p="Filtra accordo: ")
-        
-        if trovato_accordo is None: # Utente ha premuto ESC o Invio a vuoto
-            print("Ritorno al menu Chordpedia.")
-            return
-        
-        # --- Fine Ottimizzazione ---
-
-        # Da qui, la logica è identica, ma usa 'trovato_accordo'
-        
-        # Gestione tablature multiple
-        if len(chordpedia[trovato_accordo]) > 1:
-            print(f"L'accordo {trovato_accordo} ha {len(chordpedia[trovato_accordo])} tablature. Scegline una:")
-            dz_tablature_presenti_in_accordo = {}
-            indice_tablature_in_accordo = 1
-            for j in chordpedia[trovato_accordo]:
-                # Usiamo str(indice) come chiave per menu()
-                chiave_menu = str(indice_tablature_in_accordo)
-                descrizione = DaTablaturaAStringa(j) # Usiamo j (la tablatura)
-                dz_tablature_presenti_in_accordo[chiave_menu] = descrizione
-                indice_tablature_in_accordo += 1
-            
-            # Mostriamo il menu numerato
-            tablatura_scelta_key = menu(d=dz_tablature_presenti_in_accordo, show=True, numbered=True, ntf="Scelta non valida")
-            if tablatura_scelta_key is None:
-                continue # Torna alla scelta accordo
-            
-            tablatura_scelta_idx = int(tablatura_scelta_key) # L'indice menu (da 1)
-        else:
-            tablatura_scelta_idx = 1 # C'è solo una tablatura (indice 1)
-        
-        # L'indice della lista in Python è (scelta - 1)
-        tablatura_scelta_py_idx = tablatura_scelta_idx - 1
-        tablatura_corrente = chordpedia[trovato_accordo][tablatura_scelta_py_idx]
-        print(f"\nAccordo {trovato_accordo}, tablatura {tablatura_scelta_idx} Tab: {DaTablaturaAStringa(chordpedia[trovato_accordo][tablatura_scelta_py_idx])}")
-        get_note_da_tablatura(tablatura_corrente)
-        # Menu gestione singola tablatura
-        mn_gestione_tablatura = {
-            "c": "Visualizza in ordine di corda",
-            "t": "Visualizza in ordine di tasto",
-            "a": "Ascolta le note",
-            "m": "Modifica tablatura",
-            "r": "Rimuovi questa tablatura",
-            "p": "Scegli un altro accordo",
-            "i": "Torna al menu Chordpedia",
-        }
-        while True: # Loop sottomenu
-            # --- MODIFICA OBIETTIVO 1: Rimossa la riga 'print(f"Note: ...")' da qui ---
-            s = menu(d=mn_gestione_tablatura, ntf="Comando non valido", keyslist=True, show=True, show_on_filter=False)
-            
-            if s == "i": return # Esce da VediAccordi
-            elif s == "p" or s is None:
-                print("\nProsegui con la consultazione degli accordi")
-                break # Esce dal sottomenu e torna al loop scelta accordo
-            
-            elif s == "c": VediTablaturaPerCorda(chordpedia[trovato_accordo][tablatura_scelta_py_idx])
-            elif s == "t": VediTablaturaPerTasto(chordpedia[trovato_accordo][tablatura_scelta_py_idx])
-            
-            elif s == "a": 
-                # --- MODIFICA FASE 5: Chiama la nuova Suona() (Fase 3) ---
-                Suona(chordpedia[trovato_accordo][tablatura_scelta_py_idx])
-            
-            elif s == "r":
-                if len(chordpedia[trovato_accordo]) == 1:
-                    print("\nNon puoi rimuovere l'ultima tablatura.")
-                    print("Rimuovi invece l'intero accordo dal menù precedente.")
-                else:
-                    del chordpedia[trovato_accordo][tablatura_scelta_py_idx]
-                    print(f"Rimozione effettuata. Ora {trovato_accordo} ha {len(chordpedia[trovato_accordo])} tablature.")
-                    archivio_modificato = True
-                    break # Torna al loop scelta accordo
-                    
-            elif s == "m":
-                print(f"\nTab: ({tablatura_scelta_idx}) = {DaTablaturaAStringa(chordpedia[trovato_accordo][tablatura_scelta_py_idx])}. Nuova tab? ")
-                stbl = InserisciTablatura([], trovato_accordo)
-                if stbl != "":
-                    chordpedia[trovato_accordo][tablatura_scelta_py_idx] = stbl
-                    archivio_modificato = True
-                    print("Tablatura modificata")
-                else:
-                    print("Modifica annullata.")
-                break # Torna al loop scelta accordo
-        # Fine loop sottomenu
-    # Fine loop consultazione
-    return
-
-def Aggiungiaccordo():
-    """Aggiunge un nuovo accordo a impostazioni['chordpedia']"""
-    global archivio_modificato
-    chordpedia = impostazioni['chordpedia'] # Alias per leggibilità
-    
-    print("\nAggiungi un nuovo accordo alla collezione")
-    while True:
-        nuovo_nome_accordo = dgt(prompt="Nome accordo: ", kind="s", smin=1, smax=40).upper()
-        if nuovo_nome_accordo == "":
-            print("Aggiunta annullata.")
-            return
-        if nuovo_nome_accordo not in chordpedia.keys(): break
-        print("Già presente della collezione. Riprova con un nome diverso.")
-    
-    nuova_lista_tablature = []
-    print(f"Inserisci la tablatura: {NUM_CORDE} valori (Tasto o X) separati da spazi")
-    print(f"Dalla corda {NUM_CORDE} (la più spessa) alla corda 1 (la più sottile).")
-    print("Es: '0 2 2 1 0 0' (E Maggiore)")
-    print("Concludi con un INVIO a vuoto.")
-    
-    while True:
-        stbl = InserisciTablatura(nuova_lista_tablature, nuovo_nome_accordo)
-        if stbl == "": break
-        nuova_lista_tablature.append(stbl)
-    
-    if len(nuova_lista_tablature) > 0:
-        chordpedia[nuovo_nome_accordo] = nuova_lista_tablature
-        archivio_modificato = True
-        print(f"Accordo {nuovo_nome_accordo} aggiunto con {len(nuova_lista_tablature)} tablature.")
-        print(f"La Chordpedia ora contiene {len(chordpedia)} accordi.")
-    else:
-        print("Nessuna tablatura inserita. Accordo non aggiunto.")
-    return
 
 def Manlimiti(s):
     """
@@ -1850,38 +1569,6 @@ def VisualizzaEsercitatiScala():
         if usi_string: print(f"USI tentato: '{usi_string}'")
         key("Premi un tasto...")
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
-
-def GestoreChordpedia():
-    """Gestisce il DB degli accordi (Implementazione Fase 5 - Corretta)"""
-    global archivio_modificato
-    print("\n--- Tablature Accordi ---") 
-    print("Gestore del database degli accordi.")
-    
-    mnaccordi = {
-        "v": "Vedi e gestisci accordi",
-        "a": "Aggiungi un nuovo accordo",
-        "r": "Rimuovi un accordo",
-        "i": "Torna al menu principale"
-    }
-    
-    # RIMOSSA: menu(d=mnaccordi, show=True) <-- Era qui
-    
-    while True:
-        s = menu(d=mnaccordi, ntf="Non trovato", keyslist=True, show=True, show_on_filter=False)
-        
-        if s == "i" or s is None:
-            print("Ritorno al menu principale.")
-            break
-        elif s == "a":
-            Aggiungiaccordo()
-        elif s == "v":
-            VediAccordi()
-        elif s == "r":
-            RimuoviAccordi()
-        
-        # RIMOSSO: print("\n--- Menu Chordpedia ---") <-- Era qui
-    return
-# (Riga 837 circa)
 
 def ModificaSuono(suono_key):
     """
@@ -2294,32 +1981,113 @@ def CostruttoreAccordi():
     print(f"Note componenti: {note_str}")
     print("---------------------------------------------")
 
-# --- 5. Mostra sul Manico (Condizionato al numero di note) ---
-    num_note = len(note_accordo_obj) # Usiamo la lista originale con gli oggetti Pitch
+# --- 5. Calcolo e Scelta delle Diteggiature (Motore CSP) ---
+    print("\nCalcolo delle migliori diteggiature in corso...")
+    
+    target_pc = {p.pitchClass for p in note_accordo_obj}
+    root_pc = accordo_m21.root().pitchClass
 
-    if num_note <= 6:
-        print(f"\n({num_note} note <= 6) Ecco dove trovare queste note sul manico:")
-        print("Puoi indicare una porzione di manico (es. 0.4)")
-        scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
-        maninf, mansup = 0, NUM_TASTI
-        if scelta_manico != "":
-            maninf, mansup = Manlimiti(scelta_manico)
-
-        # Usiamo note_accordo_std (nomi base senza ottava, senza duplicati)
-        visualizza_note_su_manico(note_accordo_std, maninf, mansup)
+    strum_attivo = impostazioni.get("strumento_attivo", "Chitarra")
+    dati_strum = impostazioni.get("strumenti", {}).get(strum_attivo, {})
+    if not dati_strum:
+        print(f"Errore: Dati per lo strumento {strum_attivo} non trovati.")
+        key("Premi un tasto...")
+        return
         
-        print("\nUsando queste poszioni, puoi trovare una diteggiatura e salvarla nella tua Chordpedia.")
+    num_corde = int(dati_strum.get("corde", len(dati_strum.get("accordatura", []))))
+    num_tasti = int(dati_strum.get("tasti", 22))
+    
+    # Prendi direttamente la lista dell'accordatura dal JSON
+    accordatura_lista = dati_strum.get("accordatura", [])
+    if not accordatura_lista or len(accordatura_lista) != num_corde:
+        print("Errore: Accordatura dello strumento mancante o incompleta.")
+        key("Premi un tasto...")
+        return
 
-    else:
-        print(f"\n({num_note} note > 6) Visualizzazione sul manico non mostrata per accordi complessi.")
-
-    # --- 6. Passa al Player Audio Teorico ---
-    # Passiamo la lista originale di oggetti Pitch (note_accordo_obj) che contiene le ottave corrette ed è ordinata come generata da music21.
-    if note_accordo_obj: # Assicurati che ci siano note prima di chiamare il player
-        SuonaAccordoTeorico(note_accordo_obj)
-    else:
-        print("\nNessuna nota valida generata per l'ascolto.")
+    from generatore_accordi import InstrumentModel, AccordoSolver
+    model = InstrumentModel(accordatura_lista, num_tasti)
+    solver = AccordoSolver(model, target_pc, root_pc)
+    
+    # Eseguiamo il solver e valutiamo le opzioni
+    sols = solver.solve(max_stretch=4)
+    scored_sols = []
+    for s in sols:
+        score = solver.score_solution(s)
+        scored_sols.append((score, s))
+        
+    scored_sols.sort(key=lambda x: x[0], reverse=True)
+    
+    if not scored_sols:
+        print("\nNessuna diteggiatura fisicamente possibile trovata per questo accordo.")
         key("Premi un tasto per tornare al menu...")
+        return
+        
+    top_n = min(10, len(scored_sols))
+    menu_diteggiature = {}
+    soluzioni_map = {}
+    
+    for i in range(top_n):
+        score, s = scored_sols[i]
+        tab = [s[f"C{j}"] for j in range(model.num_corde)]
+        tab_str = ["X" if t == -1 else str(t) for t in tab]
+        meta = solver.analizza_difficolta_e_diteggiatura(s, score)
+        
+        # Mappa per la chordpedia (dalla corda acuta alla grave, come nel file json)
+        tab_menu_list = []
+        for j in range(model.num_corde-1, -1, -1):
+            tab_menu_list.append("x" if tab[j] == -1 else str(tab[j]))
+        
+        tab_titolo = "-".join(tab_menu_list)
+        chiave_menu = f"Opzione {i+1} [Diff: {meta['difficolta_score_perc']}%]"
+        
+        dettagli = f"Tablatura (dalla corda più grave): {' '.join(tab_str)}\n"
+        dettagli += f"Difficoltà Generale: {meta['difficolta_score_perc']}% | Estensione: {meta['difficolta_stretch_perc']}% ({meta['stretch_tasti']} tasti)\n"
+        if meta['diteggiatura']:
+            dettagli += "Impostazione mano:\n"
+            dettagli += "\n".join([f"  - {d}" for d in meta['diteggiatura']])
+        else:
+            dettagli += "Nessun dito usato (tutte a vuoto o mute)."
+        
+        # Nel menu usiamo la tablatura compatta e la % di difficoltà
+        menu_diteggiature[chiave_menu] = f"{tab_titolo} -> Diff: {meta['difficolta_score_perc']}%"
+        soluzioni_map[chiave_menu] = (tab_menu_list, dettagli)
+
+    # --- 6. Interazione con le Soluzioni Trovate ---
+    while True:
+        print(f"\n--- Le {top_n} migliori diteggiature per {nome_accordo_display} ---")
+        scelta_tab = menu(d=menu_diteggiature, keyslist=True, show=True, ntf="Scelta non valida", p="Scegli una diteggiatura per ascoltarla e salvarla: ")
+        
+        if scelta_tab is None:
+            break
+            
+        tab_selezionata, dettagli_full = soluzioni_map[scelta_tab]
+        
+        print(f"\n--- Dettagli {scelta_tab} ---")
+        print(f"{dettagli_full}")
+        print("-------------------------------")
+        
+        # Costruiamo le note reali da suonare per la simulazione audio
+        note_da_suonare = []
+        for idx_c_inv, t_str in enumerate(tab_selezionata):
+            if t_str.lower() != 'x':
+                # Convertiamo l'indice inverso (0=acuta) nell'indice del model (0=grave)
+                idx_c_model = model.num_corde - 1 - idx_c_inv
+                t = int(t_str)
+                midi_val = model.accordatura_midi[idx_c_model] + t
+                p = pitch.Pitch(midi=midi_val)
+                note_da_suonare.append(p)
+                
+        # Ordiniamo per pitch (dal grave all'acuto) per uno strumming realistico
+        note_da_suonare.sort(key=lambda p: p.midi)
+        
+        print("Ascolto dell'accordo...")
+        SuonaAccordoTeorico(tuple(note_da_suonare))
+        
+        azione = dgt("\nScegli: [R]iascolta | [Invio] per tornare alle opzioni: ").strip().lower()
+        if azione == 'r':
+            SuonaAccordoTeorico(tuple(note_da_suonare))
+            
+    print("\nUscita dal Costruttore Accordi.")
 def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
     import sys
@@ -2372,8 +2140,6 @@ def main():
     USER_CHORD_DICT = get_user_chord_dictionary() # <-- NUOVA CHIAMATA
     print(f"Riconosciuti {len(SCALE_TYPES_DICT)} tipi di scale e {len(USER_CHORD_DICT)-1} tipi di accordi.") # -1 per 'manuale'
 
-    num_accordi = len(impostazioni.get('chordpedia', {}))
-    print(f"Le tue Tablature Accordi contengono {num_accordi} diteggiature.") 
     print("\n--- Menu Principale ---")
     
     while True:
@@ -2382,10 +2148,7 @@ def main():
         
         print(f"\nHai scelto: {scelta}") # Utile per il debug e conferma
         
-        if scelta == "Accordi":
-            GestoreChordpedia()
-        
-        elif scelta == "Costruttore Accordi": # <-- NUOVO BLOCCO
+        if scelta == "Costruttore Accordi":
             CostruttoreAccordi()
         elif scelta == "Metronomo":
             print("\nAvvio del Metronomo...")
