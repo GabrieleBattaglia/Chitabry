@@ -1119,7 +1119,7 @@ def SuonaAccordoTeorico(note_pitch_list):
     print("SPAZIO = Cambia Suono")
     print("ESC = Esci")
 
-    note_prompt_str = " ".join(note_names_display)
+    note_prompt_str = " ".join(reversed(note_names_display))
 
     while True:
         print(f"\nNote: {note_prompt_str}): ", end="", flush=True)
