@@ -162,13 +162,19 @@ class NoteRenderer:
         return stereo
 
 def render_scale_audio(note_list, suono_params, bpm):
-    s_kind = suono_params['kind']
-    s_adsr = suono_params['adsr']
-    s_vol = suono_params['volume']
+    s_vol = suono_params.get('volume', 0.35)
     s_dur = 60.0 / bpm
     
     renderer = NoteRenderer(fs=FS)
     segmenti = []
+
+    is_ks = 'pluck_hardness' in suono_params
+    if is_ks:
+        hardness = suono_params.get('pluck_hardness', 0.6)
+        damping = suono_params.get('damping_factor', 0.997)
+    else:
+        s_kind = suono_params.get('kind', 1)
+        s_adsr = suono_params.get('adsr', [0,0,0,0])
 
     for item in note_list:
         freq = note_to_freq(item) if isinstance(item, str) else (float(item) if item else 0.0)
@@ -176,7 +182,11 @@ def render_scale_audio(note_list, suono_params, bpm):
             segmenti.append(np.zeros((int(s_dur * FS), 2), dtype=np.float32))
             continue
             
-        renderer.set_params(freq, s_dur, s_vol, 0.0, kind=s_kind, adsr_list=s_adsr)
+        if is_ks:
+            renderer.set_params(freq, s_dur, s_vol, 0.0, pluck_hardness=hardness, damping_factor=damping)
+        else:
+            renderer.set_params(freq, s_dur, s_vol, 0.0, kind=s_kind, adsr_list=s_adsr)
+            
         note_audio = renderer.render()
         if note_audio.size > 0: segmenti.append(note_audio)
         else: segmenti.append(np.zeros((int(s_dur * FS), 2), dtype=np.float32))

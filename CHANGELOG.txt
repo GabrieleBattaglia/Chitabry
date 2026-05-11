@@ -1,6 +1,10 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 5.0.3 Alpha (11 maggio 2026)
+--------------------------------
+*   **Hotfix:** Risolto un crash (`KeyError: 'kind'`) nel player delle scale (opzioni 'a' e 'd') che si verificava quando si cambiava strumento (premendo spazio) verso il suono_1 (Karplus-Strong).
+
 Versione 5.0.2 Alpha (11 maggio 2026)
 --------------------------------
 *   **Fix:** Issue #11 - Risolto mancato supporto allo Spazio come ciclatore di suoni nel player delle scale.
