@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "5.0.0 Alpha dell'8 maggio 2026."
+VERSIONE = "5.0.1 Alpha dell'8 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -162,8 +162,7 @@ MAINMENU = {
     "Impostazioni": "Configura i suoni e la notazione delle note",
     "Nota sul manico": "Trova le posizioni di una nota sul manico",
     "Trova Posizione": "Indica la nota su una corda/tasto (C.T)",
-    "Guida": "Mostra la guida di Chitabry",
-    "Esci": "Salva ed esci dall'applicazione"
+    "Guida": "Mostra la guida di Chitabry"
 }
 
 # --- Motore Audio Live ---
@@ -900,18 +899,21 @@ def Suona(tablatura):
     print(f"Tasti da {keys_str}, (A) pennata in levare, (Q) pennata in battere")
     print("ESC per uscire.")
     
-    #Q rimuovi i parametri non usati
-    suono_1 = impostazioni['suono_1']
-    hardness = suono_1.get('pluck_hardness', 0.6)
-    damping = suono_1.get('damping_factor', 0.997)
-    dur = suono_1['dur_accordi']
-    vol = suono_1['volume']
+    suono_attivo_key = 'suono_1'
+    suono = impostazioni[suono_attivo_key]
+    hardness = suono.get('pluck_hardness', 0.6)
+    damping = suono.get('damping_factor', 0.997)
+    dur = suono.get('dur_accordi', 9.0)
+    vol = suono.get('volume', 0.35)
+    s_kind = suono.get('kind', 1)
+    s_adsr = suono.get('adsr', [0,0,0,0])
     
     # Crea 6 renderer (invece di 'voices')
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(NUM_CORDE)]
     note_da_suonare = [] # Lista di booleani (se la corda suona)
     note_freq = [] # Lista delle frequenze
     note_pan = [] # Lista dei pan
+    note_names_display = [] # Lista dei nomi delle note per il display
 
     # Pre-configura i parametri
     for i in range(NUM_CORDE): # i da 0 a 5 (corda 6 a 1)
@@ -929,12 +931,21 @@ def Suona(tablatura):
         note_da_suonare.append(freq > 0) 
         
         # Imposta i parametri per questo renderer
-        renderers[i].set_params(freq, dur, vol, pan_val, 
-                                pluck_hardness=hardness, 
-                                damping_factor=damping)
-    note_prompt_str = get_note_da_tablatura(tablatura)
+        if 'pluck_hardness' in suono:
+            renderers[i].set_params(freq, dur, vol, pan_val, pluck_hardness=hardness, damping_factor=damping)
+        else:
+            renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
+        
+        # Nome nota per display
+        if tasto.isdigit() and f"{corda}.{tasto}" in CORDE:
+            note_names_display.append(get_nota(CORDE[f"{corda}.{tasto}"]))
+        else:
+            note_names_display.append("X")
+            
+    note_prompt_str = " - ".join(note_names_display)
+    
     while True:
-        print(f"Note: {note_prompt_str}): ",end="\r",flush=True)
+        print(f"Note: {note_prompt_str} (Premi 1-{min(NUM_CORDE, 10)}, A, Q, SPAZIO, ESC): " + " "*10, end="\r", flush=True)
         scelta = key().lower()
         
         if scelta.isdigit():
@@ -942,11 +953,27 @@ def Suona(tablatura):
             if 1 <= key_int <= min(NUM_CORDE, 10):
                 corda_idx_py = NUM_CORDE - key_int
                 if note_da_suonare[corda_idx_py]:
-                    # --- MODIFICA CHIAVE ---
-                    # Renderizza la nota ORA
                     note_audio = renderers[corda_idx_py].render()
                     if note_audio.size > 0:
                         sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+                        
+        elif scelta == ' ':
+            suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+            suono = impostazioni[suono_attivo_key]
+            hardness = suono.get('pluck_hardness', 0.6)
+            damping = suono.get('damping_factor', 0.997)
+            dur = suono.get('dur_accordi', 9.0)
+            vol = suono.get('volume', 0.35)
+            s_kind = suono.get('kind', 1)
+            s_adsr = suono.get('adsr', [0,0,0,0])
+            
+            for i in range(NUM_CORDE):
+                if note_da_suonare[i]:
+                    if 'pluck_hardness' in suono:
+                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], pluck_hardness=hardness, damping_factor=damping)
+                    else:
+                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
+            print(f"\n[Suono: {suono['descrizione']}]" + " "*20)
                     
         elif scelta == chr(27): # ESC
             print("Uscita dal menù ascolto.")
@@ -967,10 +994,12 @@ def Suona(tablatura):
             current_delay_samples = 0
             for i in note_order:
                 if note_da_suonare[i]:
-                    # Imposta i parametri corretti (necessario se cambiassero)
-                    renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], 
-                                            pluck_hardness=hardness, 
-                                            damping_factor=damping)                    
+                    # Imposta i parametri per sicurezza in base al suono corrente
+                    if 'pluck_hardness' in suono:
+                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], pluck_hardness=hardness, damping_factor=damping)
+                    else:
+                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
+                                            
                     note_data = renderers[i].render() 
                     if len(note_data) > note_duration_samples:
                         note_data = note_data[:note_duration_samples]
@@ -993,7 +1022,7 @@ def Suona(tablatura):
             sd.play(mix_buffer, samplerate=GBAudio.FS, blocking=False)
             
         else:
-            print("Comando non valido. Premi 1-6, A, Q o ESC.")
+            print("Comando non valido. Premi 1-6, A, Q, SPAZIO o ESC.")
     return
 def SuonaAccordoTeorico(note_pitch_list):
     """
@@ -1027,12 +1056,15 @@ def SuonaAccordoTeorico(note_pitch_list):
         
     num_notes = len(pitches_to_play)
 
-    # 3. Prepara parametri audio (da suono_1)
-    suono_1 = impostazioni['suono_1']
-    dur = suono_1['dur_accordi']
-    vol = suono_1['volume']
-    hardness = suono_1.get('pluck_hardness', 0.6)
-    damping = suono_1.get('damping_factor', 0.997)
+    # 3. Prepara parametri audio
+    suono_attivo_key = 'suono_1'
+    suono = impostazioni[suono_attivo_key]
+    dur = suono.get('dur_accordi', 9.0)
+    vol = suono.get('volume', 0.35)
+    hardness = suono.get('pluck_hardness', 0.6)
+    damping = suono.get('damping_factor', 0.997)
+    s_kind = suono.get('kind', 1)
+    s_adsr = suono.get('adsr', [0,0,0,0])
 
     # 4. Calcola Panning (Grave=+0.8 -> Acuto=-0.8)
     pan_values = []
@@ -1047,7 +1079,8 @@ def SuonaAccordoTeorico(note_pitch_list):
     # Segue il layout della tastiera: 1, 2, 3...0
     key_map = {str(i+1): i for i in range(min(num_notes, 9))} # Tasti '1' a '9' -> indici 0 a 8
     if num_notes >= 10:
-        key_map['0'] = 9 # Tasto '0' -> indice 9 (decima nota)            key_map[tasto_char] = target_index
+        key_map['0'] = 9 # Tasto '0' -> indice 9 (decima nota)            
+        
     # 6. Prepara Renderers e dati note
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_notes)]
     note_freqs = []
@@ -1066,9 +1099,11 @@ def SuonaAccordoTeorico(note_pitch_list):
         
         # Configura il renderer
         pan_val = pan_values[i]
-        renderers[i].set_params(freq, dur, vol, pan_val, 
-                                pluck_hardness=hardness, 
-                                damping_factor=damping)        
+        if 'pluck_hardness' in suono:
+            renderers[i].set_params(freq, dur, vol, pan_val, pluck_hardness=hardness, damping_factor=damping)        
+        else:
+            renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
+            
         # Stampa info nota (con tasto associato)
         tasto_associato = "N/A"
         for key_char, index in key_map.items():
@@ -1081,6 +1116,7 @@ def SuonaAccordoTeorico(note_pitch_list):
     print("\nPremi tasti 1-0 per note singole.")
     print("Q = Strum Giù (Grave->Acuta / Dx->Sx)")
     print("A = Strum Su (Acuta->Grave / Sx->Dx)")
+    print("SPAZIO = Cambia Suono")
     print("ESC = Esci")
 
     note_prompt_str = " ".join(note_names_display)
@@ -1100,6 +1136,23 @@ def SuonaAccordoTeorico(note_pitch_list):
                     print("Nota non valida o senza frequenza.")
             else:
                  print("Indice nota non valido?") # Debug
+                 
+        elif scelta == ' ':
+            suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+            suono = impostazioni[suono_attivo_key]
+            dur = suono.get('dur_accordi', 9.0)
+            vol = suono.get('volume', 0.35)
+            hardness = suono.get('pluck_hardness', 0.6)
+            damping = suono.get('damping_factor', 0.997)
+            s_kind = suono.get('kind', 1)
+            s_adsr = suono.get('adsr', [0,0,0,0])
+            
+            for i in range(num_notes):
+                if 'pluck_hardness' in suono:
+                    renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], pluck_hardness=hardness, damping_factor=damping)
+                else:
+                    renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
+            print(f"\n[Suono impostato su: {suono['descrizione']}]")
 
         elif scelta == chr(27): # ESC
             print("\nUscita dal player accordo.")
@@ -1118,10 +1171,11 @@ def SuonaAccordoTeorico(note_pitch_list):
             current_delay_samples = 0
             for i in note_order:
                 if note_freqs[i] > 0:
-                    # Riconfigura renderer (per sicurezza, anche se già fatto)
-                    renderers[i].set_params(freq, dur, vol, pan_val, 
-                                pluck_hardness=hardness, 
-                                damping_factor=damping)                    
+                    if 'pluck_hardness' in suono:
+                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], pluck_hardness=hardness, damping_factor=damping)
+                    else:
+                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
+                                            
                     # Renderizza la singola nota
                     note_data = renderers[i].render()
                     
@@ -1243,7 +1297,7 @@ def MostraCorde(nota_std, rp=False, maninf=0, mansup=None):
 def VisualizzaEsercitatiScala():
     """ Versione Finale Ibrida con gestione microtoni completa e indentazione corretta """
     global SCALE_CATALOG, SCALE_TYPES_DICT
-    suono_2 = impostazioni['suono_2']
+    suono_attivo_key = 'suono_2'
 
     print("\n--- Visualizza ed Esercitati sulle Scale (music21 - Catalogo) ---")
 
@@ -1478,6 +1532,10 @@ def VisualizzaEsercitatiScala():
                     print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}" + " "*10, end="\r", flush=True)
                     tasto = key(attesa=0.1)
                     if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop(); loop_messaggio_stampato = False; continue
+                    elif tasto and tasto == ' ':
+                        suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
+                        print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
+                        audio_data_asc = None; audio_data_desc = None; sd.stop(); loop_messaggio_stampato = False; scelta = ultima_direzione; continue
                     else: scelta = ultima_direzione
                 else: # Modalità Menu Interattivo
                     loop_messaggio_stampato = False
@@ -1495,6 +1553,10 @@ def VisualizzaEsercitatiScala():
                         scelta_raw = key().lower()
                         scelta = scelta_raw if scelta_raw in menu_esercizio else None
                         if scelta_raw == '?': menu(d=menu_esercizio, show=True, p="> "); continue
+                        elif scelta_raw == ' ':
+                            suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
+                            print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
+                            audio_data_asc = None; audio_data_desc = None; continue
 
                 # --- Gestione Scelte Menu Esercizio ---
                 exit_pressed = (not loop_attivo and scelta_raw == chr(27))
@@ -1519,14 +1581,14 @@ def VisualizzaEsercitatiScala():
                     ultima_direzione = 'a'
                     valid_notes_asc = [f for f in note_per_audio_asc if f is not None]
                     if not valid_notes_asc: print("\nNote ascendenti non disponibili per l'audio."); continue
-                    if audio_data_asc is None: audio_data_asc = GBAudio.render_scale_audio(note_per_audio_asc, suono_2, bpm)
+                    if audio_data_asc is None: audio_data_asc = GBAudio.render_scale_audio(note_per_audio_asc, impostazioni[suono_attivo_key], bpm)
                     audio_to_play = audio_data_asc
                     dur_totale = len(note_per_audio_asc) * (60.0 / bpm)
                 elif scelta == 'd': # ... (codice 'd') ...
                     ultima_direzione = 'd'
                     valid_notes_desc = [f for f in note_per_audio_desc if f is not None]
                     if not valid_notes_desc: print("\nNote discendenti non disponibili per l'audio."); continue
-                    if audio_data_desc is None: audio_data_desc = GBAudio.render_scale_audio(note_per_audio_desc, suono_2, bpm)
+                    if audio_data_desc is None: audio_data_desc = GBAudio.render_scale_audio(note_per_audio_desc, impostazioni[suono_attivo_key], bpm)
                     audio_to_play = audio_data_desc
                     dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
                 elif scelta is None and not loop_attivo: # Input non valido
@@ -1545,6 +1607,10 @@ def VisualizzaEsercitatiScala():
                         for _ in range(passi_totali):
                             tasto = key(attesa=step)
                             if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop fermato." + " "*30); sd.stop(); break
+                            elif tasto and tasto == ' ':
+                                suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
+                                print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
+                                audio_data_asc = None; audio_data_desc = None; sd.stop(); break
                         if not loop_attivo: continue
                         if tempo_rimanente > 0: aspetta(tempo_rimanente)
                         loop_count += 1
@@ -1656,8 +1722,7 @@ def GestoreStrumenti():
         menu_strum = {
             's': f"Seleziona strumento attivo (Attuale: {strum_attivo})",
             'a': "Aggiungi nuovo strumento",
-            'e': "Elimina strumento",
-            'i': "Indietro"
+            'e': "Elimina strumento"
         }
         
         scelta = menu(d=menu_strum, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
@@ -1682,6 +1747,8 @@ def GestoreStrumenti():
                 continue
             
             num_corde = dgt("Numero di corde (es. 4 per Ukulele): ", kind="i", imin=1, imax=12)
+            if num_corde is None:
+                continue
             accordatura = []
             
             print("Inserisci la nota vuota per ogni corda (es. E2).")
@@ -1691,9 +1758,15 @@ def GestoreStrumenti():
             mappa_note_std = dict(zip(NOTE_LATINE, NOTE_STD))
             mappa_note_std.update(dict(zip(NOTE_ANGLO, NOTE_STD)))
             
+            abort = False
             for i in range(num_corde, 0, -1):
+                if abort: break
                 while True:
-                    nota = dgt(f"Nota per la corda {i} (es. corda più grave E2): ", kind="s").strip().upper()
+                    nota = dgt(f"Nota per la corda {i} (es. corda più grave E2): ", kind="s")
+                    if nota is None:
+                        abort = True
+                        break
+                    nota = nota.strip().upper()
                     # valida formato (deve finire con un numero)
                     if len(nota) >= 2 and nota[-1].isdigit():
                         nota_base = nota[:-1]
@@ -1703,8 +1776,12 @@ def GestoreStrumenti():
                                 accordatura.append(f"{nota_std_fin}{nota[-1]}")
                                 break
                     print("Formato non valido. Es: E2, SOL3.")
+            if abort:
+                continue
             
             tasti = dgt("Numero di tasti: ", kind="i", imin=1, imax=50)
+            if tasti is None:
+                continue
             
             strumenti[nome] = {
                 "accordatura": accordatura,
@@ -1713,7 +1790,8 @@ def GestoreStrumenti():
             impostazioni['strumenti'] = strumenti
             archivio_modificato = True
             
-            if dgt(f"Vuoi impostare {nome} come strumento attivo? (S/N): ", kind="s").strip().lower() == 's':
+            ans = dgt(f"Vuoi impostare {nome} come strumento attivo? (S/N): ", kind="s")
+            if ans and ans.strip().lower() == 's':
                 impostazioni['strumento_attivo'] = nome
                 aggiorna_manico()
             print(f"Strumento {nome} aggiunto con successo!")
@@ -1728,14 +1806,14 @@ def GestoreStrumenti():
             d_strum_el = {k: f"{k} ({v.get('tasti')} tasti, {len(v.get('accordatura'))} corde)" for k, v in eliminabili.items()}
             scelto = menu(d=d_strum_el, keyslist=True, show=True, numbered=True, ntf="Strumento non trovato")
             if scelto is not None:
-                conferma = dgt(f"Sei sicuro di voler eliminare {scelto}? (S/N): ", kind="s").strip().lower()
-                if conferma == 's':
+                conferma = dgt(f"Sei sicuro di voler eliminare {scelto}? (S/N): ", kind="s")
+                if conferma and conferma.strip().lower() == 's':
                     del strumenti[scelto]
                     impostazioni['strumenti'] = strumenti
                     archivio_modificato = True
                     print(f"Strumento {scelto} eliminato.")
                     
-        elif scelta == 'i' or scelta is None:
+        elif scelta is None:
             break
 
 def GestoreImpostazioni():
@@ -1749,8 +1827,7 @@ def GestoreImpostazioni():
             's': f"Gestisci Strumenti (Attivo: {impostazioni.get('strumento_attivo')})",
             'n': f"Cambia nomenclatura (attuale: {impostazioni['nomenclatura']})",
             '1': f"Modifica {impostazioni['suono_1']['descrizione']}",
-            '2': f"Modifica {impostazioni['suono_2']['descrizione']}",
-            'i': "Torna al menu principale"
+            '2': f"Modifica {impostazioni['suono_2']['descrizione']}"
         }
         
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
@@ -2038,7 +2115,8 @@ def CostruttoreAccordi():
             tab_menu_list.append("x" if tab[j] == -1 else str(tab[j]))
         
         tab_titolo = "-".join(tab_menu_list)
-        chiave_menu = f"Opzione {i+1} [Diff: {meta['difficolta_score_perc']}%]"
+        # Pad con spazio se a singola cifra, così ' 1' viene prima di '10' nell'ordinamento testuale.
+        chiave_menu = f"{i+1:2d}"
         
         dettagli = f"Tablatura (dalla corda più grave): {' '.join(tab_str)}\n"
         dettagli += f"Difficoltà Generale: {meta['difficolta_score_perc']}% | Estensione: {meta['difficolta_stretch_perc']}% ({meta['stretch_tasti']} tasti)\n"
@@ -2048,14 +2126,16 @@ def CostruttoreAccordi():
         else:
             dettagli += "Nessun dito usato (tutte a vuoto o mute)."
         
-        # Nel menu usiamo la tablatura compatta e la % di difficoltà
-        menu_diteggiature[chiave_menu] = f"{tab_titolo} -> Diff: {meta['difficolta_score_perc']}%"
+        # Nel menu usiamo la tablatura compatta e le % di difficoltà
+        menu_diteggiature[chiave_menu] = f"{tab_titolo} | Diff: {meta['difficolta_score_perc']}% | Stretch: {meta['difficolta_stretch_perc']}%"
         soluzioni_map[chiave_menu] = (tab_menu_list, dettagli)
 
     # --- 6. Interazione con le Soluzioni Trovate ---
     while True:
         print(f"\n--- Le {top_n} migliori diteggiature per {nome_accordo_display} ---")
-        scelta_tab = menu(d=menu_diteggiature, keyslist=True, show=True, ntf="Scelta non valida", p="Scegli una diteggiatura per ascoltarla e salvarla: ")
+        # Ordiniamo le opzioni per numero (1, 2, 3...) per evitare che l'opzione 10 finisca a caso
+        menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
+        scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero (es. 1) per ascoltare: ")
         
         if scelta_tab is None:
             break
@@ -2066,26 +2146,13 @@ def CostruttoreAccordi():
         print(f"{dettagli_full}")
         print("-------------------------------")
         
-        # Costruiamo le note reali da suonare per la simulazione audio
-        note_da_suonare = []
-        for idx_c_inv, t_str in enumerate(tab_selezionata):
-            if t_str.lower() != 'x':
-                # Convertiamo l'indice inverso (0=acuta) nell'indice del model (0=grave)
-                idx_c_model = model.num_corde - 1 - idx_c_inv
-                t = int(t_str)
-                midi_val = model.accordatura_midi[idx_c_model] + t
-                p = pitch.Pitch(midi=midi_val)
-                note_da_suonare.append(p)
-                
-        # Ordiniamo per pitch (dal grave all'acuto) per uno strumming realistico
-        note_da_suonare.sort(key=lambda p: p.midi)
-        
-        print("Ascolto dell'accordo...")
-        SuonaAccordoTeorico(tuple(note_da_suonare))
+        print("Ascolto dell'accordo (Player Corde)...")
+        # tab_selezionata è [corda1, corda2... corda6]. Suona() si aspetta [corda6, corda5... corda1]
+        Suona(list(reversed(tab_selezionata)))
         
         azione = dgt("\nScegli: [R]iascolta | [Invio] per tornare alle opzioni: ").strip().lower()
         if azione == 'r':
-            SuonaAccordoTeorico(tuple(note_da_suonare))
+            Suona(list(reversed(tab_selezionata)))
             
     print("\nUscita dal Costruttore Accordi.")
 def main():
@@ -2146,6 +2213,9 @@ def main():
         # Mostriamo il menu e attendiamo la scelta
         scelta = menu(d=MAINMENU, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
         
+        if scelta is None:
+            break
+            
         print(f"\nHai scelto: {scelta}") # Utile per il debug e conferma
         
         if scelta == "Costruttore Accordi":
