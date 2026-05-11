@@ -1599,7 +1599,7 @@ def VisualizzaEsercitatiScala():
                 if audio_to_play is not None and audio_to_play.size > 0:
                     if not loop_attivo:
                         print(" " * 80, end="\r")
-                        print(f"Riproduzione scala {'ascendente' if scelta == 'a' else 'discendente'} a {bpm} BPM...")
+                        print(f"Riproducendo ({'asc' if scelta == 'a' else 'desc'} {bpm} BPM)..." + " "*20, end="\r", flush=True)
                     sd.play(audio_to_play, samplerate=GBAudio.FS, blocking=False)
                     if loop_attivo:
                         step = 0.05; passi_totali = int(dur_totale / step) if dur_totale > 0 else 0
