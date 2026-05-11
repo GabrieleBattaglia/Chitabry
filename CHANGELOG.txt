@@ -1,6 +1,12 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 5.0.2 Alpha (11 maggio 2026)
+--------------------------------
+*   **Fix:** Issue #11 - Risolto mancato supporto allo Spazio come ciclatore di suoni nel player delle scale.
+*   **Fix:** Issue #12 - Invertito l'ordine di stampa delle note nel player accordi per coerenza con il layout manico/corde.
+*   **Fix:** Issue #13 - Rimossi print ridondanti usando carriage return (\r) durante i player e la riproduzione per migliorare l'accessibilità con lo screen reader.
+
 Versione 4.8.8 (23 marzo 2026)
 --------------------------------
 *   **Rebranding Metronomo:** Rinominati i riferimenti a "Clitronomo" in "Metronomo" nelle stampe a video e nei menu.
