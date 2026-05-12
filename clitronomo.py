@@ -532,8 +532,70 @@ class Metronome:
             print("\nAggiunta annullata.")
     def _add_segment_data(self, start_bar, end_bar, target_bpm, is_audible):
         """Logica interna per aggiungere/modificare i dati di un segmento."""
-        # Rimuove un segmento esistente con la stessa start_bar per permettere la modifica
-        self.program = [s for s in self.program if s['start_bar'] != start_bar]
+        # Trova le sovrapposizioni
+        overlapping = []
+        for s in self.program:
+            if s['start_bar'] < end_bar and start_bar < s['end_bar']:
+                overlapping.append(s)
+
+        if overlapping:
+            print("\nATTENZIONE: Il nuovo segmento si sovrappone con i seguenti segmenti:")
+            for s in overlapping:
+                print(f"  - BATT. {s['start_bar']} -> {s['end_bar']} (Target BPM: {s['target_bpm']})")
+            
+            print("\nScegli come gestire la sovrapposizione:")
+            print("  1. Sovrascrivi (accorcia i segmenti esistenti)")
+            print("  2. Inserisci e Sposta (sposta in avanti la parte successiva)")
+            print("  3. Annulla l'inserimento")
+            
+            while True:
+                scelta = input("Scelta (1/2/3): ").strip()
+                if scelta in ('1', '2', '3'): break
+                print("Scelta non valida.")
+                
+            if scelta == '3':
+                print("Inserimento annullato.")
+                return
+                
+            if scelta == '1': # Sovrascrivi
+                new_program = []
+                for s in self.program:
+                    if s['end_bar'] <= start_bar or s['start_bar'] >= end_bar:
+                        new_program.append(s)
+                    else:
+                        if s['start_bar'] < start_bar:
+                            s1 = s.copy()
+                            s1['end_bar'] = start_bar
+                            new_program.append(s1)
+                        if s['end_bar'] > end_bar:
+                            s2 = s.copy()
+                            s2['start_bar'] = end_bar
+                            new_program.append(s2)
+                self.program = new_program
+
+            elif scelta == '2': # Inserisci e sposta
+                new_program = []
+                shift_amount = end_bar - start_bar
+                for s in self.program:
+                    if s['end_bar'] <= start_bar:
+                        new_program.append(s)
+                    elif s['start_bar'] >= start_bar:
+                        s_shifted = s.copy()
+                        s_shifted['start_bar'] += shift_amount
+                        s_shifted['end_bar'] += shift_amount
+                        new_program.append(s_shifted)
+                    else:
+                        s1 = s.copy()
+                        s1['end_bar'] = start_bar
+                        new_program.append(s1)
+                        s2 = s.copy()
+                        s2['start_bar'] = start_bar + shift_amount
+                        s2['end_bar'] = s['end_bar'] + shift_amount
+                        new_program.append(s2)
+                self.program = new_program
+        else:
+            # Rimuove per sicurezza un segmento con start_bar identica se non rilevato (non dovrebbe succedere con la logica sopra)
+            self.program = [s for s in self.program if s['start_bar'] != start_bar]
 
         self.program.append({
             "start_bar": start_bar,

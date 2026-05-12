@@ -1,6 +1,10 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 5.0.4 (11 maggio 2026)
+--------------------------------
+*   **Fix:** Issue #3 - Implementata la gestione interattiva delle sovrapposizioni durante la programmazione del metronomo. Ora l'utente può scegliere se sovrascrivere (accorciando i segmenti esistenti) o inserire spostando in avanti il programma successivo.
+
 Versione 5.0.3 Alpha (11 maggio 2026)
 --------------------------------
 *   **Hotfix:** Risolto un crash (`KeyError: 'kind'`) nel player delle scale (opzioni 'a' e 'd') che si verificava quando si cambiava strumento (premendo spazio) verso il suono_1 (Karplus-Strong).
