@@ -1217,23 +1217,23 @@ def SuonaAccordoTeorico(note_pitch_list):
 
 def Manlimiti(s):
     """
-    Riceve stringa "N.N", restituisce 2 int per i limiti del manico.
+    Riceve stringa "N-N", restituisce 2 int per i limiti del manico.
     (Logica identica all'originale, ma più robusta)
     """
-    if "." not in s or " " in s:
-        print("Errore: formato non valido. Usare N.N (es. 0.4).")
+    if "-" not in s or " " in s:
+        print("Errore: formato non valido. Usare N-N (es. 0-4).")
         return 0, NUM_TASTI
     
-    s2 = s.split(".")
+    s2 = s.split("-")
     if len(s2) != 2 or not s2[0].isdigit() or not s2[1].isdigit():
-        print("Errore: inserire solo valori numerici separati da un punto.")
+        print("Errore: inserire solo valori numerici separati da un trattino.")
         return 0, NUM_TASTI
         
     maninf, mansup = int(s2[0]), int(s2[1])
     
     # Assicura che i limiti siano in ordine
     if maninf > mansup:
-        print(f"Limiti invertiti. Uso {mansup}.{maninf}.")
+        print(f"Limiti invertiti. Uso {mansup}-{maninf}.")
         return mansup, maninf
         
     return maninf, mansup
@@ -1499,7 +1499,7 @@ def VisualizzaEsercitatiScala():
         if not note_scala_std_asc: # Se non ci sono note standard
             print("\nImpossibile mostrare sul manico: nessuna nota standard generata.")
         else:
-            print("\nPuoi indicare una porzione di manico per cercare le diteggiature (es. 5.8).")
+            print("\nPuoi indicare una porzione di manico per cercare le diteggiature (es. 5-8).")
             scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
             maninf, mansup = 0, NUM_TASTI
             if scelta_manico != "": 
@@ -1989,7 +1989,7 @@ def TrovaNota():
         return
         
     # Chiediamo i limiti del manico
-    print("\nPuoi indicare una porzione di manico per la ricerca (es. 0.4)")
+    print("\nPuoi indicare una porzione di manico per la ricerca (es. 0-4)")
     scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
     maninf, mansup = 0, NUM_TASTI
     if scelta_manico != "":
