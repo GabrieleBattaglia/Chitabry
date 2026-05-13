@@ -765,8 +765,10 @@ def get_impostazioni_default():
         "default_bpm": 60,
         "suono_1": {
             "descrizione": "Suono per accordi (Karplus-Strong Pluck)",
-            "pluck_hardness": 0.2,    # Range 0.1 (morbido) - 0.9 (brillante)
+            "pluck_hardness": 0.2,    # Range 0.1 (morbido) - 0.9 (aggressivo)
             "damping_factor": 0.998,  # Range 0.990 (corto) - 0.999 (lungo)
+            "pick_position": 0.15,    # Range 0.01 (ponte) - 0.5 (manico)
+            "brightness": 0.4,        # Range 0.0 (scuro) - 1.0 (brillante)
             "dur_accordi": 9.0,   
             "volume": 0.45
         },
@@ -794,11 +796,18 @@ def carica_impostazioni():
         
         if 'volume' not in impostazioni.get('suono_1', {}):
             print("Aggiornamento 'suono_1': aggiunta chiave 'volume' di default.")
-            if 'suono_1' not in impostazioni: 
+            if 'suono_1' not in impostazioni:
                 impostazioni['suono_1'] = {} # Sicurezza
-            impostazioni['suono_1']['volume'] = 0.35
+            impostazioni['suono_1']['volume'] = 0.45
             migrazione_necessaria = True
-            
+
+        if 'pick_position' not in impostazioni.get('suono_1', {}):
+            print("Aggiornamento 'suono_1': aggiunta parametri acustici Karplus-Strong.")
+            if 'suono_1' not in impostazioni:
+                impostazioni['suono_1'] = {}
+            impostazioni['suono_1']['pick_position'] = 0.15
+            impostazioni['suono_1']['brightness'] = 0.4
+            migrazione_necessaria = True            
         if 'volume' not in impostazioni.get('suono_2', {}):
             print("Aggiornamento 'suono_2': aggiunta chiave 'volume' di default.")
             if 'suono_2' not in impostazioni: 
@@ -1588,7 +1597,7 @@ def VisualizzaEsercitatiScala():
                             
                             if top_n == 1:
                                 chiave = list(soluzioni_map.keys())[0]
-                                print(f"\n--- Dettagli dell'unica Forma Trovata ---")
+                                print("\n--- Dettagli dell'unica Forma Trovata ---")
                                 print(soluzioni_map[chiave].rstrip('\n'))
                                 key("Premi un tasto per proseguire all'esercizio audio...")
                             else:
@@ -1778,7 +1787,29 @@ def ModificaSuono(suono_key):
         # Mappa [1, 10] -> [0.990, 0.999] e salva il float
         suono['damping_factor'] = 0.990 + (new_damping_int - 1) * 0.001
 
-        # 3. Modifica Durata Massima (come prima)
+        # 3. Modifica pick_position (scalato 1-10)
+        current_pick_float = suono.get('pick_position', 0.15)
+        # Mappa inversa: [0.01, 0.5] -> [1, 10]
+        current_pick_int = int(round(1 + (np.clip(current_pick_float, 0.01, 0.5) - 0.01) * (9.0 / 0.49)))
+        
+        pick_prompt = f"Posizione Plettro (1=Ponte/Twang, 10=Manico/Caldo) (attuale: {current_pick_int}): "
+        new_pick_int = dgt(pick_prompt, kind='i', imin=1, imax=10, default=current_pick_int)
+        
+        # Mappa [1, 10] -> [0.01, 0.5]
+        suono['pick_position'] = 0.01 + (new_pick_int - 1) * (0.49 / 9.0)
+
+        # 4. Modifica brightness (scalato 1-10)
+        current_bright_float = suono.get('brightness', 0.4)
+        # Mappa inversa: [0.0, 1.0] -> [1, 10]
+        current_bright_int = int(round(1 + np.clip(current_bright_float, 0.0, 1.0) * 9.0))
+        
+        bright_prompt = f"Brillantezza (1=Scuro, 10=Tagliente) (attuale: {current_bright_int}): "
+        new_bright_int = dgt(bright_prompt, kind='i', imin=1, imax=10, default=current_bright_int)
+        
+        # Mappa [1, 10] -> [0.0, 1.0]
+        suono['brightness'] = (new_bright_int - 1) * (1.0 / 9.0)
+
+        # 5. Modifica Durata Massima (come prima)
         dur_prompt = f"Durata max accordi (sec) (attuale: {suono['dur_accordi']}): "
         suono['dur_accordi'] = dgt(dur_prompt, kind='f', fmin=0.1, fmax=10.0, default=suono['dur_accordi'])
     
@@ -2241,7 +2272,7 @@ def CostruttoreAccordi():
         scelta_tab = list(soluzioni_map.keys())[0]
         tab_selezionata, dettagli_full = soluzioni_map[scelta_tab]
         
-        print(f"\n--- Dettagli dell'unica Forma Trovata ---")
+        print("\n--- Dettagli dell'unica Forma Trovata ---")
         print(f"{dettagli_full}")
         print("-------------------------------")
         
