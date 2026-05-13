@@ -1562,25 +1562,25 @@ def VisualizzaEsercitatiScala():
                                 menu_diteggiature[chiave_menu] = f"Difficoltà: {diff_gen}% | Stretch: {diff_stretch}% | Note per corda: {nps_list}"
                                 
                                 dettagli = f"Difficoltà Generale: {diff_gen}% | Estensione: {diff_stretch}% ({meta['stretch_tasti']} tasti)\n"
-                                if meta['fingering']:
-                                    dettagli += f"Diteggiatura base (1-4): {meta['fingering']}\n"
-                                else:
-                                    dettagli += "Nessun dito usato (tutte a vuoto o mute).\n"
-                                    
-                                tab_lines = {string_idx: [] for string_idx in range(model_strum.num_strings)}
-                                for p_dict in path:
-                                    for string_idx in range(model_strum.num_strings):
-                                        if string_idx == p_dict['string']:
-                                            tab_lines[string_idx].append(str(p_dict['fret']).rjust(2))
-                                        else:
-                                            tab_lines[string_idx].append("--")
-                                            
-                                tab_str = ""
-                                for string_idx in range(model_strum.num_strings - 1, -1, -1):
-                                    line = "-".join(tab_lines[string_idx])
-                                    tab_str += f"Corda {model_strum.num_strings - string_idx}: |-{line}-|\n"
                                 
-                                dettagli += "Tablatura (ordine esecuzione: da sx a dx):\n" + tab_str
+                                note_per_corda = {s: [] for s in range(model_strum.num_strings)}
+                                for idx_path, p_dict in enumerate(path):
+                                    s_idx = p_dict['string']
+                                    f_val = p_dict['fret']
+                                    dito_val = meta['fingering'][idx_path] if meta['fingering'] else 0
+                                    
+                                    if f_val == 0:
+                                        nota_str = "0 (vuota)"
+                                    else:
+                                        nota_str = f"{f_val} (dito {dito_val})"
+                                    note_per_corda[s_idx].append(nota_str)
+                                
+                                dettagli += "Posizioni (dalla corda più grave):\n"
+                                for string_idx in range(model_strum.num_strings):
+                                    corda_num = model_strum.num_strings - string_idx
+                                    if note_per_corda[string_idx]:
+                                        dettagli += f"Corda {corda_num}: tasti {', '.join(note_per_corda[string_idx])};\n"
+                                
                                 soluzioni_map[chiave_menu] = dettagli
                             
                             while True:
@@ -1592,7 +1592,7 @@ def VisualizzaEsercitatiScala():
                                     
                                 print(f"\n--- Dettagli Forma {scelta_tab} ---")
                                 print(soluzioni_map[scelta_tab])
-                                key("Premi un tasto per continuare...")
+                                dgt("\nPremi [Invio] per tornare alle opzioni: ", kind='s')
                                 
                     except Exception as e:
                         print(f"\nErrore durante il calcolo delle diteggiature: {e}")
