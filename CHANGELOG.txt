@@ -1,6 +1,14 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.1.0 (14 maggio 2026)
+--------------------------------
+*   **UX Metronomo (Minor):** Completamente riscritta l'interfaccia di programmazione del metronomo (comando `pa`).
+    *   **Programmazione Relativa (Issue #14):** Ora viene richiesta la durata del segmento in battute anziché la battuta di fine assoluta.
+    *   **Inserimento Sequenziale (Issue #15):** La programmazione si "aggancia" automaticamente alla fine del segmento precedente (aggiunta in coda).
+    *   **Wizard Esplicito (Issue #16):** Introdotta una scelta chiara del tipo di sezione: 1. Tempo Fisso (salto istantaneo), 2. Rampa (Accelerando/Ritardando), 3. Pausa.
+    *   **One-Liner Input (Issue #17):** Aggiunto il supporto per comandi rapidi su una singola riga (es. `pa 8 130` per 8 battute a 130 BPM, `pa 4 m` per 4 battute di pausa).
+
 Versione 6.0.1 (13 maggio 2026)
 --------------------------------
 *   **Hotfix UX:** Risolto il bug del "loop infinito" che si verificava quando il nuovo motore delle scale e quello degli accordi trovavano una singola diteggiatura valida.

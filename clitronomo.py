@@ -510,23 +510,116 @@ class Metronome:
             "config_subdivision": self.config_subdivision,
             "program": self.program
         }
-    def add_program_segment_interactive(self):
-        """Avvia una procedura guidata per aggiungere un nuovo segmento al programma."""
+    def add_program_segment_interactive(self, one_liner_args=None):
+        """Avvia una procedura guidata o elabora un comando one-liner per aggiungere un nuovo segmento."""
         try:
-            print("\n--- Aggiunta Nuovo Segmento Programma ---")
-            start_bar = int(input("  Battuta di INIZIO: "))
-            end_bar = int(input("  Battuta di FINE: "))
-            target_bpm = int(input("  BPM Target (alla fine): "))
-            is_audible_str = input("  Il metronomo deve suonare? (s/n): ").lower()
+            # Calcola l'ultima battuta del programma corrente per "l'aggiunta in coda"
+            if self.program:
+                last_end = max(s['end_bar'] for s in self.program)
+            else:
+                last_end = 1
+                
+            # --- ONE-LINER MODE (Power User) ---
+            if one_liner_args:
+                parts = one_liner_args.split()
+                if len(parts) >= 2:
+                    try:
+                        durata = int(parts[0])
+                        target = parts[1].lower()
+                        start_bar = last_end
+                        end_bar = start_bar + durata
+                        
+                        if target == 'm':
+                            target_bpm = self.program[-1]['target_bpm'] if self.program else self.bpm
+                            is_audible = False
+                            # Per mantenere il tempo fisso muto:
+                            # Aggiungiamo un segmento jump fittizio se serve? 
+                            # Se non era lo stesso BPM, potremmo volerlo, ma per pausa va bene mantenere il target precedente.
+                        else:
+                            target_bpm = int(target)
+                            is_audible = True
+                            
+                        # Se è un tempo fisso (target == ultimo target, o target nuovo ma one-liner si aspetta fisso?)
+                        # Come specificato nell'issue: pa 8 130 "aggiunge in coda un blocco di 8 battute che RAGGIUNGE i 130 BPM" -> Quindi è una rampa per default se diverso!
+                        
+                        self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
+                        return
+                    except ValueError:
+                        print("ERRORE: Parametri one-liner non validi. Usa: pa <durata> <bpm|m>")
+                        return
+                else:
+                    print("ERRORE: One-liner incompleto. Usa: pa <durata> <bpm|m>")
+                    return
 
-            if start_bar <= 0 or end_bar <= start_bar or target_bpm <= 0:
-                print("ERRORE: Dati non validi. La fine deve essere dopo l'inizio e i valori positivi.")
+            # --- WIZARD INTERATTIVO ---
+            print("\n--- Aggiunta Nuovo Segmento Programma ---")
+            
+            # 1. Inizio (Aggiunta in Coda di default)
+            if self.program:
+                print(f"L'ultimo segmento programmato termina alla BATTUTA {last_end}.")
+                start_bar_str = input(f"  Battuta di INIZIO [{last_end}]: ").strip()
+            else:
+                start_bar_str = input("  Battuta di INIZIO [1]: ").strip()
+                
+            start_bar = int(start_bar_str) if start_bar_str else last_end
+            
+            if start_bar <= 0:
+                print("ERRORE: La battuta di inizio deve essere maggiore di 0.")
                 return
 
-            is_audible = True if is_audible_str == 's' else False
+            # 2. Tipo di Sezione
+            print("\nCosa vuoi inserire?")
+            print("  1. Tempo fisso (Salto istantaneo di BPM e mantenimento)")
+            print("  2. Rampa (Accelerando / Ritardando graduale)")
+            print("  3. Pausa (Metronomo muto)")
+            
+            scelta_tipo = input("Scelta (1/2/3): ").strip()
+            if scelta_tipo not in ('1', '2', '3'):
+                print("ERRORE: Scelta non valida.")
+                return
+                
+            # 3. Parametri in base al tipo
+            if scelta_tipo == '1': # Tempo Fisso
+                durata = int(input("  Durata in battute: "))
+                if durata <= 0:
+                    print("ERRORE: La durata deve essere positiva.")
+                    return
+                target_bpm = int(input("  Nuovi BPM (da mantenere fissi): "))
+                if target_bpm <= 0:
+                    print("ERRORE: I BPM devono essere positivi.")
+                    return
+                end_bar = start_bar + durata
+                is_audible = True
+                
+                # Per avere un salto istantaneo, inseriamo prima un segmento di durata 0
+                # che cambia i BPM esattamente in `start_bar`
+                self._add_segment_data(start_bar, start_bar, target_bpm, True)
+                # Poi aggiungiamo il segmento di mantenimento
+                self._add_segment_data(start_bar, end_bar, target_bpm, True)
 
-            # Chiama la funzione che gestisce i dati
-            self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
+            elif scelta_tipo == '2': # Rampa
+                durata = int(input("  Durata in battute (per raggiungere il target): "))
+                if durata <= 0:
+                    print("ERRORE: La durata deve essere positiva.")
+                    return
+                target_bpm = int(input("  BPM Target (alla fine della rampa): "))
+                if target_bpm <= 0:
+                    print("ERRORE: I BPM devono essere positivi.")
+                    return
+                end_bar = start_bar + durata
+                is_audible = True
+                self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
+                
+            elif scelta_tipo == '3': # Pausa
+                durata = int(input("  Durata in battute: "))
+                if durata <= 0:
+                    print("ERRORE: La durata deve essere positiva.")
+                    return
+                end_bar = start_bar + durata
+                is_audible = False
+                # Mantiene i BPM dell'ultimo segmento noto, o quelli attuali
+                target_bpm = self.program[-1]['target_bpm'] if self.program else self.bpm
+                self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
 
         except (ValueError, KeyboardInterrupt):
             print("\nAggiunta annullata.")
@@ -975,7 +1068,7 @@ def main():
         elif command == 's':
             clitronomo.stop()
         elif command == 'pa':
-            clitronomo.add_program_segment_interactive()
+            clitronomo.add_program_segment_interactive(value)
         elif command == 'p':
             clitronomo.display_program()
         elif command == 'pc':
