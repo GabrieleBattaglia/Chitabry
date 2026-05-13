@@ -1,6 +1,20 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.0.0 (13 maggio 2026)
+--------------------------------
+*   **Nuova Funzione (Major): Motore Diteggiature Scale (Scale Pathfinder)**
+    *   Creato il nuovo modulo `generatore_scale.py` che sfrutta un algoritmo di ricerca (Depth-First Search) per trovare i percorsi migliori per suonare una scala all'interno di un'area del manico.
+    *   L'algoritmo calcola dinamicamente le posizioni rispettando i limiti fisici della mano (stretch massimo di 4 o 5 tasti).
+    *   Permette di scegliere se dare priorità alle forme classiche a blocchi ("CAGED", tipicamente 2-3 note per corda) oppure allo stile moderno "3 note per corda" (utile per legati).
+    *   Calcolo intelligente dello score basato sull'uso di corde a vuoto, salti di corda e stress per la mano.
+*   **Integrazione Scale in Chitabry:**
+    *   Nel menu "Scale", l'inserimento dei "Limiti Tasti" attiva automaticamente il nuovo motore di pathfinding.
+    *   Vengono proposte le 5 migliori diteggiature generate al volo.
+    *   Le soluzioni sono presentate in un menu interattivo con statistiche di "Difficoltà Generale (%)" e "Estensione/Stretch (%)".
+    *   Possibilità di visualizzare nel dettaglio la tablatura generata e l'uso consigliato delle dita (1-4).
+    *   Alla chiusura del sottomenu diteggiature, l'app passa fluidamente al player audio per esercitarsi sulla scala.
+
 Versione 5.0.4 (11 maggio 2026)
 --------------------------------
 *   **Fix:** Issue #3 - Implementata la gestione interattiva delle sovrapposizioni durante la programmazione del metronomo. Ora l'utente può scegliere se sovrascrivere (accorciando i segmenti esistenti) o inserire spostando in avanti il programma successivo.

@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "5.0.4 dell'11 maggio 2026."
+VERSIONE = "6.0.0 del 13 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -1493,17 +1493,114 @@ def VisualizzaEsercitatiScala():
         if note_asc_str != note_desc_str and note_desc_str:
             print(f"Note (Desc): {note_desc_str}")
 
-        # --- 5. Mostra su Manico (INDENTATO) ---
+        # --- 5. Mostra su Manico / Diteggiature (INDENTATO) ---
         if is_microtonal_scale:
             print("\nVisualizzazione sul manico approssimata per scale microtonali.")
         if not note_scala_std_asc: # Se non ci sono note standard
             print("\nImpossibile mostrare sul manico: nessuna nota standard generata.")
         else:
-            print("\nPuoi indicare una porzione di manico...")
+            print("\nPuoi indicare una porzione di manico per cercare le diteggiature (es. 5.8).")
             scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
             maninf, mansup = 0, NUM_TASTI
-            if scelta_manico != "": maninf, mansup = Manlimiti(scelta_manico)
-            visualizza_note_su_manico(note_scala_std_asc, maninf, mansup)
+            if scelta_manico != "": 
+                maninf, mansup = Manlimiti(scelta_manico)
+                
+                # Se l'utente specifica un box e non è microtonale, usiamo il pathfinding
+                if mansup - maninf <= 14 and not is_microtonal_scale:
+                    print(f"\nCalcolo delle migliori diteggiature nel box {maninf}-{mansup} in corso...")
+                    
+                    try:
+                        strum_attivo = impostazioni.get("strumento_attivo", "Chitarra")
+                        dati_strum = impostazioni.get("strumenti", {}).get(strum_attivo, {})
+                        accordatura_lista = dati_strum.get("accordatura", ["E2", "A2", "D3", "G3", "B3", "E4"])
+                        num_tasti_strum = int(dati_strum.get("tasti", 22))
+                        
+                        tuning_midi = [pitch.Pitch(n).midi for n in accordatura_lista]
+                        
+                        from generatore_scale import InstrumentModel, ScalePathfinder
+                        model_strum = InstrumentModel(tuning_midi=tuning_midi, num_frets=num_tasti_strum)
+                        
+                        target_pc_list = []
+                        if isinstance(scala_m21, scale.ScalaScale) or isinstance(scala_m21, scale.ConcreteScale):
+                             for p in scala_m21.pitches:
+                                if isinstance(p, pitch.Pitch):
+                                    target_pc_list.append(p.pitchClass)
+                        else:
+                             # Fallback extraction
+                             for p_name in note_scala_std_asc:
+                                 target_pc_list.append(pitch.Pitch(p_name).pitchClass)
+                                 
+                        root_pc = pitch.Pitch(tonica_std_con_ottava).pitchClass
+                        
+                        solver = ScalePathfinder(model_strum, target_pc_list, root_pc)
+                        
+                        from GBUtils import enter_escape
+                        priorita_caged = enter_escape("Desideri dare priorità alla forma CAGED? (INVIO per Sì, ESC per forme a 3 note per corda): ")
+                        
+                        sols = solver.find_paths(maninf, mansup, priorita_caged=priorita_caged)
+                        
+                        if not sols:
+                            print("\nNessuna diteggiatura fisicamente possibile trovata per questa scala nel box specificato.")
+                        else:
+                            top_n = min(5, len(sols))
+                            print(f"\n--- Le {top_n} migliori diteggiature per {nome_scala_display} ---")
+                            
+                            menu_diteggiature = {}
+                            soluzioni_map = {}
+                            
+                            for i in range(top_n):
+                                s_dict = sols[i]
+                                meta = s_dict['meta']
+                                path = s_dict['path']
+                                
+                                diff_gen = meta['difficolta_score_perc']
+                                diff_stretch = meta['difficolta_stretch_perc']
+                                nps = meta['nps']
+                                nps_list = [nps[str_idx] for str_idx in range(model_strum.num_strings)]
+                                
+                                chiave_menu = f"{i+1:2d}"
+                                menu_diteggiature[chiave_menu] = f"Difficoltà: {diff_gen}% | Stretch: {diff_stretch}% | Note per corda: {nps_list}"
+                                
+                                dettagli = f"Difficoltà Generale: {diff_gen}% | Estensione: {diff_stretch}% ({meta['stretch_tasti']} tasti)\n"
+                                if meta['fingering']:
+                                    dettagli += f"Diteggiatura base (1-4): {meta['fingering']}\n"
+                                else:
+                                    dettagli += "Nessun dito usato (tutte a vuoto o mute).\n"
+                                    
+                                tab_lines = {string_idx: [] for string_idx in range(model_strum.num_strings)}
+                                for p_dict in path:
+                                    for string_idx in range(model_strum.num_strings):
+                                        if string_idx == p_dict['string']:
+                                            tab_lines[string_idx].append(str(p_dict['fret']).rjust(2))
+                                        else:
+                                            tab_lines[string_idx].append("--")
+                                            
+                                tab_str = ""
+                                for string_idx in range(model_strum.num_strings - 1, -1, -1):
+                                    line = "-".join(tab_lines[string_idx])
+                                    tab_str += f"Corda {model_strum.num_strings - string_idx}: |-{line}-|\n"
+                                
+                                dettagli += "Tablatura (ordine esecuzione: da sx a dx):\n" + tab_str
+                                soluzioni_map[chiave_menu] = dettagli
+                            
+                            while True:
+                                menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
+                                scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero per vedere i dettagli: ")
+                                
+                                if scelta_tab is None:
+                                    break
+                                    
+                                print(f"\n--- Dettagli Forma {scelta_tab} ---")
+                                print(soluzioni_map[scelta_tab])
+                                key("Premi un tasto per continuare...")
+                                
+                    except Exception as e:
+                        print(f"\nErrore durante il calcolo delle diteggiature: {e}")
+                        visualizza_note_su_manico(note_scala_std_asc, maninf, mansup)
+                else:
+                    visualizza_note_su_manico(note_scala_std_asc, maninf, mansup)
+            else:
+                visualizza_note_su_manico(note_scala_std_asc, maninf, mansup)
 
         # --- 6. Loop Esercizio (INDENTATO) ---
         if not note_per_audio_asc and not note_per_audio_desc:

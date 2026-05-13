@@ -1,4 +1,3 @@
-import json
 from generatore_accordi import HarmonicParser, InstrumentModel, AccordoSolver
 
 def run_position_test():
@@ -13,9 +12,9 @@ def run_position_test():
     ]
     
     for nome_it, nome_en in accordi_da_testare:
-        print(f"\n======================================")
+        print("\n======================================")
         print(f" TEST ACCORDO: {nome_it} ({nome_en})")
-        print(f"======================================")
+        print("======================================")
         
         target_pc, root_pc = HarmonicParser.get_pitch_classes_and_root(nome_en)
         

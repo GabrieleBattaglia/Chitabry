@@ -1,4 +1,3 @@
-import re
 
 with open('Chitabry.py', 'r', encoding='utf-8') as f:
     lines = f.readlines()
