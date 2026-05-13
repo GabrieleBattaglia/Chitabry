@@ -1,12 +1,10 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 5, di martedì 6 gennaio 2026.
+L'ultima revisione di questo documento e' la numero 6, di giovedì 14 maggio 2026.
 A cura di Gabriele Battaglia.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
 Nota: dalla versione 4 in poi, l'orizzonte di Chitabry si è notevolmente allargato. Grazie alla potente libreria `music21`, ora è un vero e proprio coltellino svizzero per la teoria musicale. La chitarra è un'opzione di visualizzazione, ma Chitabry vi potrà essere molto utile per studiare, costruire e ascoltare accordi e scale complesse, oltre che per esercitarvi live con il vostro strumento usando il prezioso Clitronomo.
-
-Clitronomo è una funzione così sofisticata di Chitabry che merita un manuale a parte. Lo trovate nel pacchetto con cui viene distribuito questo software, in Clitronomo.md
 
 Ogni segnalazione di bug, malfunzionamenti ed errori, nel programma o in questo manuale, sara' gradita, scrivetemi una e-mail ad gabriele.battaglia@gmail.com descrivendo con la massima precisione possibile cio' che riscontrate ed io cerchero' di aiutarvi come posso. Chiunque e' autorizzato ed incoraggiato a distribuire questo software cosi' com'e', senza garanzie e gratuitamente.
 E' vietato modificarne il codice senza espressa autorizzazione del sottoscritto. Se vi piace Chitabry, fatemelo sapere scrivendomi 2 righe. Grazie.
@@ -23,6 +21,12 @@ Nota: Al primo avvio, Chitabry creerà automaticamente un file chiamato `chitabr
 
 Alla conclusione del programma (selezionando "Esci"), la finestra si chiude automaticamente; se avevate aperto un terminale o prompt dei comandi, dovete chiuderlo digitando exit e battendo invio.
 Prima di lanciare il software, vi consiglio di leggere questo manuale.
+
+Il sistema dei menu (Regole Standard)
+Chitabry utilizza un sistema di menu intelligenti per la navigazione:
+1. Ricerca Veloce: Quando visualizzate un menu, potete digitare parte della parola che cercate. Il menu si restringerà automaticamente (filtro in tempo reale).
+2. Tasti di scelta rapida: Alcuni menu presentano opzioni con una lettera dedicata (es. 'A' per Ascolta). Basta premere la lettera e invio.
+3. Tornare Indietro (Uscire): In qualsiasi sottomenu o prompt di inserimento, per annullare l'operazione e tornare al livello precedente, vi basta premere il tasto ESC (Escape) sulla tastiera. In alternativa, se state digitando del testo, premere semplicemente il tasto Invio (senza aver scritto nulla) sortirà lo stesso effetto. Non troverete voci esplicite "Indietro" scritte a schermo, poiché l'uso di ESC o Invio vuoto è una regola globale e sempre valida per l'intera applicazione.
 
 Il menu' principale.
 Vediamo le scelte disponibili nel menu' principale e come funzionano.
@@ -83,7 +87,112 @@ Subito dopo, si avvierà un player audio teorico per farvi ascoltare queste note
 
  Metronomo
 
-Questa voce lancia Clitronomo, il metronomo testuale avanzato integrato in Chitabry. Per le sue molteplici funzioni (tempo, suddivisioni, accenti, pattern ritmici), vi rimandiamo al suo manuale dedicato `Clitronomo.md`.
+Questa voce avvia il metronomo testuale avanzato integrato in Chitabry. Di seguito il manuale completo per l'utilizzo del Metronomo.
+
+-----
+
+# Clitronomo
+
+**Integrato in Chitabry 6.1.0**
+
+Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controllabile da tastiera, scritto in Python. Progettato per musicisti, sviluppatori e chiunque preferisca la velocità e la semplicità del terminale.
+
+-----
+
+## Caratteristiche Principali
+
+  * **Interfaccia a Riga di Comando**: Nessuna GUI. Tutte le operazioni avvengono tramite comandi testuali, garantendo minime risorse di sistema e massima velocità.
+  * **Programmazione Avanzata**: Crea sequenze complesse dove il metronomo cambia BPM o si silenzia automaticamente a battute predefinite. Perfetto per esercizi con cambi di tempo o per studiare la propria stabilità ritmica.
+  * **Gestione di Preset**: Salva, carica, elenca e cancella facilmente le tue configurazioni preferite. I preset sono salvati in un file `clitronomo_presets.json` leggibile e facilmente modificabile.
+  * **Accessibilità**: Il programma è stato sviluppato pensando all'accessibilità. Essendo un'applicazione testuale, è pienamente compatibile con **screen reader** (come NVDA, JAWS, VoiceOver) e **display Braille**, garantendo un'esperienza utente completa a persone non vedenti e ipovedenti.
+  * **Configurazione Audio Dettagliata**: Personalizza la frequenza, il volume, la durata, l'attack e il decay per ogni suono (accento, beat e suddivisione).
+
+-----
+
+## Installazione
+
+Clitronomo richiede Python 3 e due librerie esterne.
+
+1.  Assicurati di avere Python installato.
+2.  Installa le dipendenze necessarie tramite pip:
+    ```bash
+    pip install numpy sounddevice
+    ```
+
+-----
+
+## Utilizzo
+
+Per avviare il programma, avvia Chitabry e scegli Metronomo dal menu principale, questi dovrà avere i permessi di scrittura per salvare il proprio file di impostazioni, quindi assicurati che il sistema operativo gli conceda i permessi di scrittura sulla cartella in cui lo hai salvato.
+
+All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, verrà avviato un metronomo di default a 120 BPM in 4/4.
+
+-----
+
+## Riferimento Comandi
+
+### Controlli di Base
+
+| Comando | Spiegazione | Esempio |
+| :--- | :--- | :--- |
+| `g` | Avvia il metronomo. | `g` |
+| `s` | Ferma il metronomo. | `s` |
+| `i` | Mostra lo stato corrente. | `i` |
+| `x` | Resetta Clitronomo alle impostazioni di fabbrica. | `x` |
+| `?` | Mostra la lista dei comandi. | `?` |
+| `q` | Esce dal programma. | `q` |
+
+### Ritmo
+
+| Comando | Spiegazione | Esempio |
+| :--- | :--- | :--- |
+| `b <bpm>` | Imposta i Beats Per Minute. | `b 120` |
+| `t <n/d>` | Imposta il tempo (es. 7/8). | `t 7/8` |
+| `0`, `1`, `2`, `3` | Attiva/Disattiva le suddivisioni (0=off, 1=ottavi, 2=sedicesimi, 3=trentaduesimi). | `2` |
+
+### Parametri Suono (`<n>` = 1:Accento, 2:Beat, 3:Sub)
+
+| Comando | Spiegazione | Esempio |
+| :--- | :--- | :--- |
+| `l<n> <ms>` | Imposta la durata del suono in ms. | `l1 100` |
+| `v<n> <vol>`| Imposta il volume (0-100). | `v2 70` |
+| `f<n> <hz>` | Imposta la frequenza in Hz. | `f3 880` |
+| `a<n> <ms>` | Imposta l'attack in ms. | `a1 5` |
+| `d<n> <ms>` | Imposta il decay in ms. | `d2 50` |
+
+### Gestione Preset
+
+| Comando | Spiegazione | Esempio |
+| :--- | :--- | :--- |
+| `m` | Mostra la lista dei preset salvati. | `m` |
+| `ms <nome>` | Salva la configurazione corrente come nuovo preset. | `ms Esercizio A` |
+| `ml <nome>` | Carica un preset cercandolo per nome. | `ml Esercizio` |
+| `mc <nome>` | Cancella un preset cercandolo per nome. | `mc Lento` |
+
+### Programmazione
+
+| Comando | Spiegazione | Esempio |
+| :--- | :--- | :--- |
+| `p` | Visualizza la sequenza programmata. | `p` |
+| `pa` | Aggiunge un passo alla sequenza. Cerca di "agganciarsi" in coda. Chiede la Durata in battute. Wizard: 1(Fisso), 2(Rampa), 3(Pausa). | `pa` |
+| `pa <durata> <bpm/m>`| Inserimento 'One-Liner' ultra-rapido. Es: 'pa 8 130' (aggiunge in coda 8 battute a 130 bpm). 'pa 4 m' (4 battute mute). | `pa 8 130` |
+| `pc <battuta>`| Cancella un passo specificando la sua battuta d'inizio. | `pc 16` |
+
+-----
+
+## Sviluppatori
+
+  * **Gabriele Battaglia** (IZ4APU) - Concept e sviluppo principale.
+  * **Partner di Programmazione (Gemini)** - Code review, debugging e implementazione di nuove feature.
+
+-----
+
+## Idee per Sviluppi Futuri (Roadmap)
+
+  * **Pattern Ritmici**: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
+  * **Tap Tempo**: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
+  * **Supporto Suoni `.wav`**: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
+  * **Modalità "Ghost Bars"**: Aggiungere una modalità di allenamento che silenzia casualmente una o più battute per testare la stabilità ritmica dell'utente.
 
 -----
 
@@ -129,13 +238,18 @@ Il processo:
 Chitabry vi mostrerà:
 
 1.  Le note della scala: Sia in salita (Asc) che in discesa (Desc), se sono diverse.
-2.  Posizioni sul manico: Vi chiederà un range di tasti (es. `0.4` per i primi 4 tasti) e vi mostrerà tutte le posizioni delle note della scala in quel range.
+2.  Ricerca Diteggiature (Scale Pathfinder): Vi chiederà di indicare una porzione di manico inserendo i limiti dei tasti separati da un trattino (es. `0-4` per la prima posizione, o `5-8`).
+    - L'algoritmo intelligente di Chitabry calcolerà tutti i percorsi fisicamente possibili per suonare quella scala nel box indicato.
+    - Vi chiederà se dare priorità alle forme classiche a blocchi ("CAGED") o alle moderne forme a "3 note per corda".
+    - Vi proporrà le 5 migliori diteggiature ordinate per "Difficoltà Generale" e "Estensione/Stretch" in percentuale.
+    - Selezionando una forma, potrete leggere la tablatura ottimizzata per screen reader (partendo dalla corda 6 a scendere), completa dell'indicazione del dito da usare (1-4) e del nome della nota esatta.
 
-Infine, si aprirà il Menu Esercizio Scala:
+Infine, chiudendo il menu delle diteggiature (premendo Invio), si aprirà il Menu Esercizio Scala per allenare l'orecchio:
 
    A: Ascolta la scala ascendente.
    D: Ascolta la scala discendente.
-   L: Attiva il loop (continua a suonare A o D finché non premete di nuovo L).
+   L: Attiva il loop (continua a suonare A o D finché non premete 'L').
+   SPAZIO: Alterna dinamicamente tra il suono synth/flauto e l'arpeggio di chitarra (Karplus-Strong).
    B: Cambia i BPM (Battiti Per Minuto) per l'esercizio.
 
 -----
