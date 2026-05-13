@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.1.0 del 14 maggio 2026."
+VERSIONE = "6.2.0 del 14 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -900,7 +900,7 @@ def get_nota(nota_std_music21):
 def Suona(tablatura):
     """
     Permette l'ascolto interattivo di una tablatura.
-    Usa il motore 'pre-calcolato' (classe NoteRenderer) e sd.play().
+    Usa il PolyphonicPlayer per uno stream continuo e mixaggio indipendente per corda.
     """
     print("\nAscolta le corde:")
     max_keys = min(NUM_CORDE, 10)
@@ -912,24 +912,29 @@ def Suona(tablatura):
     suono = impostazioni[suono_attivo_key]
     hardness = suono.get('pluck_hardness', 0.6)
     damping = suono.get('damping_factor', 0.997)
+    pick_pos = suono.get('pick_position', 0.15)
+    bright = suono.get('brightness', 0.4)
     dur = suono.get('dur_accordi', 9.0)
     vol = suono.get('volume', 0.35)
     s_kind = suono.get('kind', 1)
     s_adsr = suono.get('adsr', [0,0,0,0])
     
-    # Crea 6 renderer (invece di 'voices')
+    # Crea il player polifonico e i renderer
+    poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=NUM_CORDE)
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(NUM_CORDE)]
-    note_da_suonare = [] # Lista di booleani (se la corda suona)
-    note_freq = [] # Lista delle frequenze
-    note_pan = [] # Lista dei pan
-    note_names_display = [] # Lista dei nomi delle note per il display
+    
+    note_da_suonare = []
+    note_freq = []
+    note_pan = []
+    note_names_display = []
 
     # Pre-configura i parametri
-    for i in range(NUM_CORDE): # i da 0 a 5 (corda 6 a 1)
+    for i in range(NUM_CORDE):
         corda = 6 - i
         tasto = tablatura[i]
         pan_val = 0.8 - (i * 0.32) 
         note_pan.append(pan_val)
+        poly_player.set_pan(i, pan_val)
         
         freq = 0.0
         if tasto.isdigit() and f"{corda}.{tasto}" in CORDE:
@@ -939,105 +944,92 @@ def Suona(tablatura):
         note_freq.append(freq)
         note_da_suonare.append(freq > 0) 
         
-        # Imposta i parametri per questo renderer
         if 'pluck_hardness' in suono:
-            renderers[i].set_params(freq, dur, vol, pan_val, pluck_hardness=hardness, damping_factor=damping)
+            renderers[i].set_params(freq, dur, vol, pan_val, 
+                                    pluck_hardness=hardness, damping_factor=damping,
+                                    pick_position=pick_pos, brightness=bright)
         else:
             renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
         
-        # Nome nota per display
         if tasto.isdigit() and f"{corda}.{tasto}" in CORDE:
             note_names_display.append(get_nota(CORDE[f"{corda}.{tasto}"]))
         else:
             note_names_display.append("X")
             
     note_prompt_str = " - ".join(note_names_display)
+    poly_player.start()
     
-    while True:
-        print(f"Note: {note_prompt_str} (Premi 1-{min(NUM_CORDE, 10)}, A, Q, SPAZIO, ESC): " + " "*10, end="\r", flush=True)
-        scelta = key().lower()
-        
-        if scelta.isdigit():
-            key_int = int(scelta) if scelta != '0' else 10
-            if 1 <= key_int <= min(NUM_CORDE, 10):
-                corda_idx_py = NUM_CORDE - key_int
-                if note_da_suonare[corda_idx_py]:
-                    note_audio = renderers[corda_idx_py].render()
-                    if note_audio.size > 0:
-                        sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
-                        
-        elif scelta == ' ':
-            suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
-            suono = impostazioni[suono_attivo_key]
-            hardness = suono.get('pluck_hardness', 0.6)
-            damping = suono.get('damping_factor', 0.997)
-            dur = suono.get('dur_accordi', 9.0)
-            vol = suono.get('volume', 0.35)
-            s_kind = suono.get('kind', 1)
-            s_adsr = suono.get('adsr', [0,0,0,0])
+    try:
+        while True:
+            print(f"Note: {note_prompt_str} (Premi 1-{min(NUM_CORDE, 10)}, A, Q, SPAZIO, ESC): " + " "*10, end="\r", flush=True)
+            scelta = key().lower()
             
-            for i in range(NUM_CORDE):
-                if note_da_suonare[i]:
-                    if 'pluck_hardness' in suono:
-                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], pluck_hardness=hardness, damping_factor=damping)
-                    else:
-                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
-            print(f"\n[Suono: {suono['descrizione']}]" + " "*20)
-                    
-        elif scelta == chr(27): # ESC
-            print("Uscita dal menù ascolto.")
-            sd.stop() 
-            break 
-            
-        elif scelta == 'a' or scelta == 'q': # Pennata
-            sd.stop() 
-            strum_delay_sec = 0.07
-            strum_delay_samples = int(strum_delay_sec * FS)
-            note_duration_samples = int(dur * FS)
-            
-            total_samples = note_duration_samples + (5 * strum_delay_samples)
-            mix_buffer = np.zeros((total_samples, 2), dtype=np.float32)
-
-            note_order = range(NUM_CORDE) if scelta == 'q' else range(NUM_CORDE - 1, -1, -1)
-            
-            current_delay_samples = 0
-            for i in note_order:
-                if note_da_suonare[i]:
-                    # Imposta i parametri per sicurezza in base al suono corrente
-                    if 'pluck_hardness' in suono:
-                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], pluck_hardness=hardness, damping_factor=damping)
-                    else:
-                        renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
-                                            
-                    note_data = renderers[i].render() 
-                    if len(note_data) > note_duration_samples:
-                        note_data = note_data[:note_duration_samples]
-                    
-                    start_pos = current_delay_samples
-                    end_pos = start_pos + len(note_data)
-                    
-                    if end_pos > total_samples:
-                        end_pos = total_samples
-                        note_data = note_data[:(end_pos - start_pos)]
-                        
-                    mix_buffer[start_pos:end_pos] += note_data
+            if scelta.isdigit():
+                key_int = int(scelta) if scelta != '0' else 10
+                if 1 <= key_int <= min(NUM_CORDE, 10):
+                    corda_idx_py = NUM_CORDE - key_int
+                    if note_da_suonare[corda_idx_py]:
+                        # Ottieni l'audio mono renderizzato
+                        note_audio_stereo = renderers[corda_idx_py].render()
+                        if note_audio_stereo.size > 0:
+                            # Prende solo il canale L o divide per il mix
+                            # NoteRenderer outputta stereo. Selezioniamo il canale sinistro senza panning, perché il panning lo fa il PolyphonicPlayer.
+                            # Dobbiamo estrarre l'audio mono prima del panning di NoteRenderer
+                            # Oppure modifichiamo provvisoriamente NoteRenderer per outputtare mono o resettiamo il pan_l a 1.0.
+                            # Ma in PolyphonicPlayer, pluck si aspetta audio_mono.
+                            # NoteRenderer resitituisce: wave * envelope, poi lo panna. 
+                            # Se mettiamo pan_val a 0 in renderers e prendiamo canale 0 (mono=stereo/0.707):
+                            mono_audio = note_audio_stereo[:, 0] / renderers[corda_idx_py].pan_l if renderers[corda_idx_py].pan_l != 0 else note_audio_stereo[:, 0]
+                            poly_player.pluck(string_idx=corda_idx_py, audio_mono=mono_audio)
+                            
+            elif scelta == ' ':
+                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                suono = impostazioni[suono_attivo_key]
+                hardness = suono.get('pluck_hardness', 0.6)
+                damping = suono.get('damping_factor', 0.997)
+                pick_pos = suono.get('pick_position', 0.15)
+                bright = suono.get('brightness', 0.4)
+                dur = suono.get('dur_accordi', 9.0)
+                vol = suono.get('volume', 0.35)
+                s_kind = suono.get('kind', 1)
+                s_adsr = suono.get('adsr', [0,0,0,0])
                 
-                current_delay_samples += strum_delay_samples
-            
-            max_val = np.max(np.abs(mix_buffer))
-            if max_val > 1.0:
-                mix_buffer /= max_val
-            
-            sd.play(mix_buffer, samplerate=GBAudio.FS, blocking=False)
-            
-        else:
-            print("Comando non valido. Premi 1-6, A, Q, SPAZIO o ESC.")
+                for i in range(NUM_CORDE):
+                    if note_da_suonare[i]:
+                        if 'pluck_hardness' in suono:
+                            renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], 
+                                                    pluck_hardness=hardness, damping_factor=damping,
+                                                    pick_position=pick_pos, brightness=bright)
+                        else:
+                            renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
+                print(f"\n[Suono: {suono['descrizione']}]" + " "*20)
+                        
+            elif scelta == chr(27): # ESC
+                print("\nUscita dal menù ascolto.")
+                break 
+                
+            elif scelta == 'a' or scelta == 'q': # Pennata
+                strum_delay_sec = 0.07
+                note_order = range(NUM_CORDE) if scelta == 'q' else range(NUM_CORDE - 1, -1, -1)
+                
+                for i in note_order:
+                    if note_da_suonare[i]:
+                        note_audio_stereo = renderers[i].render()
+                        if note_audio_stereo.size > 0:
+                            mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
+                            poly_player.pluck(string_idx=i, audio_mono=mono_audio)
+                        aspetta(strum_delay_sec)
+                        
+            else:
+                print("Comando non valido. Premi 1-6, A, Q, SPAZIO o ESC.")
+    finally:
+        poly_player.stop()
     return
 def SuonaAccordoTeorico(note_pitch_list):
     """
     Player audio per accordi teorici generati da CostruttoreAccordi.
     Gestisce fino a 10 note, ordina per altezza, assegna panning
-    (grave=dx, acuto=sx) e mappa i tasti 1-0.
+    (grave=dx, acuto=sx) e mappa i tasti 1-0. Usa PolyphonicPlayer per polifonia reale.
     """
     if not note_pitch_list:
         print("Nessuna nota da suonare.")
@@ -1072,6 +1064,8 @@ def SuonaAccordoTeorico(note_pitch_list):
     vol = suono.get('volume', 0.35)
     hardness = suono.get('pluck_hardness', 0.6)
     damping = suono.get('damping_factor', 0.997)
+    pick_pos = suono.get('pick_position', 0.15)
+    bright = suono.get('brightness', 0.4)
     s_kind = suono.get('kind', 1)
     s_adsr = suono.get('adsr', [0,0,0,0])
 
@@ -1090,7 +1084,8 @@ def SuonaAccordoTeorico(note_pitch_list):
     if num_notes >= 10:
         key_map['0'] = 9 # Tasto '0' -> indice 9 (decima nota)            
         
-    # 6. Prepara Renderers e dati note
+    # 6. Prepara Renderers, Player e dati note
+    poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=num_notes)
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_notes)]
     note_freqs = []
     note_names_display = []
@@ -1108,8 +1103,12 @@ def SuonaAccordoTeorico(note_pitch_list):
         
         # Configura il renderer
         pan_val = pan_values[i]
+        poly_player.set_pan(i, pan_val)
+        
         if 'pluck_hardness' in suono:
-            renderers[i].set_params(freq, dur, vol, pan_val, pluck_hardness=hardness, damping_factor=damping)        
+            renderers[i].set_params(freq, dur, vol, pan_val, 
+                                    pluck_hardness=hardness, damping_factor=damping,
+                                    pick_position=pick_pos, brightness=bright)        
         else:
             renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
             
@@ -1121,106 +1120,76 @@ def SuonaAccordoTeorico(note_pitch_list):
                 break
         print(f"  Tasto '{tasto_associato}': {nota_display} (Pan: {pan_val:.2f})")
 
-    # 7. Loop Interattivo
-    print("\nPremi tasti 1-0 per note singole.")
-    print("Q = Strum Giù (Grave->Acuta / Dx->Sx)")
-    print("A = Strum Su (Acuta->Grave / Sx->Dx)")
-    print("SPAZIO = Cambia Suono")
-    print("ESC = Esci")
+    poly_player.start()
+    
+    try:
+        # 7. Loop Interattivo
+        print("\nPremi tasti 1-0 per note singole.")
+        print("Q = Strum Giù (Grave->Acuta / Dx->Sx)")
+        print("A = Strum Su (Acuta->Grave / Sx->Dx)")
+        print("SPAZIO = Cambia Suono")
+        print("ESC = Esci")
 
-    note_prompt_str = " ".join(reversed(note_names_display))
+        note_prompt_str = " ".join(reversed(note_names_display))
 
-    while True:
-        print(f"\nNote: {note_prompt_str}): ", end="", flush=True)
-        scelta = key().lower()
+        while True:
+            print(f"\nNote: {note_prompt_str}): ", end="", flush=True)
+            scelta = key().lower()
 
-        if scelta in key_map: # Tasto nota singola (1-0)
-            note_idx = key_map[scelta]
-            if 0 <= note_idx < num_notes:
-                if note_freqs[note_idx] > 0:
-                    note_audio = renderers[note_idx].render()
-                    if note_audio.size > 0:
-                        sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+            if scelta in key_map: # Tasto nota singola (1-0)
+                note_idx = key_map[scelta]
+                if 0 <= note_idx < num_notes:
+                    if note_freqs[note_idx] > 0:
+                        note_audio_stereo = renderers[note_idx].render()
+                        if note_audio_stereo.size > 0:
+                            mono_audio = note_audio_stereo[:, 0] / renderers[note_idx].pan_l if renderers[note_idx].pan_l != 0 else note_audio_stereo[:, 0]
+                            poly_player.pluck(string_idx=note_idx, audio_mono=mono_audio)
+                    else:
+                        print("Nota non valida o senza frequenza.")
                 else:
-                    print("Nota non valida o senza frequenza.")
-            else:
-                 print("Indice nota non valido?") # Debug
-                 
-        elif scelta == ' ':
-            suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
-            suono = impostazioni[suono_attivo_key]
-            dur = suono.get('dur_accordi', 9.0)
-            vol = suono.get('volume', 0.35)
-            hardness = suono.get('pluck_hardness', 0.6)
-            damping = suono.get('damping_factor', 0.997)
-            s_kind = suono.get('kind', 1)
-            s_adsr = suono.get('adsr', [0,0,0,0])
-            
-            for i in range(num_notes):
-                if 'pluck_hardness' in suono:
-                    renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], pluck_hardness=hardness, damping_factor=damping)
-                else:
-                    renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
-            print(f"\n[Suono impostato su: {suono['descrizione']}]")
-
-        elif scelta == chr(27): # ESC
-            print("\nUscita dal player accordo.")
-            sd.stop()
-            break
-
-        elif scelta == 'q' or scelta == 'a': # Strum
-            sd.stop()
-            strum_delay_sec = 0.05 # Più veloce per accordi
-            strum_delay_samples = int(strum_delay_sec * FS)
-            note_duration_samples = int(dur * FS)
-
-            total_samples = note_duration_samples + ((num_notes - 1) * strum_delay_samples)
-            mix_buffer = np.zeros((total_samples, 2), dtype=np.float32)
-            note_order = range(num_notes) if scelta == 'q' else range(num_notes - 1, -1, -1)
-            current_delay_samples = 0
-            for i in note_order:
-                if note_freqs[i] > 0:
+                     print("Indice nota non valido?") # Debug
+                     
+            elif scelta == ' ':
+                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                suono = impostazioni[suono_attivo_key]
+                dur = suono.get('dur_accordi', 9.0)
+                vol = suono.get('volume', 0.35)
+                hardness = suono.get('pluck_hardness', 0.6)
+                damping = suono.get('damping_factor', 0.997)
+                pick_pos = suono.get('pick_position', 0.15)
+                bright = suono.get('brightness', 0.4)
+                s_kind = suono.get('kind', 1)
+                s_adsr = suono.get('adsr', [0,0,0,0])
+                
+                for i in range(num_notes):
                     if 'pluck_hardness' in suono:
-                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], pluck_hardness=hardness, damping_factor=damping)
+                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], 
+                                                pluck_hardness=hardness, damping_factor=damping,
+                                                pick_position=pick_pos, brightness=bright)
                     else:
                         renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
-                                            
-                    # Renderizza la singola nota
-                    note_data = renderers[i].render()
-                    
-                    if note_data.size == 0: continue
+                print(f"\n[Suono impostato su: {suono['descrizione']}]")
 
-                    # Tronca se necessario
-                    actual_note_samples = note_data.shape[0]
-                    samples_to_mix = min(actual_note_samples, note_duration_samples)
-                    note_data_segment = note_data[:samples_to_mix]
-                    
-                    # Calcola posizione nel buffer
-                    start_pos = current_delay_samples
-                    end_pos = start_pos + samples_to_mix
-                    
-                    # Assicura che non sfori dal buffer
-                    if end_pos > total_samples:
-                        end_pos = total_samples
-                        samples_to_mix = end_pos - start_pos
-                        if samples_to_mix <= 0: continue # Non c'è spazio
-                        note_data_segment = note_data_segment[:samples_to_mix]
+            elif scelta == chr(27): # ESC
+                print("\nUscita dal player accordo.")
+                break
 
-                    # Mixa
-                    mix_buffer[start_pos:end_pos] += note_data_segment
+            elif scelta == 'q' or scelta == 'a': # Strum
+                strum_delay_sec = 0.05 # Più veloce per accordi
+                note_order = range(num_notes) if scelta == 'q' else range(num_notes - 1, -1, -1)
                 
-                # Incrementa il ritardo per la prossima nota
-                current_delay_samples += strum_delay_samples
+                for i in note_order:
+                    if note_freqs[i] > 0:
+                        note_audio_stereo = renderers[i].render()
+                        if note_audio_stereo.size > 0:
+                            mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
+                            poly_player.pluck(string_idx=i, audio_mono=mono_audio)
+                        aspetta(strum_delay_sec)
 
-            # Normalizza e suona
-            max_val = np.max(np.abs(mix_buffer))
-            if max_val > 1.0:
-                mix_buffer /= max_val
-            
-            sd.play(mix_buffer, samplerate=GBAudio.FS, blocking=False)
-
-        else:
-            print("Comando non valido.")
+            else:
+                print("Comando non valido.")
+    finally:
+        poly_player.stop()
 
     return # Fine funzione SuonaAccordoTeorico
 

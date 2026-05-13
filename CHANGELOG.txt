@@ -1,6 +1,17 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.2.0 (14 maggio 2026)
+--------------------------------
+*   **Motore Audio (Major): Nuovo Motore Polifonico (Fix Issue #9)**
+    *   Completamente riscritto il motore di riproduzione audio interattivo per accordi e scale.
+    *   **Polifonia Reale:** Passaggio da `sd.play()` bloccante a uno stream continuo (`sd.OutputStream`) con callback in tempo reale.
+    *   **Bus Indipendenti:** Ogni corda ha un suo canale audio. Suonare una nuova corda non interrompe più le corde già in vibrazione, che si sommano naturalmente.
+    *   **Strumming Accurato:** Ripetere la stessa corda ne azzera il buffer, "stoppando" l'onda precedente, proprio come su una chitarra vera.
+*   **Sintesi Karplus-Strong Veloce:**
+    *   Sostituito il ciclo `for` in Python con un filtro IIR implementato nativamente in C tramite `scipy.signal.lfilter`, portando il tempo di calcolo di una corda da ~50ms a meno di 1ms.
+    *   Nuovi parametri fisici esposti per l'utente: Posizione del plettro (da 1 a 10) e Brillantezza/Tono (da 1 a 10).
+
 Versione 6.1.0 (14 maggio 2026)
 --------------------------------
 *   **UX Metronomo (Minor):** Completamente riscritta l'interfaccia di programmazione del metronomo (comando `pa`).

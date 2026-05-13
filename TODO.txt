@@ -1,24 +1,20 @@
 # Chitabry - Todo List
 # =====================
 
-## Completati Recentemente (v5.0.0 Alpha)
-*   [X] Sostituzione completa Chordpedia con generatore CSP on-demand (`AccordoSolver`).
-*   [X] Calcolo metadati accordi: Difficoltà Generale (%), Difficoltà Stretch (%) e numero tasti.
-*   [X] Calcolo formattazione anatomica dita e barré per accessibilità (Braille).
-*   [X] Implementazione vincolo biomeccanico numero di dita (max 4 dita separate o forme standard barré/piccolo barré).
-*   [X] Riformattato menu Costruttore Accordi per layout pulito e stringato.
-*   [X] Bugfix del player Karplus-Strong per gli accordi (rimozione vecchie chiavi 'kind' e 'adsr').
-*   [X] Rimozione di tutto il codice legacy relativo al salvataggio manuale e gestione tabellare.
+## Completati Recentemente (v6.0.0 - v6.2.0)
+*   [X] **Motore Audio (Major):** Nuovo Motore Polifonico con stream continuo (`sd.OutputStream`) per mixaggio indipendente delle corde in real-time (Fix Issue #9).
+*   [X] **Sintesi Veloce (KS):** Filtro IIR nativo in C (`scipy.signal.lfilter`) per il Karplus-Strong, abbattendo la latenza e aggiungendo i parametri *Posizione Plettro* e *Brillantezza*.
+*   [X] **Generatore Scale (Pathfinder):** Nuovo motore DFS per calcolare le migliori diteggiature (CAGED o 3NPS) dato un intervallo di tasti (Fix Issue #10).
+*   [X] **Metronomo - UX:** Completamente riscritta l'interfaccia di programmazione del metronomo con inserimento relativo, in coda, wizard e one-liner (Fix Issue #14, #15, #16, #17).
+*   [X] **Metronomo - Sovrapposizioni:** Implementata la gestione interattiva delle sovrapposizioni durante la programmazione (Fix Issue #3).
+*   [X] Documentazione unificata in `ChitabryMan.txt`.
 
 ## Prossimi Interventi (Bugfix & UX - Prossima Sessione)
-*   [ ] Test approfonditi sul campo: verifica e correzione di eventuali errori residui nel motore e nei metadati generati.
-*   [ ] Eventuali raffinamenti logici sui punteggi e sulla prioritizzazione forme.
+*   [ ] Test approfonditi sul campo: verifica e correzione di eventuali errori residui nel motore audio e nei metadati generati.
+*   [ ] Eventuali raffinamenti logici sui punteggi e sulla prioritizzazione forme per scale e accordi.
 
 ## Prossimi Interventi (Altre funzionalità)
-*   [ ] **Auto-update:** Importare e integrare da `GBUtils` le due funzioni per la gestione dell'aggiornamento automatico.
-*   [ ] **Metronomo - Sovrapposizioni:** Implementare controlli per impedire la programmazione di segmenti audio sovrapposti.
-*   [ ] **Metronomo - UX:** Semplificare la logica di programmazione del metronomo per renderla più intuitiva.
-*   [ ] **UI/UX Revision Generale:** Garantire che l'impaginazione di tutte le nuove interfacce resti perfettamente Braille-friendly e coerente con la v5.
+*   [ ] **UI/UX Revision Generale:** Garantire che l'impaginazione di tutte le nuove interfacce resti perfettamente Braille-friendly e coerente.
 
 ---
-*Aggiornato l'8 maggio 2026*
+*Aggiornato il 14 maggio 2026*
