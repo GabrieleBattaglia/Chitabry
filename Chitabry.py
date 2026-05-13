@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.0.0 del 13 maggio 2026."
+VERSIONE = "6.0.1 del 13 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -1569,10 +1569,13 @@ def VisualizzaEsercitatiScala():
                                     f_val = p_dict['fret']
                                     dito_val = meta['fingering'][idx_path] if meta['fingering'] else 0
                                     
+                                    nota_obj = pitch.Pitch(midi=p_dict['midi'])
+                                    nota_nome = get_nota(nota_obj.nameWithOctave.replace('-', 'b'))
+                                    
                                     if f_val == 0:
-                                        nota_str = "0 (vuota)"
+                                        nota_str = f"0 (vuota, {nota_nome})"
                                     else:
-                                        nota_str = f"{f_val} (dito {dito_val})"
+                                        nota_str = f"{f_val} (dito {dito_val}, {nota_nome})"
                                     note_per_corda[s_idx].append(nota_str)
                                 
                                 dettagli += "Posizioni (dalla corda più grave):\n"
@@ -1583,16 +1586,22 @@ def VisualizzaEsercitatiScala():
                                 
                                 soluzioni_map[chiave_menu] = dettagli
                             
-                            while True:
-                                menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
-                                scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero per vedere i dettagli: ")
-                                
-                                if scelta_tab is None:
-                                    break
+                            if top_n == 1:
+                                chiave = list(soluzioni_map.keys())[0]
+                                print(f"\n--- Dettagli dell'unica Forma Trovata ---")
+                                print(soluzioni_map[chiave].rstrip('\n'))
+                                key("Premi un tasto per proseguire all'esercizio audio...")
+                            else:
+                                while True:
+                                    menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
+                                    scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero per i dettagli (o Invio per proseguire): ")
                                     
-                                print(f"\n--- Dettagli Forma {scelta_tab} ---")
-                                print(soluzioni_map[scelta_tab])
-                                dgt("\nPremi [Invio] per tornare alle opzioni: ", kind='s')
+                                    if scelta_tab is None:
+                                        break
+                                        
+                                    print(f"\n--- Dettagli Forma {scelta_tab} ---")
+                                    print(soluzioni_map[scelta_tab].rstrip('\n'))
+                                    key("Premi un tasto per tornare alle opzioni...")
                                 
                     except Exception as e:
                         print(f"\nErrore durante il calcolo delle diteggiature: {e}")
@@ -2228,29 +2237,40 @@ def CostruttoreAccordi():
         soluzioni_map[chiave_menu] = (tab_menu_list, dettagli)
 
     # --- 6. Interazione con le Soluzioni Trovate ---
-    while True:
-        print(f"\n--- Le {top_n} migliori diteggiature per {nome_accordo_display} ---")
-        # Ordiniamo le opzioni per numero (1, 2, 3...) per evitare che l'opzione 10 finisca a caso
-        menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
-        scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero (es. 1) per ascoltare: ")
-        
-        if scelta_tab is None:
-            break
-            
+    if top_n == 1:
+        scelta_tab = list(soluzioni_map.keys())[0]
         tab_selezionata, dettagli_full = soluzioni_map[scelta_tab]
         
-        print(f"\n--- Dettagli {scelta_tab} ---")
+        print(f"\n--- Dettagli dell'unica Forma Trovata ---")
         print(f"{dettagli_full}")
         print("-------------------------------")
         
         print("Ascolto dell'accordo (Player Corde)...")
-        # tab_selezionata è [corda1, corda2... corda6]. Suona() si aspetta [corda6, corda5... corda1]
         Suona(list(reversed(tab_selezionata)))
-        
-        azione = dgt("\nScegli: [R]iascolta | [Invio] per tornare alle opzioni: ").strip().lower()
-        if azione == 'r':
+    else:
+        while True:
+            print(f"\n--- Le {top_n} migliori diteggiature per {nome_accordo_display} ---")
+            # Ordiniamo le opzioni per numero (1, 2, 3...) per evitare che l'opzione 10 finisca a caso
+            menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
+            scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero (es. 1) per ascoltare: ")
+            
+            if scelta_tab is None:
+                break
+                
+            tab_selezionata, dettagli_full = soluzioni_map[scelta_tab]
+            
+            print(f"\n--- Dettagli {scelta_tab} ---")
+            print(f"{dettagli_full}")
+            print("-------------------------------")
+            
+            print("Ascolto dell'accordo (Player Corde)...")
+            # tab_selezionata è [corda1, corda2... corda6]. Suona() si aspetta [corda6, corda5... corda1]
             Suona(list(reversed(tab_selezionata)))
             
+            azione = dgt("\nScegli: [R]iascolta | [Invio] per tornare alle opzioni: ").strip().lower()
+            if azione == 'r':
+                Suona(list(reversed(tab_selezionata)))
+                
     print("\nUscita dal Costruttore Accordi.")
 def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni

@@ -1,6 +1,11 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.0.1 (13 maggio 2026)
+--------------------------------
+*   **Hotfix UX:** Risolto il bug del "loop infinito" che si verificava quando il nuovo motore delle scale e quello degli accordi trovavano una singola diteggiatura valida.
+*   **Hotfix UX:** Rimossa la stampa di righe vuote inutili nella tablatura delle scale, migliorando l'esperienza per gli utenti con display Braille.
+
 Versione 6.0.0 (13 maggio 2026)
 --------------------------------
 *   **Nuova Funzione (Major): Motore Diteggiature Scale (Scale Pathfinder)**
