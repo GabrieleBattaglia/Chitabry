@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.5.0 del 15 maggio 2026."
+VERSIONE = "6.5.1 del 15 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -2344,6 +2344,7 @@ def PlayerGenerico():
     print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}")
 
     try:
+        print(f"\r[Suono: {impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
         while True:
             ch = key()
             if not ch: continue
@@ -2353,7 +2354,7 @@ def PlayerGenerico():
             elif ch == ' ':
                 suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
                 p = get_synth_params(suono_attivo_key)
-                print(f"Suono impostato su: {impostazioni[suono_attivo_key]['descrizione']}")
+                print(f"\rSuono: {impostazioni[suono_attivo_key]['descrizione']}{' '*30}\r", end="", flush=True)
             elif ch == '\xe0' or ch == '\x00': # Tasti speciali (F1-F8, frecce)
                 ch2 = key()
                 if ch2 == ';': base_octave = 2   # F1
@@ -2365,7 +2366,7 @@ def PlayerGenerico():
                 elif ch2 == 'A': base_octave = 8 # F7
                 elif ch2 == 'B': base_octave = 9 # F8
                 else: continue
-                print(f"Ottava Base impostata a: {base_octave} (F1=2, F2=3, F3=4, F4=5...)")
+                print(f"\rOttava Base impostata a: {base_octave}{' '*30}\r", end="", flush=True)
             elif ch in KB_MAP:
                 semitones, oct_offset = KB_MAP[ch]
                 actual_octave = base_octave + oct_offset
@@ -2392,6 +2393,11 @@ def PlayerGenerico():
                 if note_audio.size > 0:
                     mono_audio = note_audio[:, 0] / renderers[v].pan_l if renderers[v].pan_l != 0 else note_audio[:, 0]
                     poly_player.pluck(string_idx=v, audio_mono=mono_audio)
+                
+                # Calcola il nome della nota per il display
+                nota_obj = pitch.Pitch(midi=midi_num)
+                nota_nome = get_nota(nota_obj.nameWithOctave.replace('-', 'b'))
+                print(f"\rUltima nota: {nota_nome} ({freq:.1f} Hz) [Ottava base: {base_octave}]{' '*15}\r", end="", flush=True)
 
     finally:
         poly_player.stop()
