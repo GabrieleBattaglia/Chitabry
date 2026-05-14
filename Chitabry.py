@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.2.0 del 14 maggio 2026."
+VERSIONE = "6.2.1 del 14 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -1536,12 +1536,12 @@ def VisualizzaEsercitatiScala():
                                 nps = meta['nps']
                                 nps_list = [nps[str_idx] for str_idx in range(model_strum.num_strings)]
                                 
-                                chiave_menu = f"{i+1:2d}"
+                                chiave_menu = str(i+1)
                                 menu_diteggiature[chiave_menu] = f"Difficoltà: {diff_gen}% | Stretch: {diff_stretch}% | Note per corda: {nps_list}"
                                 
                                 dettagli = f"Difficoltà Generale: {diff_gen}% | Estensione: {diff_stretch}% ({meta['stretch_tasti']} tasti)\n"
                                 
-                                note_per_corda = {s: [] for s in range(model_strum.num_strings)}
+                                note_per_corda = {s: {'f': [], 'd': [], 'n': []} for s in range(model_strum.num_strings)}
                                 for idx_path, p_dict in enumerate(path):
                                     s_idx = p_dict['string']
                                     f_val = p_dict['fret']
@@ -1550,17 +1550,18 @@ def VisualizzaEsercitatiScala():
                                     nota_obj = pitch.Pitch(midi=p_dict['midi'])
                                     nota_nome = get_nota(nota_obj.nameWithOctave.replace('-', 'b'))
                                     
-                                    if f_val == 0:
-                                        nota_str = f"0 (vuota, {nota_nome})"
-                                    else:
-                                        nota_str = f"{f_val} (dito {dito_val}, {nota_nome})"
-                                    note_per_corda[s_idx].append(nota_str)
+                                    note_per_corda[s_idx]['f'].append(str(f_val))
+                                    note_per_corda[s_idx]['d'].append(str(dito_val))
+                                    note_per_corda[s_idx]['n'].append(nota_nome)
                                 
                                 dettagli += "Posizioni (dalla corda più grave):\n"
                                 for string_idx in range(model_strum.num_strings):
                                     corda_num = model_strum.num_strings - string_idx
-                                    if note_per_corda[string_idx]:
-                                        dettagli += f"Corda {corda_num}: tasti {', '.join(note_per_corda[string_idx])};\n"
+                                    if note_per_corda[string_idx]['f']:
+                                        f_str = ", ".join(note_per_corda[string_idx]['f'])
+                                        d_str = ", ".join(note_per_corda[string_idx]['d'])
+                                        n_str = ", ".join(note_per_corda[string_idx]['n'])
+                                        dettagli += f"Corda {corda_num}: tasti ({f_str}), dita ({d_str}), note ({n_str});\n"
                                 
                                 soluzioni_map[chiave_menu] = dettagli
                             
@@ -1570,11 +1571,12 @@ def VisualizzaEsercitatiScala():
                                 print(soluzioni_map[chiave].rstrip('\n'))
                                 key("Premi un tasto per proseguire all'esercizio audio...")
                             else:
+                                menu_diteggiature["p"] = ">> Prosegui all'esercizio audio"
                                 while True:
-                                    menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
-                                    scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero per i dettagli (o Invio per proseguire): ")
+                                    menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: (0 if item[0] == 'p' else 1, int(item[0]) if item[0].isdigit() else 999)))
+                                    scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero per i dettagli (o 'p' per proseguire): ")
                                     
-                                    if scelta_tab is None:
+                                    if scelta_tab is None or scelta_tab == 'p':
                                         break
                                         
                                     print(f"\n--- Dettagli Forma {scelta_tab} ---")
@@ -1601,7 +1603,7 @@ def VisualizzaEsercitatiScala():
             ultima_direzione = 'a'
             audio_data_asc = None
             audio_data_desc = None
-            menu_esercizio = {"a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "i": "Indietro"}
+            menu_esercizio = {"1-8": "Suona nota singola", "a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "i": "Indietro"}
             menu_mostrato_iniziale = False
             loop_messaggio_stampato = False
 
@@ -1641,6 +1643,14 @@ def VisualizzaEsercitatiScala():
                             suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
                             print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
                             audio_data_asc = None; audio_data_desc = None; continue
+                        elif scelta_raw.isdigit() and '1' <= scelta_raw <= '8':
+                            idx = int(scelta_raw) - 1
+                            if idx < len(note_per_audio_asc):
+                                freq = note_per_audio_asc[idx]
+                                if freq is not None and freq > 0:
+                                    note_audio = GBAudio.render_scale_audio([freq], impostazioni[suono_attivo_key], 60)
+                                    sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+                            continue
 
                 # --- Gestione Scelte Menu Esercizio ---
                 exit_pressed = (not loop_attivo and scelta_raw == chr(27))
@@ -1683,7 +1693,6 @@ def VisualizzaEsercitatiScala():
                 if audio_to_play is not None and audio_to_play.size > 0:
                     if not loop_attivo:
                         print(" " * 80, end="\r")
-                        print(f"Riproducendo ({'asc' if scelta == 'a' else 'desc'} {bpm} BPM)..." + " "*20, end="\r", flush=True)
                     sd.play(audio_to_play, samplerate=GBAudio.FS, blocking=False)
                     if loop_attivo:
                         step = 0.05; passi_totali = int(dur_totale / step) if dur_totale > 0 else 0
