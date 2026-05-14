@@ -137,7 +137,7 @@ class AccordoSolver:
         
         # 1. Premio per le corde a vuoto
         corde_vuote = tasti.count(0)
-        score += corde_vuote * 10
+        score += corde_vuote * 30  # Aumentato drasticamente per premiare le posizioni con corde aperte
         
         # 2. Penalità per le corde mute (-1) e corde a vuoto impossibili (barré spezzato)
         suonanti_idx = [i for i, t in enumerate(tasti) if t != -1]
@@ -158,23 +158,25 @@ class AccordoSolver:
             stretch = max(tasti_premuti) - min(tasti_premuti)
             score -= stretch * 20
             
-            # Penalità per suonare troppo in alto sul manico senza motivo
-            score -= min(tasti_premuti) * 10
+            # Penalità per suonare troppo in alto sul manico senza motivo (MOLTO severa per favorire il capotasto)
+            score -= min(tasti_premuti) * 20
             
-            # 3.5 Penalità per "barré spezzato" o "corde a vuoto impossibili sotto al barrè"
+            # Penalità severa per i barré (richiedono molta forza fisica!)
             if len(tasti_premuti) > 4:
                 min_tasto = min(tasti_premuti)
                 if min_tasto > 0:
                     corde_min_tasto = [i for i, t in enumerate(tasti) if t == min_tasto]
                     if len(corde_min_tasto) >= 2:
+                        score -= 80 # Faticoso!
+                        
                         primo_barre = min(corde_min_tasto)
                         for i in range(primo_barre, self.model.num_corde):
                             if tasti[i] == 0:
                                 score -= 150 # Impossibile mantenere corda a vuoto sotto un barré obbligatorio
                 
-                # 3.6 Premio per le Forme a Barrè Standard
+                # 3.6 Premio per le Forme a Barrè Standard (solo un piccolo rimborso sulla faticaccia)
                 if len(corde_min_tasto) >= 3:
-                    score += 40
+                    score += 20
             
         # 4. Premio se la nota più bassa suonata è la fondamentale (Root position)
         if suonanti_idx:
@@ -192,8 +194,8 @@ class AccordoSolver:
                     if (nota_successiva - nota_basso) % 12 == 7: # Quinta giusta
                         score += 10
         
-        # 5. Penalità se si usano poche corde (preferiamo accordi pieni)
-        score += len(suonanti_idx) * 20
+        # 5. Penalità se si usano poche corde (preferiamo accordi pieni, ma senza esagerare)
+        score += len(suonanti_idx) * 10
         
         return score
 

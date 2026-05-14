@@ -1,5 +1,5 @@
 {
- "last_preset_id": "9",
+ "last_preset_id": "3",
  "presets": {
   "4": {
    "name": "ID4 walter ritmato basso",
@@ -36,36 +36,6 @@
       "is_audible": false
      }
     ]
-   }
-  },
-  "3": {
-   "name": "ID3 Flauto",
-   "state": {
-    "bpm": 60,
-    "time_signature": "4/4",
-    "subdivision_level": 0,
-    "config_accento": {
-     "beep_duration_ms": 40,
-     "volume_perc": 50,
-     "attack_ms": 2,
-     "decay_ms": 8,
-     "frequency_hz": 700
-    },
-    "config_tick": {
-     "beep_duration_ms": 45,
-     "volume_perc": 25,
-     "attack_ms": 2,
-     "decay_ms": 4,
-     "frequency_hz": 350
-    },
-    "config_subdivision": {
-     "beep_duration_ms": 10,
-     "volume_perc": 15,
-     "attack_ms": 1,
-     "decay_ms": 4,
-     "frequency_hz": 1300
-    },
-    "program": []
    }
   },
   "1": {
@@ -155,49 +125,6 @@
     }
    }
   },
-  "7": {
-   "name": "ID7 test programmi",
-   "state": {
-    "bpm": 90,
-    "time_signature": "4/4",
-    "subdivision_level": 0,
-    "config_accento": {
-     "beep_duration_ms": 30,
-     "volume_perc": 30,
-     "attack_ms": 2,
-     "decay_ms": 2,
-     "frequency_hz": 200
-    },
-    "config_tick": {
-     "beep_duration_ms": 80,
-     "volume_perc": 13,
-     "attack_ms": 2,
-     "decay_ms": 60,
-     "frequency_hz": 160
-    },
-    "config_subdivision": {
-     "beep_duration_ms": 10,
-     "volume_perc": 15,
-     "attack_ms": 1,
-     "decay_ms": 4,
-     "frequency_hz": 1300
-    },
-    "program": [
-     {
-      "start_bar": 2,
-      "end_bar": 4,
-      "target_bpm": 200,
-      "is_audible": true
-     },
-     {
-      "start_bar": 6,
-      "end_bar": 8,
-      "target_bpm": 140,
-      "is_audible": false
-     }
-    ]
-   }
-  },
   "8": {
    "name": "ID8 morbido alto",
    "state": {
@@ -262,6 +189,36 @@
    "name": "ID9 Handpan",
    "state": {
     "bpm": 90,
+    "time_signature": "4/4",
+    "subdivision_level": 0,
+    "config_accento": {
+     "beep_duration_ms": 25,
+     "volume_perc": 50,
+     "attack_ms": 2,
+     "decay_ms": 13,
+     "frequency_hz": 1340
+    },
+    "config_tick": {
+     "beep_duration_ms": 25,
+     "volume_perc": 25,
+     "attack_ms": 2,
+     "decay_ms": 13,
+     "frequency_hz": 340
+    },
+    "config_subdivision": {
+     "beep_duration_ms": 10,
+     "volume_perc": 15,
+     "attack_ms": 2,
+     "decay_ms": 8,
+     "frequency_hz": 1030.0
+    },
+    "program": []
+   }
+  },
+  "3": {
+   "name": "ID3 Chitarra",
+   "state": {
+    "bpm": 60,
     "time_signature": "4/4",
     "subdivision_level": 0,
     "config_accento": {

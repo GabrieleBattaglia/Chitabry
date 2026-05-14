@@ -3236,7 +3236,7 @@
             ]
         ]
     },
-    "default_bpm": 230,
+    "default_bpm": 110,
     "strumenti": {
         "Chitarra Standard": {
             "accordatura": [
@@ -3338,5 +3338,5 @@
             "tasti": 17
         }
     },
-    "strumento_attivo": "Guitalele"
+    "strumento_attivo": "Chitarra Standard"
 }
