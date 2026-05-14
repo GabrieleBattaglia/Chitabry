@@ -1,7 +1,16 @@
 Chitabry - ChangeLog
 ====================
 
-Versione 6.2.0 (14 maggio 2026)
+Versione 6.5.0 (15 maggio 2026)
+--------------------------------
+*   **Nuova Funzionalità (Minor): Tastiera (Fix Issue #18)**
+    *   Aggiunta una nuova voce al menu principale per accedere a una tastiera musicale virtuale suonabile con la tastiera del PC (layout Italiano QWERTY).
+    *   Sfrutta il nuovo motore polifonico (`PolyphonicPlayer`) offrendo 16 voci simultanee per suonare liberamente armonie complesse in real-time.
+    *   Implementata un'estensione su 4 ottave simultanee: la riga in basso (`Z`, `X`, `C`...) controlla l'ottava base, la riga in alto (`Q`, `W`, `E`...) l'ottava superiore. L'uso di SHIFT (maiuscole) sposta i tasti di un'ulteriore ottava.
+    *   Semplificato il controllo dell'ottava: I tasti da **F1** a **F8** (oppure `<` e `>`) consentono di mappare rapidamente l'ottava base (da 1 a 8) prevenendo frequenze estreme o crash di sistema.
+    *   Possibilità di ciclare tra i suoni con la barra spaziatrice.
+
+Versione 6.2.1 (14 maggio 2026)
 --------------------------------
 *   **Motore Audio (Major): Nuovo Motore Polifonico (Fix Issue #9)**
     *   Completamente riscritto il motore di riproduzione audio interattivo per accordi e scale.

@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.2.1 del 14 maggio 2026."
+VERSIONE = "6.5.0 del 15 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -154,7 +154,8 @@ archivio_modificato = False
 impostazioni = {} # Conterrà l'intera configurazione caricata/default
 
 MAINMENU = {
-        "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
+    "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
+    "Tastiera": "Suona liberamente con la tastiera del PC",
     "Flauto": "Consulta la diteggiatura del flauto traverso",
     "Metronomo": "Avvia il Metronomo",
     "MidiStudy": "Analizza e studia file MIDI",
@@ -2281,6 +2282,121 @@ def CostruttoreAccordi():
                 Suona(list(reversed(tab_selezionata)))
                 
     print("\nUscita dal Costruttore Accordi.")
+
+def PlayerGenerico():
+    print("\n--- Tastiera Virtuale (Player Generico) ---")
+    print("Suona usando la tastiera del tuo PC (layout Italiano).")
+    print("  Ottava Base (ZXC...): Z=Do, S=Do#, X=Re, D=Re#...")
+    print("  Ottava Superiore (QWE...): Q=Do, 2=Do#, W=Re...")
+    print("  Maiuscole (Shift): Suonano un'ottava sotto/sopra rispetto ai minuscoli.")
+    print("  Freccia SU / GIÙ (o Tasti < / >): Alza/Abbassa l'ottava base")
+    print("  SPAZIO: Cambia Suono")
+    print("  ESC: Esci")
+
+    base_octave = 3
+    suono_attivo_key = 'suono_1'
+
+    # Mappa tastiera italiana per il player virtuale
+    # (semitoni rispetto a Do, offset_ottava)
+    KB_MAP = {
+        # --- OTTAVA BASE (offset 0) ---
+        'z': (0, 0),  'x': (2, 0),  'c': (4, 0),  'v': (5, 0),  'b': (7, 0),  'n': (9, 0),  'm': (11, 0), 
+        ',': (12, 0), '.': (14, 0), '-': (16, 0),
+        's': (1, 0),  'd': (3, 0),  'g': (6, 0),  'h': (8, 0),  'j': (10, 0), 'l': (13, 0), 'ò': (15, 0),
+
+        # --- OTTAVA BASE - 1 (offset -1, SHIFT) ---
+        'Z': (0, -1), 'X': (2, -1), 'C': (4, -1), 'V': (5, -1), 'B': (7, -1), 'N': (9, -1), 'M': (11, -1),
+        ';': (12, -1), ':': (14, -1), '_': (16, -1),
+        'S': (1, -1), 'D': (3, -1), 'G': (6, -1), 'H': (8, -1), 'J': (10, -1), 'L': (13, -1), 'ç': (15, -1),
+
+        # --- OTTAVA BASE + 1 (offset +1, riga superiore) ---
+        'q': (0, 1),  'w': (2, 1),  'e': (4, 1),  'r': (5, 1),  't': (7, 1),  'y': (9, 1),  'u': (11, 1),
+        'i': (12, 1), 'o': (14, 1), 'p': (16, 1), 'è': (17, 1), '+': (19, 1),
+        '2': (1, 1),  '3': (3, 1),  '5': (6, 1),  '6': (8, 1),  '7': (10, 1), '9': (13, 1), '0': (15, 1), 'ì': (18, 1),
+
+        # --- OTTAVA BASE + 2 (offset +2, SHIFT riga superiore) ---
+        'Q': (0, 2),  'W': (2, 2),  'E': (4, 2),  'R': (5, 2),  'T': (7, 2),  'Y': (9, 2),  'U': (11, 2),
+        'I': (12, 2), 'O': (14, 2), 'P': (16, 2), 'é': (17, 2), '*': (19, 2),
+        '"': (1, 2),  '£': (3, 2),  '%': (6, 2),  '&': (8, 2),  '/': (10, 2), ')': (13, 2), '=': (15, 2), '^': (18, 2),
+    }
+
+    poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=16) 
+    num_voices = 16
+    renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_voices)]
+    voice_idx = 0
+
+    poly_player.start()
+    
+    def get_synth_params(s_key):
+        s = impostazioni[s_key]
+        return {
+            'dur': s.get('dur_accordi', 9.0),
+            'vol': s.get('volume', 0.35),
+            'hardness': s.get('pluck_hardness', 0.6),
+            'damping': s.get('damping_factor', 0.997),
+            'pick_pos': s.get('pick_position', 0.15),
+            'bright': s.get('brightness', 0.4),
+            'kind': s.get('kind', 1),
+            'adsr': s.get('adsr', [0,0,0,0])
+        }
+    
+    p = get_synth_params(suono_attivo_key)
+    print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}")
+
+    try:
+        while True:
+            ch = key()
+            if not ch: continue
+
+            if ch == chr(27): # ESC
+                break
+            elif ch == ' ':
+                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                p = get_synth_params(suono_attivo_key)
+                print(f"Suono impostato su: {impostazioni[suono_attivo_key]['descrizione']}")
+            elif ch == '\xe0' or ch == '\x00': # Tasti speciali (F1-F8, frecce)
+                ch2 = key()
+                if ch2 == ';': base_octave = 2   # F1
+                elif ch2 == '<': base_octave = 3 # F2
+                elif ch2 == '=': base_octave = 4 # F3
+                elif ch2 == '>': base_octave = 5 # F4
+                elif ch2 == '?': base_octave = 6 # F5
+                elif ch2 == '@': base_octave = 7 # F6
+                elif ch2 == 'A': base_octave = 8 # F7
+                elif ch2 == 'B': base_octave = 9 # F8
+                else: continue
+                print(f"Ottava Base impostata a: {base_octave} (F1=2, F2=3, F3=4, F4=5...)")
+            elif ch in KB_MAP:
+                semitones, oct_offset = KB_MAP[ch]
+                actual_octave = base_octave + oct_offset
+                
+                # Previene frequenze estreme inaudibili/scomode
+                if actual_octave < 1: actual_octave = 1
+                if actual_octave > 9: actual_octave = 9
+                
+                midi_num = 12 + semitones + 12 * actual_octave
+                freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
+                
+                v = voice_idx % num_voices
+                voice_idx += 1
+                
+                suono = impostazioni[suono_attivo_key]
+                if 'pluck_hardness' in suono:
+                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, 
+                                            pluck_hardness=p['hardness'], damping_factor=p['damping'],
+                                            pick_position=p['pick_pos'], brightness=p['bright'])
+                else:
+                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, kind=p['kind'], adsr_list=p['adsr'])
+                
+                note_audio = renderers[v].render()
+                if note_audio.size > 0:
+                    mono_audio = note_audio[:, 0] / renderers[v].pan_l if renderers[v].pan_l != 0 else note_audio[:, 0]
+                    poly_player.pluck(string_idx=v, audio_mono=mono_audio)
+
+    finally:
+        poly_player.stop()
+        print("\nUscita dal Player Generico.")
+
 def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
     import sys
@@ -2346,6 +2462,8 @@ def main():
         
         if scelta == "Costruttore Accordi":
             CostruttoreAccordi()
+        elif scelta == "Tastiera":
+            PlayerGenerico()
         elif scelta == "Metronomo":
             print("\nAvvio del Metronomo...")
             aspetta(0.5)
