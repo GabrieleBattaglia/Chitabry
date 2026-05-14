@@ -1,6 +1,11 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.5.2 (15 maggio 2026)
+--------------------------------
+*   **UX Tastiera:** Il prompt della tastiera virtuale è stato ulteriormente accorciato (es. "C4 (261.6 Hz) (3)") per restare entro i 40 caratteri ed evitare problemi di lettura con display Braille.
+*   **Impostazioni:** Rinominata la descrizione di default del `suono_2` da "simil-flauto" a "Suono sintetico (onda semplice)", con migrazione automatica per i file di impostazione esistenti.
+
 Versione 6.5.1 (15 maggio 2026)
 --------------------------------
 *   **UX Tastiera:** Il prompt della tastiera virtuale ora mostra in tempo reale l'ultima nota suonata e la sua frequenza (Hz). Il cursore rimane sempre ancorato all'inizio della riga sovrascrivendo l'output per massimizzare la leggibilità con i display Braille.

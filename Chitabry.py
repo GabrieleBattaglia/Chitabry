@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.5.1 del 15 maggio 2026."
+VERSIONE = "6.5.2 del 15 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -774,7 +774,7 @@ def get_impostazioni_default():
             "volume": 0.45
         },
         "suono_2": {
-            "descrizione": "Suono per scale (simil-flauto)",
+            "descrizione": "Suono sintetico (onda semplice)",
             "kind": 1,
             "adsr": [2.0, 1.0, 90.0, 2.0],
             "volume": 0.35
@@ -809,11 +809,16 @@ def carica_impostazioni():
             impostazioni['suono_1']['pick_position'] = 0.15
             impostazioni['suono_1']['brightness'] = 0.4
             migrazione_necessaria = True            
+            
         if 'volume' not in impostazioni.get('suono_2', {}):
             print("Aggiornamento 'suono_2': aggiunta chiave 'volume' di default.")
             if 'suono_2' not in impostazioni: 
                 impostazioni['suono_2'] = {} # Sicurezza
             impostazioni['suono_2']['volume'] = 0.35
+            migrazione_necessaria = True
+            
+        if impostazioni.get('suono_2', {}).get('descrizione') == "Suono per scale (simil-flauto)":
+            impostazioni['suono_2']['descrizione'] = "Suono sintetico (onda semplice)"
             migrazione_necessaria = True
 
         # --- Aggiunta controllo 'default_bpm' ---
