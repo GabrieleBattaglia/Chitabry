@@ -1,10 +1,10 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 6, di giovedì 14 maggio 2026.
+L'ultima revisione di questo documento e' la numero 7, di venerdì 15 maggio 2026.
 A cura di Gabriele Battaglia.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
-Nota: dalla versione 4 in poi, l'orizzonte di Chitabry si è notevolmente allargato. Grazie alla potente libreria `music21`, ora è un vero e proprio coltellino svizzero per la teoria musicale. La chitarra è un'opzione di visualizzazione, ma Chitabry vi potrà essere molto utile per studiare, costruire e ascoltare accordi e scale complesse, oltre che per esercitarvi live con il vostro strumento usando il prezioso Clitronomo.
+Nota: dalla versione 4 in poi, l'orizzonte di Chitabry si è notevolmente allargato. Grazie alla potente libreria `music21`, ora è un vero e proprio coltellino svizzero per la teoria musicale. La chitarra è un'opzione di visualizzazione, ma Chitabry vi potrà essere molto utile per studiare, costruire e ascoltare accordi e scale complesse, oltre che per esercitarvi live con il vostro strumento usando il prezioso metronomo.
 
 Ogni segnalazione di bug, malfunzionamenti ed errori, nel programma o in questo manuale, sara' gradita, scrivetemi una e-mail ad gabriele.battaglia@gmail.com descrivendo con la massima precisione possibile cio' che riscontrate ed io cerchero' di aiutarvi come posso. Chiunque e' autorizzato ed incoraggiato a distribuire questo software cosi' com'e', senza garanzie e gratuitamente.
 E' vietato modificarne il codice senza espressa autorizzazione del sottoscritto. Se vi piace Chitabry, fatemelo sapere scrivendomi 2 righe. Grazie.
@@ -41,77 +41,57 @@ Questo sistema rende facilissimo trovare un tipo di scala o un accordo anche tra
 
 Vediamo ora le singole voci del menu.
 
------
+  Costruttore Accordi
 
- Accordi
+Questa è la funzione teorica di Chitabry. Non si occupa solo di quali note compongono un accordo, ma calcola dinamicamente come suonarlo sulla chitarra (o su qualunque strumento a corda configurato). È uno strumento potentissimo per lo studio dell'armonia e della tecnica.
 
-Questa è la vostra Chordpedia personale, il vostro database di diteggiature (o tablature) salvate. È pensata per la pratica sulla chitarra.
+Il processo:
 
-Da qui potete:
-
-   Aggiungi un nuovo accordo: Vi verrà chiesto un nome (es. "DO MAJ") e una o più tablature (es. "X 3 2 0 1 0").
-   Rimuovi un accordo: Elimina un accordo (e tutte le sue tablature) dal database.
-   Vedi e gestisci accordi: Il cuore della funzione. Potete filtrare e selezionare un accordo salvato. Una volta scelto:
-       Se l'accordo ha più tablature, potete scegliere quale visualizzare.
-       Visualizza: Potete vederla per corda o per tasto.
-       Ascolta: Un player audio interattivo vi permetterà di sentire l'accordo.
-           Tasti 1-6: Suonano le singole corde (1 = MI cantino, 6 = MI grave).
-           Q: Pennata in giù (Strum "battere", dal grave all'acuto).
-           A: Pennata in su (Strum "levare", dall'acuto al grave).
-       Modifica/Rimuovi: Potete cambiare la tablatura o rimuoverla.
-
------
-
- Costruttore Accordi
-
-Questa è la funzione teorica di Chitabry. Non si occupa di come suonate un accordo sulla chitarra, ma di quali note lo compongono. È uno strumento potentissimo per lo studio dell'armonia.
-
-Il processo è semplice:
-
-1.  Scegli la Tonica: Selezionate la nota fondamentale (es. "DO", "FA\", "SIb").
+1.  Scegli la Tonica: Selezionate la nota fondamentale (es. "DO", "FA", "SIb").
 2.  Scegli il Tipo: Si aprirà un menu filtrabile con decine di tipi di accordi (es. "Major", "Minor", "Dominant 13th", "Half-Diminished (m7b5)").
        Suggerimento: Se non trovate il tipo, selezionate l'opzione `>> Cerca tipo di accordo...` (digitando `...` o filtrando) per una ricerca testuale completa.
 
 Chitabry vi mostrerà subito le note che compongono quell'accordo (es. DO Maggiore = DO4, MI4, SOL4).
 
-Subito dopo, si avvierà un player audio teorico per farvi ascoltare queste note:
+Subito dopo, l'algoritmo intelligente di Chitabry calcolerà le 10 migliori diteggiature fisicamente possibili per quell'accordo, ordinandole per "Difficoltà Generale" e "Estensione/Stretch" in percentuale.
+   - Scegliete il numero della forma per vederne i dettagli (posizioni dito per dito) e ascoltarne la riproduzione polifonica.
+   - All'interno del dettaglio, potrete riascoltare l'accordo o tornare alla lista delle forme.
 
-   Tasti 1-0: Suonano le singole note. La mappatura è ottimizzata per la tastiera:
-       Tasto 1: Nota più acuta (panning a sinistra).
-       Tasto 2, 3...: Note intermedie.
-       Tasto 9, 0: Note più gravi (panning a destra).
-   Q: Strum "giù" (dal grave all'acuto).
-   A: Strum "su" (dall'acuto al grave).
+Durante l'ascolto di una forma:
+   - Tasti 1-0: Suonano le singole note (1=grave, 0=acuta).
+   - Q: Pennata in giù (Strum "battere", dal grave all'acuto).
+   - A: Pennata in su (Strum "levare", dall'acuto al grave).
+   - SPAZIO: Alterna tra il suono della Chitarra e quello Sintetico.
 
------
+
 
  Metronomo
 
 Questa voce avvia il metronomo testuale avanzato integrato in Chitabry. Di seguito il manuale completo per l'utilizzo del Metronomo.
 
------
 
-# Clitronomo
 
-**Integrato in Chitabry 6.1.0**
+# metronomo
+
+Integrato in Chitabry 6.1.0
 
 Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controllabile da tastiera, scritto in Python. Progettato per musicisti, sviluppatori e chiunque preferisca la velocità e la semplicità del terminale.
 
------
 
-## Caratteristiche Principali
 
-  * **Interfaccia a Riga di Comando**: Nessuna GUI. Tutte le operazioni avvengono tramite comandi testuali, garantendo minime risorse di sistema e massima velocità.
-  * **Programmazione Avanzata**: Crea sequenze complesse dove il metronomo cambia BPM o si silenzia automaticamente a battute predefinite. Perfetto per esercizi con cambi di tempo o per studiare la propria stabilità ritmica.
-  * **Gestione di Preset**: Salva, carica, elenca e cancella facilmente le tue configurazioni preferite. I preset sono salvati in un file `clitronomo_presets.json` leggibile e facilmente modificabile.
-  * **Accessibilità**: Il programma è stato sviluppato pensando all'accessibilità. Essendo un'applicazione testuale, è pienamente compatibile con **screen reader** (come NVDA, JAWS, VoiceOver) e **display Braille**, garantendo un'esperienza utente completa a persone non vedenti e ipovedenti.
-  * **Configurazione Audio Dettagliata**: Personalizza la frequenza, il volume, la durata, l'attack e il decay per ogni suono (accento, beat e suddivisione).
+ Caratteristiche Principali
 
------
+   Interfaccia a Riga di Comando: Nessuna GUI. Tutte le operazioni avvengono tramite comandi testuali, garantendo minime risorse di sistema e massima velocità.
+   Programmazione Avanzata: Crea sequenze complesse dove il metronomo cambia BPM o si silenzia automaticamente a battute predefinite. Perfetto per esercizi con cambi di tempo o per studiare la propria stabilità ritmica.
+   Gestione di Preset: Salva, carica, elenca e cancella facilmente le tue configurazioni preferite. I preset sono salvati in un file `metronomo_presets.json` leggibile e facilmente modificabile.
+   Accessibilità: Il programma è stato sviluppato pensando all'accessibilità. Essendo un'applicazione testuale, è pienamente compatibile con screen reader (come NVDA, JAWS, VoiceOver) e display Braille, garantendo un'esperienza utente completa a persone non vedenti e ipovedenti.
+   Configurazione Audio Dettagliata: Personalizza la frequenza, il volume, la durata, l'attack e il decay per ogni suono (accento, beat e suddivisione).
 
-## Installazione
 
-Clitronomo richiede Python 3 e due librerie esterne.
+
+ Installazione
+
+metronomo richiede Python 3 e due librerie esterne.
 
 1.  Assicurati di avere Python installato.
 2.  Installa le dipendenze necessarie tramite pip:
@@ -119,82 +99,82 @@ Clitronomo richiede Python 3 e due librerie esterne.
     pip install numpy sounddevice
     ```
 
------
 
-## Utilizzo
+
+ Utilizzo
 
 Per avviare il programma, avvia Chitabry e scegli Metronomo dal menu principale, questi dovrà avere i permessi di scrittura per salvare il proprio file di impostazioni, quindi assicurati che il sistema operativo gli conceda i permessi di scrittura sulla cartella in cui lo hai salvato.
 
 All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, verrà avviato un metronomo di default a 120 BPM in 4/4.
 
------
 
-## Riferimento Comandi
 
-### Controlli di Base
+ Riferimento Comandi
+
+ Controlli di Base
 
 | Comando | Spiegazione | Esempio |
-| :--- | :--- | :--- |
+| : | : | : |
 | `g` | Avvia il metronomo. | `g` |
 | `s` | Ferma il metronomo. | `s` |
 | `i` | Mostra lo stato corrente. | `i` |
-| `x` | Resetta Clitronomo alle impostazioni di fabbrica. | `x` |
+| `x` | Resetta metronomo alle impostazioni di fabbrica. | `x` |
 | `?` | Mostra la lista dei comandi. | `?` |
 | `q` | Esce dal programma. | `q` |
 
-### Ritmo
+ Ritmo
 
 | Comando | Spiegazione | Esempio |
-| :--- | :--- | :--- |
+| : | : | : |
 | `b <bpm>` | Imposta i Beats Per Minute. | `b 120` |
 | `t <n/d>` | Imposta il tempo (es. 7/8). | `t 7/8` |
 | `0`, `1`, `2`, `3` | Attiva/Disattiva le suddivisioni (0=off, 1=ottavi, 2=sedicesimi, 3=trentaduesimi). | `2` |
 
-### Parametri Suono (`<n>` = 1:Accento, 2:Beat, 3:Sub)
+ Parametri Suono (`<n>` = 1:Accento, 2:Beat, 3:Sub)
 
 | Comando | Spiegazione | Esempio |
-| :--- | :--- | :--- |
+| : | : | : |
 | `l<n> <ms>` | Imposta la durata del suono in ms. | `l1 100` |
 | `v<n> <vol>`| Imposta il volume (0-100). | `v2 70` |
 | `f<n> <hz>` | Imposta la frequenza in Hz. | `f3 880` |
 | `a<n> <ms>` | Imposta l'attack in ms. | `a1 5` |
 | `d<n> <ms>` | Imposta il decay in ms. | `d2 50` |
 
-### Gestione Preset
+ Gestione Preset
 
 | Comando | Spiegazione | Esempio |
-| :--- | :--- | :--- |
+| : | : | : |
 | `m` | Mostra la lista dei preset salvati. | `m` |
 | `ms <nome>` | Salva la configurazione corrente come nuovo preset. | `ms Esercizio A` |
 | `ml <nome>` | Carica un preset cercandolo per nome. | `ml Esercizio` |
 | `mc <nome>` | Cancella un preset cercandolo per nome. | `mc Lento` |
 
-### Programmazione
+ Programmazione
 
 | Comando | Spiegazione | Esempio |
-| :--- | :--- | :--- |
+| : | : | : |
 | `p` | Visualizza la sequenza programmata. | `p` |
 | `pa` | Aggiunge un passo alla sequenza. Cerca di "agganciarsi" in coda. Chiede la Durata in battute. Wizard: 1(Fisso), 2(Rampa), 3(Pausa). | `pa` |
 | `pa <durata> <bpm/m>`| Inserimento 'One-Liner' ultra-rapido. Es: 'pa 8 130' (aggiunge in coda 8 battute a 130 bpm). 'pa 4 m' (4 battute mute). | `pa 8 130` |
 | `pc <battuta>`| Cancella un passo specificando la sua battuta d'inizio. | `pc 16` |
 
------
 
-## Sviluppatori
 
-  * **Gabriele Battaglia** (IZ4APU) - Concept e sviluppo principale.
-  * **Partner di Programmazione (Gemini)** - Code review, debugging e implementazione di nuove feature.
+ Sviluppatori
 
------
+   Gabriele Battaglia (IZ4APU) - Concept e sviluppo principale.
+   Partner di Programmazione (Gemini) - Code review, debugging e implementazione di nuove feature.
 
-## Idee per Sviluppi Futuri (Roadmap)
 
-  * **Pattern Ritmici**: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
-  * **Tap Tempo**: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
-  * **Supporto Suoni `.wav`**: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
-  * **Modalità "Ghost Bars"**: Aggiungere una modalità di allenamento che silenzia casualmente una o più battute per testare la stabilità ritmica dell'utente.
 
------
+ Idee per Sviluppi Futuri (Roadmap)
+
+   Pattern Ritmici: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
+   Tap Tempo: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
+   Supporto Suoni `.wav`: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
+   Modalità "Ghost Bars": Aggiungere una modalità di allenamento che silenzia casualmente una o più battute per testare la stabilità ritmica dell'utente.
+
+
 
  MidiStudy
 
@@ -212,47 +192,85 @@ Funzionamento:
 
 Visualizzatore Interattivo:
 Pensato per l'accessibilità (screen reader e Braille), mostra una battuta alla volta nel prompt.
-- **Frecce DX/SX** (o SPAZIO/B): Battuta successiva / precedente.
-- **SPAZIO**: Suona la battuta corrente.
-- **INVIO**: Avvia/Ferma la riproduzione continua (suona e avanza). Interrompibile con qualsiasi tasto.
-- **P**: Cambia il suono (Synth/Flauto o Chitarra).
-- **ESC** (o Q): Esce.
+- Frecce DX/SX (o SPAZIO/B): Battuta successiva / precedente.
+- SPAZIO: Suona la battuta corrente.
+- INVIO: Avvia/Ferma la riproduzione continua (suona e avanza). Interrompibile con qualsiasi tasto.
+- P: Cambia il suono (Synth/Flauto o Chitarra).
+- ESC (o Q): Esce.
 
 Notazione:
 - Durate: `/4` (Quarto), `/8` (Ottavo), `/16` (Sedicesimo).
 - Accordi: Note racchiuse tra parentesi quadre, es. `[DO4 MI4 SOL4]`.
 - Legature: Il simbolo `~` a fine riga indica che l'ultima nota continua nella battuta successiva.
 
------
 
- Scale
+
+  Scale
 
 Simile al Costruttore Accordi, questa è la funzione teorica per lo studio delle scale. Utilizza l'enorme archivio di `music21` per darvi accesso a migliaia di scale da tutto il mondo.
 
 Il processo:
 
 1.  Scegli la Tonica: (Es. "LA").
-2.  Scegli il Tipo di Scala: Si aprirà un menu filtrabile con un elenco sterminato (es. "Major Scale", "Melodic Minor", "Hirajoshi", "Chromatic Scale").
-       Suggerimento: Usate il filtro o l'opzione `>> Inserisci USI manualmente...` (digitando `...`) per la ricerca testuale.
+2.  Scegli il Tipo di Scala: Si aprirà un menu filtrabile (es. "Major Scale", "Melodic Minor"). Digitate `...` per la ricerca testuale libera.
 
 Chitabry vi mostrerà:
 
-1.  Le note della scala: Sia in salita (Asc) che in discesa (Desc), se sono diverse.
-2.  Ricerca Diteggiature (Scale Pathfinder): Vi chiederà di indicare una porzione di manico inserendo i limiti dei tasti separati da un trattino (es. `0-4` per la prima posizione, o `5-8`).
-    - L'algoritmo intelligente di Chitabry calcolerà tutti i percorsi fisicamente possibili per suonare quella scala nel box indicato.
-    - Vi chiederà se dare priorità alle forme classiche a blocchi ("CAGED") o alle moderne forme a "3 note per corda".
-    - Vi proporrà le 5 migliori diteggiature ordinate per "Difficoltà Generale" e "Estensione/Stretch" in percentuale.
-    - Selezionando una forma, potrete leggere la tablatura ottimizzata per screen reader (partendo dalla corda 6 a scendere), completa dell'indicazione del dito da usare (1-4) e del nome della nota esatta.
+1.  Le note della scala: Sia in salita (Asc) che in discesa (Desc).
+2.  Ricerca Diteggiature (Scale Pathfinder): Vi chiederà di indicare una porzione di manico (es. `5-8`).
+    - L'algoritmo calcolerà i percorsi ottimali, permettendovi di scegliere tra forme "CAGED" o "3 note per corda".
+    - Vi proporrà le migliori diteggiature. Selezionando un'opzione, leggerete la tablatura ottimizzata per screen reader (Corda 6 a scendere), con indicazione di tasti, dita e nomi delle note:
+      Es: `Corda 6: tasti (0, 2, 3), dita (0, 2, 3), note (Mi2, Fa#2, Sol2);`
+    - Digitate `p` (Prosegui) o premete ESC per passare all'esercizio audio.
 
-Infine, chiudendo il menu delle diteggiature (premendo Invio), si aprirà il Menu Esercizio Scala per allenare l'orecchio:
+Menu Esercizio Scala:
+   - A / D: Ascolta la scala (o qualsiasi altro tasto per riascoltare).
+   - Tasti 1-8: Suonano le singole note della scala appena generata.
+   - L: Attiva/Disattiva il loop.
+   - SPAZIO: Alterna tra suono Chitarra e Sintetico.
+   - B: Cambia i BPM per l'esercizio.
 
-   A: Ascolta la scala ascendente.
-   D: Ascolta la scala discendente.
-   L: Attiva il loop (continua a suonare A o D finché non premete 'L').
-   SPAZIO: Alterna dinamicamente tra il suono synth/flauto e l'arpeggio di chitarra (Karplus-Strong).
-   B: Cambia i BPM (Battiti Per Minuto) per l'esercizio.
 
------
+
+ Tastiera
+
+Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 voci.
+
+- Layout: Mappato sulla tastiera QWERTY Italiana.
+  - Riga inferiore (`Z`, `X`, `C`...): Ottava base (Naturali e relativi Diesis sui tasti `S`, `D`, `G`...).
+  - Riga superiore (`Q`, `W`, `E`...): Ottava successiva.
+  - SHIFT: Se premuto insieme ai tasti, sposta l'esecuzione di un'ulteriore ottava (sotto per la riga Z, sopra per la riga Q).
+- Controlli:
+  - F1 - F8: Impostano istantaneamente l'ottava base (da 1 a 8).
+  - SPAZIO: Cambia il tipo di suono (Chitarra / Sintetico).
+  - ESC: Torna al menu principale.
+- Display Braille: Il prompt viene sovrascritto in tempo reale mostrando la nota suonata, la frequenza in Hz e l'ottava base attuale, restando sempre entro i 40 caratteri.
+
+
+
+ Gioca col suono
+
+Una nuova e divertente modalità per l'ear training (allenamento dell'orecchio musicale).
+Selezionando questa voce potrete mettere alla prova la vostra capacità di riconoscere le note o le frequenze pure "a orecchio".
+
+1. Scelta del Gioco: 
+   - Note: Il programma genera una nota MIDI casuale tra C2 (Do grave) e C7 (Do acutissimo). Vi verrà chiesto se volete includere i diesis/bemolli o giocare solo con le note naturali.
+   - Frequenze: Il programma genera una frequenza pura casuale (in Hz) all'interno dello stesso range udibile (da 65 a 2093 Hz).
+
+2. Svolgimento: 
+   Una partita è composta da 30 round. Ad ogni round ascolterete il suono bersaglio. Il prompt, estremamente compatto e ottimizzato per i display Braille, vi mostrerà il risultato del round precedente e i comandi disponibili.
+   - Premete un tasto qualsiasi per riascoltare il suono quante volte volete.
+   - Premete la Barra Spaziatrice per passare al volo dal suono del Sintetizzatore a quello della Chitarra per aiutarvi nel riconoscimento.
+   - Premete Invio quando vi sentite pronti a digitare la vostra risposta.
+   
+3. Calcolo del Punteggio:
+   - Nel gioco delle Note: Una risposta esatta vale il 100%. L'errore viene calcolato in semitoni. Ogni semitono di distanza dalla nota corretta vi farà perdere circa il 4.16% del punteggio del round (fino ad azzerarsi se vi sbagliate di oltre 2 ottave).
+   - Nel gioco delle Frequenze: Riconoscere la frequenza esatta a orecchio è difficilissimo! Se vi avvicinate entro uno scarto di 10 Hz, prenderete comunque il 100%. Da lì in poi il punteggio scende proporzionalmente fino a zero per errori superiori a 100 Hz.
+
+4. Classifica (Hall of Fame):
+   Al termine dei 30 round, vi verrà mostrata la vostra precisione media finale e il tempo impiegato per completare la sfida. Se il vostro punteggio rientra nei migliori 30 (Hall of Fame), alla fine dei 30 round vi verrà chiesto di inserire il vostro nome per l'inserimento in classifica!
+
+
 
  Impostazioni
 
@@ -261,9 +279,9 @@ Qui potete configurare alcuni parametri di Chitabry:
    Gestisci Strumenti: Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino). Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento (specificando numero di corde, nota di ogni corda vuota e numero di tasti) oppure eliminare strumenti non più usati.
    Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
    Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
-   Modifica suono 2 (Scale): Permette di cambiare i parametri del suono usato per "Scale".
+   Modifica suono 2 (Sintetico): Permette di configurare i parametri del sintetizzatore ad onda semplice.
 
------
+
 
  Nota sul manico
 
@@ -283,7 +301,7 @@ Corda 3, tasti: 12
 
 A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non "RE\"). Per cercare un diesis, digitate "RE#".
 
------
+
 
  Trova Posizione
 
@@ -299,7 +317,7 @@ Ad esempio, scrivendo `6.3` (terzo tasto della sesta corda), Chitabry risponder�
 
 Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato\!
 
------
+
 
  Guida
 
@@ -309,7 +327,7 @@ Mostra questo manuale (il file Chitabryman.txt) direttamente nell'applicazione.
 
 Salva eventuali modifiche alle impostazioni o al database accordi e chiude l'applicazione.
 
------
+
 
 Ringraziamenti.
 Per questo lavoro impegnativo ringrazio in ordine del tutto casuale, le seguenti persone e chiedo anticipatamente perdono se ne ho dimenticata qualcuna:

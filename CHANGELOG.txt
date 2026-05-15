@@ -1,6 +1,14 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.6.0 (15 maggio 2026)
+--------------------------------
+*   **Nuova Funzionalità (Minor): Gioca col Suono (Ear Training)**
+    *   Nuova modalità di gioco per allenare l'orecchio a riconoscere note musicali o frequenze pure.
+    *   30 round per partita con calcolo intelligente della precisione in base all'errore in semitoni o Hz.
+    *   Interfaccia di gioco ultra-veloce basata su tasti singoli, ottimizzata per display Braille con aggiornamento continuo su una singola riga.
+    *   Classifica (Hall of Fame) integrata che salva la precisione e il tempo impiegato nel file delle impostazioni.
+
 Versione 6.5.2 (15 maggio 2026)
 --------------------------------
 *   **UX Tastiera:** Il prompt della tastiera virtuale è stato ulteriormente accorciato (es. "C4 (261.6 Hz) (3)") per restare entro i 40 caratteri ed evitare problemi di lettura con display Braille.

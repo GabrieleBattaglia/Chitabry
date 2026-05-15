@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.5.2 del 15 maggio 2026."
+VERSIONE = "6.6.0 del 15 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -160,6 +160,7 @@ MAINMENU = {
     "Metronomo": "Avvia il Metronomo",
     "MidiStudy": "Analizza e studia file MIDI",
     "Scale": "Visualizza, esercitati e gestisci le scale",
+    "Gioca col suono": "Allena l'orecchio riconoscendo note e frequenze",
     "Impostazioni": "Configura i suoni e la notazione delle note",
     "Nota sul manico": "Trova le posizioni di una nota sul manico",
     "Trova Posizione": "Indica la nota su una corda/tasto (C.T)",
@@ -2360,17 +2361,15 @@ def PlayerGenerico():
                 suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
                 p = get_synth_params(suono_attivo_key)
                 print(f"\rSuono: {impostazioni[suono_attivo_key]['descrizione']}{' '*30}\r", end="", flush=True)
-            elif ch == '\xe0' or ch == '\x00': # Tasti speciali (F1-F8, frecce)
-                ch2 = key()
-                if ch2 == ';': base_octave = 2   # F1
-                elif ch2 == '<': base_octave = 3 # F2
-                elif ch2 == '=': base_octave = 4 # F3
-                elif ch2 == '>': base_octave = 5 # F4
-                elif ch2 == '?': base_octave = 6 # F5
-                elif ch2 == '@': base_octave = 7 # F6
-                elif ch2 == 'A': base_octave = 8 # F7
-                elif ch2 == 'B': base_octave = 9 # F8
-                else: continue
+            elif ch in ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'):
+                if ch == 'f1': base_octave = 2
+                elif ch == 'f2': base_octave = 3
+                elif ch == 'f3': base_octave = 4
+                elif ch == 'f4': base_octave = 5
+                elif ch == 'f5': base_octave = 6
+                elif ch == 'f6': base_octave = 7
+                elif ch == 'f7': base_octave = 8
+                elif ch == 'f8': base_octave = 9
                 print(f"\rOttava Base impostata a: {base_octave}{' '*30}\r", end="", flush=True)
             elif ch in KB_MAP:
                 semitones, oct_offset = KB_MAP[ch]
@@ -2407,6 +2406,17 @@ def PlayerGenerico():
     finally:
         poly_player.stop()
         print("\nUscita dal Player Generico.")
+
+def GiocaColSuono():
+    import gioca_suono
+    
+    def cb_salva(nuove_impostazioni):
+        global impostazioni, archivio_modificato
+        impostazioni = nuove_impostazioni
+        archivio_modificato = True
+        salva_impostazioni()
+        
+    gioca_suono.avvia_gioco(impostazioni, get_nota, NOTE_LATINE, NOTE_STD, NOTE_ANGLO, cb_salva)
 
 def main():
     global SCALE_CATALOG, SCALE_TYPES_DICT, USER_CHORD_DICT , archivio_modificato, impostazioni
@@ -2475,6 +2485,8 @@ def main():
             CostruttoreAccordi()
         elif scelta == "Tastiera":
             PlayerGenerico()
+        elif scelta == "Gioca col suono":
+            GiocaColSuono()
         elif scelta == "Metronomo":
             print("\nAvvio del Metronomo...")
             aspetta(0.5)

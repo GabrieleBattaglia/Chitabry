@@ -264,18 +264,17 @@ def visualizzatore_interattivo(output_lines, part):
         if not k:
             k = key().lower()
         
-        if k == chr(27) or k == 'q': sd.stop(); break
-        elif k == 'm' or k == 'n': idx = min(idx + 1, tot_righe - 1)
-        elif k == 'k' or k == 'b': idx = max(idx - 1, 0)
+        if k == chr(27) or k == 'q' or k == 'esc': sd.stop(); break
+        elif k == 'm' or k == 'n' or k == 'right' or k == 'down': idx = min(idx + 1, tot_righe - 1)
+        elif k == 'k' or k == 'b' or k == 'left' or k == 'up': idx = max(idx - 1, 0)
         elif k == ' ':
             sd.stop()
             play_battuta_audio(part, num_battuta, current_sound_type)
-        elif k == 'p': 
+        elif k == 'p':
             current_sound_type = 1 if current_sound_type == 2 else 2
             print(f"\n[Audio] Preset cambiato: {sound_names[current_sound_type]}")
             time.sleep(0.5)
-        elif k == '\r': play_continuo = True
-        
+        elif k == '\r' or k == 'enter': play_continuo = True        
     print("\nUscita visualizzatore.")
 
 def estrai_e_mostra_note(part, idx, tot, filepath):
