@@ -1,21 +1,23 @@
 {
-    "nomenclatura": "latino",
+    "nomenclatura": "anglosassone",
     "suono_1": {
         "descrizione": "Suono per accordi (Karplus-Strong Pluck)",
-        "dur_accordi": 10.0,
+        "dur_accordi": 6.0,
         "volume": 0.6,
-        "pluck_hardness": 0.18888888888888888,
-        "damping_factor": 0.998
+        "pluck_hardness": 0.4555555555555556,
+        "damping_factor": 0.996,
+        "pick_position": 0.33666666666666667,
+        "brightness": 0.7777777777777777
     },
     "suono_2": {
-        "descrizione": "Suono per scale (simil-flauto)",
-        "kind": 1,
-        "volume": 0.35,
+        "descrizione": "Suono sintetico (onda semplice)",
+        "kind": 2,
+        "volume": 0.4,
         "adsr": [
-            2.0,
             1.0,
-            90.0,
-            2.0
+            0.0,
+            100.0,
+            1.0
         ]
     },
     "chordpedia": {
@@ -3335,8 +3337,61 @@
                 "E4",
                 "A4"
             ],
-            "tasti": 17
+            "tasti": 18
         }
     },
-    "strumento_attivo": "Chitarra Standard"
+    "strumento_attivo": "Chitarra Standard",
+    "classifica_note": [
+        {
+            "nome": "Riprovo",
+            "precisione": 82.91666666666666,
+            "durata_sec": 267.0138199329376,
+            "durata_str": "04.27.013",
+            "data": "2026-05-15 15:13:54"
+        },
+        {
+            "nome": "Corsoistruttorescacc",
+            "precisione": 82.36111111111111,
+            "durata_sec": 243.83831214904785,
+            "durata_str": "04.03.838",
+            "data": "2026-05-16 08:21:08"
+        },
+        {
+            "nome": "Gabry Tentativo1",
+            "precisione": 82.22222222222221,
+            "durata_sec": 320.9204270839691,
+            "durata_str": "05.20.920",
+            "data": "2026-05-15 13:20:45"
+        },
+        {
+            "nome": "Miaooo",
+            "precisione": 78.19444444444447,
+            "durata_sec": 229.61422491073608,
+            "durata_str": "03.49.614",
+            "data": "2026-05-15 15:24:26"
+        },
+        {
+            "nome": "Gabry Tentativo1",
+            "precisione": 77.63888888888889,
+            "durata_sec": 469.2466583251953,
+            "durata_str": "07.49.246",
+            "data": "2026-05-15 13:08:34"
+        },
+        {
+            "nome": "Gabrysynth",
+            "precisione": 76.94444444444444,
+            "durata_sec": 300.3556544780731,
+            "durata_str": "05.00.355",
+            "data": "2026-05-15 18:52:57"
+        }
+    ],
+    "classifica_freq": [
+        {
+            "nome": "Gabry Tentavo1",
+            "precisione": 16.22222222222222,
+            "durata_sec": 291.86885166168213,
+            "durata_str": "04.51.868",
+            "data": "2026-05-15 13:32:18"
+        }
+    ]
 }
