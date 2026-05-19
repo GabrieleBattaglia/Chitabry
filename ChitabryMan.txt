@@ -178,24 +178,38 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
 
  MidiStudy
 
-Il nuovo modulo per l'analisi e lo studio di file MIDI. Permette di esplorare brani musicali, isolare le singole tracce (es. voce, pianoforte) e analizzarle battuta per battuta in un formato accessibile.
+Il potente modulo per l'analisi, lo studio e la conversione testuale/grafica di file MIDI e ABC. Permette di esplorare brani musicali, isolare singole tracce o selezionarne molteplici (multi-traccia) per studiarle in un formato accessibile.
 
 Funzionamento:
-1.  Chitabry cerca i file `.mid` o `.midi` nella cartella `Mine\Chitabry\midi`. Copiate qui i vostri brani!
-2.  Selezionate un file dal menu.
-3.  Scegliete una traccia da studiare.
-    - Usate l'opzione `0` per ascoltare il brano intero con il player di sistema.
-4.  Nel menu di studio traccia, potete:
-    - (a) Ascoltare l'anteprima della traccia isolata (usa il player di sistema).
-    - (e) Aprire il Visualizzatore Interattivo.
-    - (s) Salvare l'analisi completa in un file di testo `.txt`.
+1.  Chitabry cerca i file `.mid`, `.midi` o `.abc` nella cartella `Mine\Chitabry\midi`. All'avvio del programma, vi verrà notificato se ci sono file vecchi da ripulire (scadenza a 1 anno).
+2.  Selezionate un file dal menu. Verranno estratti e visualizzati immediatamente i metadati (BPM, Tempo, Tonalità).
+3.  Nel menu principale del brano potete:
+    - Ascoltare l'intero brano tramite il preciso player nativo MCI di Windows (interrompibile con ESC o Q).
+    - Trasporre globalmente il brano da -24 a +24 semitoni, con un algoritmo che impedisce l'uscita dai limiti (0-127).
+    - Cambiare globalmente i BPM.
+    - Accedere alla suite "Strumenti ABC" (se avete scaricato e configurato i tool `abcMIDI` sul vostro sistema, come `midi2abc`, `abc2midi`, `mftext`).
+    - "Scegli tracce" per isolare lo studio.
+
+Scegli Tracce (Multi-selezione):
+Vedrete l'elenco delle tracce. Digitate il numero corrispondente per selezionare/deselezionare le tracce (`[X]`). Digitate `?` per visualizzare il riepilogo delle tracce attive, oppure `0` per confermare. Le tracce selezionate verranno unite in uno speciale Mix.
+
+Azioni sulle Tracce isolate/unite:
+    - Ascolta: Riproduce solo le tracce isolate col player nativo MCI.
+    - Visualizza: Apre il Visualizzatore Interattivo testuale per display Braille.
+    - Trasponi: Cerca in automatico la tonalità con meno accidenti (diesis/bemolli) o permette l'inserimento manuale.
+    - Salva: Esporta l'analisi. Potete salvare in:
+        1. Testo (Formato Standard Chitabry)
+        2. ABC (Il formato standard mondiale ASCII per spartiti - Esportatore Nativo)
+        3. PDF (Spartito grafico ad alta qualità per vedenti - Richiede che "LilyPond" sia installato tramite Winget).
 
 Visualizzatore Interattivo:
-Pensato per l'accessibilità (screen reader e Braille), mostra una battuta alla volta nel prompt.
-- Frecce DX/SX (o SPAZIO/B): Battuta successiva / precedente.
-- SPAZIO: Suona la battuta corrente.
-- INVIO: Avvia/Ferma la riproduzione continua (suona e avanza). Interrompibile con qualsiasi tasto.
-- P: Cambia il suono (Synth/Flauto o Chitarra).
+Pensato per l'accessibilità, mostra una battuta alla volta sovrascrivendo la stessa riga (`\r`) in modo che il cursore Braille resti immobile. Il motore esegue una quantizzazione automatica (es. normalizza strani 23/48 in perfetti 1/8) e rileva dinamicamente i cambi di tempo nella battuta.
+- `Z` e `X`: Naviga indietro e avanti.
+- `+` e `-`: Aumenta o diminuisci il BPM per l'ascolto. `=` per digitare il valore esatto.
+- `T`: Trasponi al volo la traccia che stai leggendo.
+- SPAZIO: Suona l'audio generato (sintetizzatore) della battuta corrente.
+- INVIO: Avvia la riproduzione continua (suona e avanza da sola).
+- P: Cambia il suono del sintetizzatore integrato.
 - ESC (o Q): Esce.
 
 Notazione:

@@ -22,7 +22,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.6.0 del 15 maggio 2026."
+VERSIONE = "6.8.0 del 17 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -2448,7 +2448,10 @@ def main():
 
     carica_impostazioni()
     aggiorna_manico()
-    
+
+    import midistudy
+    midistudy.check_midi_folder_cleanup()
+
     strum_attivo = impostazioni.get("strumento_attivo", "Chitarra")
     print(f"\nBenvenuto in Chitabry, l'App per familiarizzare con il tuo strumento ({strum_attivo}) e studiare musica.")
     print(f"\tVersione: {VERSIONE}, di Gabriele Battaglia (IZ4APU)")

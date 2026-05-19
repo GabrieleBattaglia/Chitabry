@@ -1,7 +1,18 @@
 Chitabry - ChangeLog
 ====================
 
-Versione 6.6.0 (15 maggio 2026)
+Versione 6.8.0 (17 maggio 2026)
+--------------------------------
+*   **MidiStudy (Major Update):**
+    *   Integrazione completa con la suite esterna `abcMIDI`. Inserendo il percorso agli eseguibili (es. midi2abc, abc2midi, mftext), è possibile convertire, formattare ed estrarre dump testuali dai brani in formato `.mid` e `.abc`.
+    *   Riorganizzato il menu principale: ora le modifiche come Trasposizione e cambio BPM si applicano globalmente al brano intero.
+    *   **Selezione Multi-Traccia:** Nel menu "Scegli tracce", è ora possibile selezionare più tracce contemporaneamente digitando il loro numero (es. melodia e basso). Premendo `0` verranno unite e potranno essere ascoltate, visualizzate o esportate simultaneamente in un unico mix "cordificato".
+    *   **Export Avanzato:** Il sottomenu "Salva" ora permette di esportare la traccia selezionata non solo in testo, ma anche nel formato universale testuale `.abc` (grazie a un esportatore nativo sviluppato appositamente) e, se LilyPond è installato nel sistema, di generare automaticamente lo spartito grafico in formato `.pdf`.
+    *   **Pulizia Intelligente:** All'avvio, Chitabry controlla la cartella `midi` e avvisa l'utente se ci sono file vecchi di oltre un anno, offrendo la possibilità di eliminarli definitivamente o di aggiornarne la data di modifica per nasconderli.
+    *   Migliorata la quantizzazione delle durate frazionarie anomale (es. 23/48 -> 1/8) e i metadati BPM in fase di visualizzazione e salvataggio testuale.
+    *   Il player MCI ora ha frequenza di polling abbassata per ridurre i carichi sulla CPU, e si stoppa in modo pulito con ESC o Q senza arrestare lo script principale.
+
+Versione 6.7.1 (16 maggio 2026)
 --------------------------------
 *   **Nuova Funzionalità (Minor): Gioca col Suono (Ear Training)**
     *   Nuova modalità di gioco per allenare l'orecchio a riconoscere note musicali o frequenze pure.

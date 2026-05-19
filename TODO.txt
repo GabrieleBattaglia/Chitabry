@@ -1,7 +1,12 @@
 # Chitabry - Todo List
 # =====================
 
-## Completati Recentemente (v6.0.0 - v6.2.0)
+## Completati Recentemente (v6.0.0 - v6.8.0)
+*   [X] **MidiStudy - abcMIDI Suite:** Integrazione completa della suite C `abcMIDI` per conversioni, dump testuali e statistiche professionali su file MIDI/ABC.
+*   [X] **MidiStudy - Multi-Traccia:** Nuova interfaccia interattiva "Scegli tracce" per combinare liberamente più strumenti in un unico mix coerente.
+*   [X] **MidiStudy - Export:** Implementato esportatore nativo `.abc` e generazione spartiti PDF tramite LilyPond.
+*   [X] **MidiStudy - UX:** Quantizzazione automatica delle durate, gestione intelligente dei BPM e prompt dinamico per display Braille (`\r`).
+*   [X] **Ear Training:** Aggiunta la modalità "Gioca col Suono" con salvataggio punteggi e UI ottimizzata Braille (Fix Issue #23).
 *   [X] **Motore Audio (Major):** Nuovo Motore Polifonico con stream continuo (`sd.OutputStream`) per mixaggio indipendente delle corde in real-time (Fix Issue #9).
 *   [X] **Sintesi Veloce (KS):** Filtro IIR nativo in C (`scipy.signal.lfilter`) per il Karplus-Strong, abbattendo la latenza e aggiungendo i parametri *Posizione Plettro* e *Brillantezza*.
 *   [X] **Generatore Scale (Pathfinder):** Nuovo motore DFS per calcolare le migliori diteggiature (CAGED o 3NPS) dato un intervallo di tasti (Fix Issue #10).
@@ -9,12 +14,14 @@
 *   [X] **Metronomo - Sovrapposizioni:** Implementata la gestione interattiva delle sovrapposizioni durante la programmazione (Fix Issue #3).
 *   [X] Documentazione unificata in `ChitabryMan.txt`.
 
-## Prossimi Interventi (Bugfix & UX - Prossima Sessione)
-*   [ ] Test approfonditi sul campo: verifica e correzione di eventuali errori residui nel motore audio e nei metadati generati.
-*   [ ] Eventuali raffinamenti logici sui punteggi e sulla prioritizzazione forme per scale e accordi.
+## Piano di Sviluppo Attuale:
+1.  [X] Integrazione LilyPond per export grafico.
+2.  [X] Integrazione abcMIDI suite.
+3.  [X] Multi-selezione tracce e Mix intelligente.
+4.  [X] Pulizia automatica cartella MIDI (scadenza 1 anno).
 
 ## Prossimi Interventi (Altre funzionalità)
 *   [ ] **UI/UX Revision Generale:** Garantire che l'impaginazione di tutte le nuove interfacce resti perfettamente Braille-friendly e coerente.
 
 ---
-*Aggiornato il 14 maggio 2026*
+*Aggiornato il 17 maggio 2026*

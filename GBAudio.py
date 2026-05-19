@@ -5,7 +5,6 @@
 
 import numpy as np
 from scipy import signal
-from collections import deque
 import re
 import sounddevice as sd
 import threading
@@ -73,7 +72,8 @@ class FastGuitarSynth:
         
         # 2. Prepara l'input per il filtro IIR
         x = np.zeros(N_samples, dtype=np.float32)
-        x[:L] = excitation
+        actual_L = min(L, N_samples)
+        x[:actual_L] = excitation[:actual_L]
         
         # 3. Calcola i coefficienti del filtro Karplus-Strong
         # Eq: y[n] = x[n] + damping * ( (1-S)*y[n-L] + S*y[n-L-1] )
