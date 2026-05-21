@@ -1,0 +1,71 @@
+MidiStudy (Chitabry Engine)
+File: La solitudine.mid
+Traccia: 4/12 - Electric Piano
+BPM=68.0, Tempo=4/4, Tonalità: N/A
+Nomenclatura: ANGLOSASSONE
+========================================
+
+B01 [BPM: 68]: PAUSA /1
+B02: PAUSA /1
+B03: PAUSA /1
+B04: PAUSA 15/16 | PAUSA /16
+B05: PAUSA /1
+B06: A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | F3 /16 | D3 /8 | PAUSA /8 | Bb3 /16 | A3 /16 ~
+B07: A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | D4 /8 | PAUSA /8 | G3 /16 | D4 /16 ~
+B08: D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Bb3 /16 | G3 /16 | PAUSA 3/16 | G3 /16 | C4 /16 ~
+B09: C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | Bb3 /16 | D4 3/16 | PAUSA /16 | Bb3 /16 | A3 /16 ~
+B10: A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | F3 /16 | D3 /8 | PAUSA /8 | Bb3 /16 | A3 /16 ~
+B11: A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | A3 /16 | Bb3 /16 | D4 /8 | PAUSA /8 | G3 /16 | D4 /16 ~
+B12: D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Eb4 /16 | D4 /16 | Bb3 /16 | G3 /8 | PAUSA /8 | G3 /16 | C4 /16 ~
+B13: C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | D4 /16 | C4 /16 | PAUSA /16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 3/16
+B14: C4 /8 | Bb3 /16 | Bb3 /16 | PAUSA /16 | C4 /16 | PAUSA /16 | C4 /8 | PAUSA /16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16
+B15: C4 /8 | Bb3 /16 | Bb3 /16 | PAUSA /16 | C4 /8 | C4 3/16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16
+B16: F4 /16 | PAUSA /16 | Bb3 /16 | Bb3 /16 | PAUSA /16 | F4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | Bb3 /16 | C4 /16 | PAUSA /16 | D4 3/16
+B17: Eb4 /8 | D4 /16 | Eb4 /16 | PAUSA /16 | D4 /8 | Eb4 3/16 | PAUSA /16 | D4 /16 | Eb4 /16 | F4 3/16
+B18: C4 /8 | Bb3 /16 | Bb3 /16 | PAUSA /16 | C4 /16 | PAUSA /16 | C4 /8 | PAUSA /16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 3/16
+B19: C4 /8 | Bb3 /16 | Bb3 /16 | PAUSA /16 | C4 /16 | PAUSA /16 | C4 /8 | PAUSA /16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16
+B20: F4 /8 | Bb3 /16 | Bb3 /16 | PAUSA /16 | F4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | Bb3 /16 | C4 /16 | PAUSA /16 | D4 3/16
+B21: Eb4 /8 | D4 /16 | Eb4 /16 | PAUSA /16 | D4 /8 | Eb4 3/16 | PAUSA /16 | D4 /16 | Eb4 /16 | F4 3/16
+B22: C4 /8 | Bb3 /16 | Bb3 /8 | PAUSA 5/16 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 3/16
+B23: C4 /8 | Bb3 /16 | Bb3 3/16 | PAUSA /4 | D4 /16 | Eb4 /16 | PAUSA /16 | F4 3/16
+B24: PAUSA 5/8 | D4 /16 | Eb4 /8 | F4 /8 | PAUSA /16
+B25: PAUSA /1
+B26: C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | G#3 /16 | F3 /8 | PAUSA /8 | C#4 /16 | C4 /16 ~
+B27: C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | F4 /8 | PAUSA /8 | Bb3 /16 | F4 /16 ~
+B28: F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | C#4 /16 | Bb3 /8 | PAUSA /8 | Bb3 /16 | Eb4 /16 ~
+B29: Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | C#4 /16 | F4 /16 | PAUSA 3/16 | C#4 /16 | C4 /16 ~
+B30: C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | G#3 /16 | F3 /8 | PAUSA /8 | C#4 /16 | C4 /16 ~
+B31: C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | C4 /16 | C#4 /16 | F4 /8 | PAUSA /8 | Bb3 /16 | F4 /16 ~
+B32: F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | F#4 /16 | F4 /16 | C#4 /16 | Bb3 /8 | PAUSA /8 | G#3 /16 | Eb4 /16 ~
+B33: Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | F4 /16 | Eb4 /16 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16
+B34: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16
+B35: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16
+B36: G#4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | G#4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16 | C#4 /16 | Eb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16
+B37: F#4 /16 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | F4 /16 | PAUSA /16 | F#4 /8 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 /16 | PAUSA /8
+B38: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 3/16
+B39: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | F4 /16 | F#4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16
+B40: G#4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Bb4 3/16 | G#4 /16 | PAUSA /16 | C#4 /16 | Eb4 /16 | PAUSA /16 | F4 /16 | PAUSA /16 | F4 /16
+B41: F#4 /8 | F4 /16 | F#4 /16 | PAUSA /16 | F4 /16 | PAUSA /16 | G#4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 /8 | PAUSA /16
+B42: C5 /8 | C#5 /16 | Bb4 3/16 | PAUSA /16 | C5 /16 | C5 /16 | C#5 /8 | G#4 3/16 | PAUSA /16 | F4 /16
+B43: F#4 /8 | F4 /16 | F#4 /16 | PAUSA /16 | F4 /8 | G#4 /8 | PAUSA /16 | G#4 /16 | C#5 /8 | C5 /8 | PAUSA /16
+B44: C5 /8 | C#5 /16 | Bb4 3/16 | PAUSA /16 | C5 /16 | Eb5 /8 | C#5 /16 | G#4 /8 | PAUSA /8 | F4 /16
+B45: F#4 /8 | F4 /16 | F#4 /8 | F4 /8 | F#4 /8 | PAUSA /8 | F4 /16 | F#4 /16 | G#4 /8 | PAUSA /16
+B46: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 /8 | PAUSA /16
+B47: C5 /8 | Bb4 /16 | Bb4 /16 | PAUSA /16 | Bb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 3/16
+B48: C5 /8 | C#5 /16 | C#5 3/16 | PAUSA /16 | C#5 /16 | C5 /8 | C#5 /16 | G#4 3/16 | PAUSA /16 | F4 /16
+B49: F#4 /8 | F4 /16 | F#4 /8 | F4 /8 | F#4 /8 | PAUSA /8 | F4 /16 | F#4 /16 | G#4 /8 | PAUSA /16
+B50: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 /8 | PAUSA /16
+B51: C5 /8 | Bb4 /16 | Bb4 /16 | PAUSA /16 | Bb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 3/16
+B52: C5 /8 | C#5 /16 | C#5 3/16 | PAUSA /16 | C#5 /16 | C5 /8 | C#5 /16 | G#4 3/16 | PAUSA /16 | F4 /16
+B53: F#4 /8 | F4 /16 | F#4 /8 | F4 /8 | F#4 /8 | PAUSA /8 | F4 /16 | F#4 /16 | G#4 /8 | PAUSA /16
+B54: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 /8 | PAUSA /16
+B55: C5 /8 | Bb4 /16 | Bb4 /16 | PAUSA /16 | Bb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 3/16
+B56: C5 /8 | C#5 /16 | C#5 3/16 | PAUSA /16 | C#5 /16 | C5 /8 | C#5 /16 | G#4 3/16 | PAUSA /16 | F4 /16
+B57: F#4 /8 | F4 /16 | F#4 /8 | F4 /8 | F#4 /8 | PAUSA /8 | F4 /16 | F#4 /16 | G#4 /8 | PAUSA /16
+B58: Eb4 /8 | C#4 /16 | C#4 /16 | PAUSA /16 | Eb4 /16 | PAUSA /16 | Eb4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 /8 | PAUSA /16
+B59: C5 /8 | Bb4 /16 | Bb4 /16 | PAUSA /16 | Bb4 /16 | PAUSA /16 | F4 /8 | PAUSA /16 | G#4 /16 | C#5 /16 | PAUSA /16 | C5 3/16
+B60: C5 /8 | C#5 /16 | C#5 3/16 | PAUSA /16 | C#5 /16 | C5 /8 | C#5 /16 | G#4 3/16 | PAUSA /16 | F4 /16
+B61: F#4 /8 | F4 /16 | F#4 /8 | F4 /8 | F#4 /8 | PAUSA /8 | F4 /16 | F#4 /16 | G#4 /8 | PAUSA /16
+B62: Eb4 /8 | C#4 /16 | C#4 /3 | PAUSA 23/48
+
+Totale Battute: 62

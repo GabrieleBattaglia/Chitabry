@@ -1,0 +1,288 @@
+Header format=1 ntrks=1 division=480
+Track start
+Time=0  Time signature=6/8  MIDI-clocks/click=24  32nd-notes/24-MIDI-clocks=8
+Time=0  Key signature, sharp/flats=-2  minor=0
+Time=0  Tempo, microseconds-per-MIDI-quarter-note=500000
+Time=0  Parameter, chan=1 c1=121 c2=0
+Time=0  Program, chan=1 program=40
+Time=0  Parameter, chan=1 c1=7 c2=100
+Time=0  Parameter, chan=1 c1=10 c2=64
+Time=0  Parameter, chan=1 c1=91 c2=0
+Time=0  Parameter, chan=1 c1=93 c2=0
+Time=0  Meta event, unrecognized, type=0x21 leng=1
+Time=0  Note on, chan=1 pitch=65 vol=80
+Time=0  Parameter, chan=2 c1=121 c2=0
+Time=0  Program, chan=2 program=45
+Time=0  Parameter, chan=2 c1=7 c2=100
+Time=0  Parameter, chan=2 c1=10 c2=64
+Time=0  Parameter, chan=2 c1=91 c2=0
+Time=0  Parameter, chan=2 c1=93 c2=0
+Time=0  Meta event, unrecognized, type=0x21 leng=1
+Time=0  Parameter, chan=3 c1=121 c2=0
+Time=0  Program, chan=3 program=44
+Time=0  Parameter, chan=3 c1=7 c2=100
+Time=0  Parameter, chan=3 c1=10 c2=64
+Time=0  Parameter, chan=3 c1=91 c2=0
+Time=0  Parameter, chan=3 c1=93 c2=0
+Time=0  Meta event, unrecognized, type=0x21 leng=1
+Time=959  Note on, chan=1 pitch=65 vol=0
+Time=960  Note on, chan=1 pitch=70 vol=80
+Time=1199  Note on, chan=1 pitch=70 vol=0
+Time=1200  Note on, chan=1 pitch=74 vol=80
+Time=1439  Note on, chan=1 pitch=74 vol=0
+Time=1440  Note on, chan=1 pitch=72 vol=80
+Time=2399  Note on, chan=1 pitch=72 vol=0
+Time=2400  Note on, chan=1 pitch=68 vol=80
+Time=2639  Note on, chan=1 pitch=68 vol=0
+Time=2640  Note on, chan=1 pitch=79 vol=80
+Time=2879  Note on, chan=1 pitch=79 vol=0
+Time=2880  Note on, chan=1 pitch=77 vol=80
+Time=4319  Note on, chan=1 pitch=77 vol=0
+Time=4560  Note on, chan=1 pitch=68 vol=80
+Time=4799  Note on, chan=1 pitch=68 vol=0
+Time=4800  Note on, chan=1 pitch=75 vol=80
+Time=5039  Note on, chan=1 pitch=75 vol=0
+Time=5040  Note on, chan=1 pitch=77 vol=80
+Time=5279  Note on, chan=1 pitch=77 vol=0
+Time=5280  Note on, chan=1 pitch=79 vol=80
+Time=5519  Note on, chan=1 pitch=79 vol=0
+Time=5520  Note on, chan=1 pitch=75 vol=80
+Time=5759  Note on, chan=1 pitch=75 vol=0
+Time=5760  Note on, chan=1 pitch=77 vol=80
+Time=6479  Note on, chan=1 pitch=77 vol=0
+Time=6480  Note on, chan=1 pitch=75 vol=80
+Time=7199  Note on, chan=1 pitch=75 vol=0
+Time=7200  Note on, chan=1 pitch=74 vol=80
+Time=7919  Note on, chan=1 pitch=74 vol=0
+Time=7920  Note on, chan=1 pitch=74 vol=80
+Time=8159  Note on, chan=1 pitch=74 vol=0
+Time=8160  Note on, chan=1 pitch=70 vol=80
+Time=8399  Note on, chan=1 pitch=70 vol=0
+Time=8400  Note on, chan=1 pitch=74 vol=80
+Time=8639  Note on, chan=1 pitch=74 vol=0
+Time=8640  Note on, chan=1 pitch=72 vol=80
+Time=10079  Note on, chan=1 pitch=72 vol=0
+Time=10080  Note on, chan=1 pitch=65 vol=80
+Time=11039  Note on, chan=1 pitch=65 vol=0
+Time=11040  Note on, chan=1 pitch=70 vol=80
+Time=11279  Note on, chan=1 pitch=70 vol=0
+Time=11280  Note on, chan=1 pitch=74 vol=80
+Time=11519  Note on, chan=1 pitch=74 vol=0
+Time=11520  Note on, chan=1 pitch=72 vol=80
+Time=12479  Note on, chan=1 pitch=72 vol=0
+Time=12480  Note on, chan=1 pitch=68 vol=80
+Time=12719  Note on, chan=1 pitch=68 vol=0
+Time=12720  Note on, chan=1 pitch=79 vol=80
+Time=12959  Note on, chan=1 pitch=79 vol=0
+Time=12960  Note on, chan=1 pitch=77 vol=80
+Time=14399  Note on, chan=1 pitch=77 vol=0
+Time=14640  Note on, chan=1 pitch=68 vol=80
+Time=14879  Note on, chan=1 pitch=68 vol=0
+Time=14880  Note on, chan=1 pitch=75 vol=80
+Time=15119  Note on, chan=1 pitch=75 vol=0
+Time=15120  Note on, chan=1 pitch=77 vol=80
+Time=15359  Note on, chan=1 pitch=77 vol=0
+Time=15360  Note on, chan=1 pitch=79 vol=80
+Time=15599  Note on, chan=1 pitch=79 vol=0
+Time=15600  Note on, chan=1 pitch=75 vol=80
+Time=15839  Note on, chan=1 pitch=75 vol=0
+Time=15840  Note on, chan=1 pitch=77 vol=80
+Time=16559  Note on, chan=1 pitch=77 vol=0
+Time=16560  Note on, chan=1 pitch=75 vol=80
+Time=17279  Note on, chan=1 pitch=75 vol=0
+Time=17280  Note on, chan=1 pitch=74 vol=80
+Time=17999  Note on, chan=1 pitch=74 vol=0
+Time=18000  Note on, chan=1 pitch=74 vol=80
+Time=18239  Note on, chan=1 pitch=74 vol=0
+Time=18240  Note on, chan=1 pitch=70 vol=80
+Time=18479  Note on, chan=1 pitch=70 vol=0
+Time=18480  Note on, chan=1 pitch=74 vol=80
+Time=18719  Note on, chan=1 pitch=74 vol=0
+Time=18720  Note on, chan=1 pitch=72 vol=80
+Time=20159  Note on, chan=1 pitch=72 vol=0
+Time=20160  Key signature, sharp/flats=2  minor=0
+Time=20160  Note on, chan=1 pitch=81 vol=80
+Time=21599  Note on, chan=1 pitch=81 vol=0
+Time=21600  Note on, chan=1 pitch=78 vol=80
+Time=22559  Note on, chan=1 pitch=78 vol=0
+Time=22560  Note on, chan=1 pitch=74 vol=80
+Time=22799  Note on, chan=1 pitch=74 vol=0
+Time=22800  Note on, chan=1 pitch=83 vol=80
+Time=23039  Note on, chan=1 pitch=83 vol=0
+Time=23040  Note on, chan=1 pitch=81 vol=80
+Time=24479  Note on, chan=1 pitch=81 vol=0
+Time=24480  Note on, chan=1 pitch=78 vol=80
+Time=25919  Note on, chan=1 pitch=78 vol=0
+Time=25920  Note on, chan=1 pitch=81 vol=80
+Time=26639  Note on, chan=1 pitch=81 vol=0
+Time=26640  Note on, chan=1 pitch=83 vol=80
+Time=27359  Note on, chan=1 pitch=83 vol=0
+Time=27360  Note on, chan=1 pitch=85 vol=80
+Time=28079  Note on, chan=1 pitch=85 vol=0
+Time=28080  Note on, chan=1 pitch=83 vol=80
+Time=28799  Note on, chan=1 pitch=83 vol=0
+Time=28800  Note on, chan=1 pitch=81 vol=80
+Time=29039  Note on, chan=1 pitch=81 vol=0
+Time=29040  Note on, chan=1 pitch=74 vol=80
+Time=29279  Note on, chan=1 pitch=74 vol=0
+Time=29280  Note on, chan=1 pitch=81 vol=80
+Time=29519  Note on, chan=1 pitch=81 vol=0
+Time=29520  Note on, chan=1 pitch=79 vol=80
+Time=31679  Note on, chan=1 pitch=79 vol=0
+Time=31680  Key signature, sharp/flats=-2  minor=0
+Time=31680  Note on, chan=1 pitch=77 vol=80
+Time=32639  Note on, chan=1 pitch=77 vol=0
+Time=32640  Note on, chan=1 pitch=70 vol=80
+Time=32879  Note on, chan=1 pitch=70 vol=0
+Time=32880  Note on, chan=1 pitch=74 vol=80
+Time=33119  Note on, chan=1 pitch=74 vol=0
+Time=33120  Note on, chan=1 pitch=72 vol=80
+Time=34079  Note on, chan=1 pitch=72 vol=0
+Time=34080  Note on, chan=1 pitch=68 vol=80
+Time=34319  Note on, chan=1 pitch=68 vol=0
+Time=34320  Note on, chan=1 pitch=79 vol=80
+Time=34559  Note on, chan=1 pitch=79 vol=0
+Time=34560  Note on, chan=1 pitch=77 vol=80
+Time=35999  Note on, chan=1 pitch=77 vol=0
+Time=36240  Note on, chan=1 pitch=68 vol=80
+Time=36479  Note on, chan=1 pitch=68 vol=0
+Time=36480  Note on, chan=1 pitch=75 vol=80
+Time=36719  Note on, chan=1 pitch=75 vol=0
+Time=36720  Note on, chan=1 pitch=77 vol=80
+Time=36959  Note on, chan=1 pitch=77 vol=0
+Time=36960  Note on, chan=1 pitch=79 vol=80
+Time=37199  Note on, chan=1 pitch=79 vol=0
+Time=37200  Note on, chan=1 pitch=75 vol=80
+Time=37439  Note on, chan=1 pitch=75 vol=0
+Time=37440  Note on, chan=1 pitch=77 vol=80
+Time=38159  Note on, chan=1 pitch=77 vol=0
+Time=38160  Note on, chan=1 pitch=75 vol=80
+Time=38879  Note on, chan=1 pitch=75 vol=0
+Time=38880  Note on, chan=1 pitch=74 vol=80
+Time=39839  Note on, chan=1 pitch=74 vol=0
+Time=39840  Note on, chan=1 pitch=70 vol=80
+Time=40079  Note on, chan=1 pitch=70 vol=0
+Time=40080  Note on, chan=1 pitch=74 vol=80
+Time=40319  Note on, chan=1 pitch=74 vol=0
+Time=40320  Note on, chan=1 pitch=72 vol=80
+Time=41759  Note on, chan=1 pitch=72 vol=0
+Time=41760  Key signature, sharp/flats=5  minor=0
+Time=41760  Note on, chan=1 pitch=78 vol=80
+Time=43199  Note on, chan=1 pitch=78 vol=0
+Time=43200  Note on, chan=1 pitch=75 vol=80
+Time=44159  Note on, chan=1 pitch=75 vol=0
+Time=44160  Note on, chan=1 pitch=71 vol=80
+Time=44399  Note on, chan=1 pitch=71 vol=0
+Time=44400  Note on, chan=1 pitch=80 vol=80
+Time=44639  Note on, chan=1 pitch=80 vol=0
+Time=44640  Note on, chan=1 pitch=78 vol=80
+Time=46079  Note on, chan=1 pitch=78 vol=0
+Time=46080  Note on, chan=1 pitch=75 vol=80
+Time=47519  Note on, chan=1 pitch=75 vol=0
+Time=47520  Note on, chan=1 pitch=78 vol=80
+Time=48239  Note on, chan=1 pitch=78 vol=0
+Time=48240  Note on, chan=1 pitch=80 vol=80
+Time=48959  Note on, chan=1 pitch=80 vol=0
+Time=48960  Note on, chan=1 pitch=82 vol=80
+Time=49679  Note on, chan=1 pitch=82 vol=0
+Time=49680  Note on, chan=1 pitch=80 vol=80
+Time=50399  Note on, chan=1 pitch=80 vol=0
+Time=50400  Note on, chan=1 pitch=78 vol=80
+Time=50639  Note on, chan=1 pitch=78 vol=0
+Time=50640  Note on, chan=1 pitch=71 vol=80
+Time=50879  Note on, chan=1 pitch=71 vol=0
+Time=50880  Note on, chan=1 pitch=78 vol=80
+Time=51119  Note on, chan=1 pitch=78 vol=0
+Time=51120  Note on, chan=1 pitch=76 vol=80
+Time=53279  Note on, chan=1 pitch=76 vol=0
+Time=53280  Key signature, sharp/flats=0  minor=0
+Time=53280  Note on, chan=1 pitch=76 vol=80
+Time=54239  Note on, chan=1 pitch=76 vol=0
+Time=54240  Note on, chan=1 pitch=74 vol=80
+Time=54479  Note on, chan=1 pitch=74 vol=0
+Time=54480  Note on, chan=1 pitch=72 vol=80
+Time=54719  Note on, chan=1 pitch=72 vol=0
+Time=54720  Note on, chan=1 pitch=74 vol=80
+Time=55679  Note on, chan=1 pitch=74 vol=0
+Time=55680  Note on, chan=1 pitch=69 vol=80
+Time=55919  Note on, chan=1 pitch=69 vol=0
+Time=55920  Note on, chan=1 pitch=78 vol=80
+Time=56159  Note on, chan=1 pitch=78 vol=0
+Time=56160  Note on, chan=1 pitch=76 vol=80
+Time=56399  Note on, chan=1 pitch=76 vol=0
+Time=56640  Note on, chan=1 pitch=72 vol=80
+Time=56879  Note on, chan=1 pitch=72 vol=0
+Time=56880  Note on, chan=1 pitch=74 vol=80
+Time=59039  Note on, chan=1 pitch=74 vol=0
+Time=59040  Note on, chan=1 pitch=76 vol=80
+Time=59759  Note on, chan=1 pitch=76 vol=0
+Time=59760  Note on, chan=1 pitch=78 vol=80
+Time=60479  Note on, chan=1 pitch=78 vol=0
+Time=60480  Note on, chan=1 pitch=79 vol=80
+Time=61199  Note on, chan=1 pitch=79 vol=0
+Time=61200  Note on, chan=1 pitch=77 vol=80
+Time=61919  Note on, chan=1 pitch=77 vol=0
+Time=61920  Note on, chan=1 pitch=77 vol=80
+Time=62159  Note on, chan=1 pitch=77 vol=0
+Time=62160  Note on, chan=1 pitch=76 vol=80
+Time=62399  Note on, chan=1 pitch=76 vol=0
+Time=62400  Note on, chan=1 pitch=72 vol=80
+Time=62639  Note on, chan=1 pitch=72 vol=0
+Time=62640  Note on, chan=1 pitch=74 vol=80
+Time=63599  Note on, chan=1 pitch=74 vol=0
+Time=63600  Note on, chan=1 pitch=81 vol=80
+Time=63839  Note on, chan=1 pitch=81 vol=0
+Time=63840  Note on, chan=1 pitch=86 vol=80
+Time=64079  Note on, chan=1 pitch=86 vol=0
+Time=64800  Note on, chan=1 pitch=62 vol=80
+Time=65759  Note on, chan=1 pitch=62 vol=0
+Time=65760  Note on, chan=1 pitch=67 vol=80
+Time=65999  Note on, chan=1 pitch=67 vol=0
+Time=66000  Note on, chan=1 pitch=71 vol=80
+Time=66239  Note on, chan=1 pitch=71 vol=0
+Time=66240  Note on, chan=1 pitch=69 vol=80
+Time=67199  Note on, chan=1 pitch=69 vol=0
+Time=67200  Note on, chan=1 pitch=65 vol=80
+Time=67439  Note on, chan=1 pitch=65 vol=0
+Time=67440  Note on, chan=1 pitch=76 vol=80
+Time=67679  Note on, chan=1 pitch=76 vol=0
+Time=67680  Note on, chan=1 pitch=74 vol=80
+Time=69119  Note on, chan=1 pitch=74 vol=0
+Time=69360  Note on, chan=1 pitch=65 vol=80
+Time=69599  Note on, chan=1 pitch=65 vol=0
+Time=69600  Note on, chan=1 pitch=72 vol=80
+Time=69839  Note on, chan=1 pitch=72 vol=0
+Time=69840  Note on, chan=1 pitch=74 vol=80
+Time=70079  Note on, chan=1 pitch=74 vol=0
+Time=70080  Note on, chan=1 pitch=76 vol=80
+Time=70319  Note on, chan=1 pitch=76 vol=0
+Time=70320  Note on, chan=1 pitch=72 vol=80
+Time=70559  Note on, chan=1 pitch=72 vol=0
+Time=70560  Note on, chan=1 pitch=74 vol=80
+Time=71279  Note on, chan=1 pitch=74 vol=0
+Time=71280  Note on, chan=1 pitch=76 vol=80
+Time=71999  Note on, chan=1 pitch=76 vol=0
+Time=72000  Note on, chan=1 pitch=77 vol=80
+Time=72719  Note on, chan=1 pitch=77 vol=0
+Time=72720  Note on, chan=1 pitch=75 vol=80
+Time=73439  Note on, chan=1 pitch=75 vol=0
+Time=73440  Note on, chan=1 pitch=79 vol=80
+Time=74159  Note on, chan=1 pitch=79 vol=0
+Time=74160  Note on, chan=1 pitch=55 vol=80
+Time=74160  Note on, chan=1 pitch=67 vol=80
+Time=74399  Note on, chan=1 pitch=55 vol=0
+Time=74399  Note on, chan=1 pitch=67 vol=0
+Time=74400  Note on, chan=1 pitch=55 vol=80
+Time=74400  Note on, chan=1 pitch=67 vol=80
+Time=74639  Note on, chan=1 pitch=55 vol=0
+Time=74639  Note on, chan=1 pitch=67 vol=0
+Time=74640  Note on, chan=1 pitch=55 vol=80
+Time=74640  Note on, chan=1 pitch=67 vol=80
+Time=74879  Note on, chan=1 pitch=55 vol=0
+Time=74879  Note on, chan=1 pitch=67 vol=0
+Time=74880  Note on, chan=1 pitch=55 vol=80
+Time=74880  Note on, chan=1 pitch=67 vol=80
+Time=75119  Note on, chan=1 pitch=55 vol=0
+Time=75119  Note on, chan=1 pitch=67 vol=0
+Time=75120  Meta event, end of track
+Track end

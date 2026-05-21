@@ -1,0 +1,29 @@
+DIRETTIVE DI SVILUPPO: PLAYER MIDI PYTHON CLI (WINDOWS 11)
+1. Scopo del Progetto
+Sviluppare un player MIDI a riga di comando in Python. Il software deve leggere un file Standard MIDI (.mid), estrarre l'elenco delle tracce, consentire l'attivazione/disattivazione statica delle stesse e avviare la riproduzione. Il target operativo è Windows 11. Il generatore sonoro è VirtualMIDISynth, già configurato come default MIDI Out di sistema.
+2. Vincolo Architetturale Critico (Gestione del Tempo)
+È severamente vietato utilizzare il generatore di playback interno della libreria Python (es. il metodo play() di mido combinato con python-rtmidi). Il thread scheduler di Windows combinato con il Global Interpreter Lock (GIL) di Python induce fluttuazioni temporali (jitter) inaccettabili tramite time.sleep(), compromettendo la sincronia musicale. Il carico di lettura e temporizzazione dei messaggi MIDI deve essere delegato interamente al sottosistema multimediale nativo C/C++ di Windows (API MCI).
+3. Librerie Richieste
+• 
+mido: Esclusivamente per il parsing del file originale, l'estrazione dei metadati e il routing dei dati nel nuovo file.
+• 
+ctypes: Per interfacciarsi con la libreria di sistema winmm.dll.
+• 
+os, time: Per la gestione del file system e del thread idle.
+4. Flusso Logico di Esecuzione
+• 
+FASE A (Analisi): Caricare il file con mido. Iterare le tracce per individuare i MetaMessage di tipo 'track_name'. Esporre all'utente un indice numerico e il nome della traccia.
+• 
+FASE B (Filtraggio): Acquisire l'input utente per le tracce da attivare. Generare in memoria un nuovo oggetto MidiFile. Copiare in esso rigorosamente la Traccia 0 (contenente la tempo map) e le tracce selezionate dall'utente.
+• 
+FASE C (Preparazione): Salvare l'oggetto filtrato come file .mid temporaneo sul file system locale.
+• 
+FASE D (Playback MCI): Invocare ctypes.windll.winmm.mciSendStringW.
+1. 
+Inviare il comando di apertura: open "percorso_file_temporaneo" type sequencer alias midi_player.
+2. 
+Inviare il comando di esecuzione: play midi_player. L'API instradera in automatico e con precisione al millisecondo gli eventi verso VirtualMIDISynth.
+• 
+FASE E (Idle e Chiusura): Mantenere il main thread di Python in attesa (time.sleep() calcolato sulla lunghezza totale in secondi estratta da mido) all'interno di un blocco try/except per catturare il KeyboardInterrupt.
+• 
+FASE F (Pulizia): Al termine naturale o all'interruzione forzata, inviare i comandi MCI stop midi_player e close midi_player. Eliminare il file temporaneo dal disco.

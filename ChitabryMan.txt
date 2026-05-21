@@ -1,8 +1,8 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 7, di venerdì 15 maggio 2026.
+L'ultima revisione di questo documento e' la numero 8, di mercoledì 20 maggio 2026.
 A cura di Gabriele Battaglia.
 
-Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 2.5 Pro, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
+Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 3.5 Flash, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
 Nota: dalla versione 4 in poi, l'orizzonte di Chitabry si è notevolmente allargato. Grazie alla potente libreria `music21`, ora è un vero e proprio coltellino svizzero per la teoria musicale. La chitarra è un'opzione di visualizzazione, ma Chitabry vi potrà essere molto utile per studiare, costruire e ascoltare accordi e scale complesse, oltre che per esercitarvi live con il vostro strumento usando il prezioso metronomo.
 
@@ -65,7 +65,20 @@ Durante l'ascolto di una forma:
 
 
 
- Metronomo
+  Flauto
+ 
+Questa funzione permette di consultare in modo rapido e interattivo le diteggiature per il Flauto Traverso.
+ 
+Il processo:
+1. All'avvio della funzione viene mostrata una legenda dettagliata delle chiavi per la mano sinistra (MS) e per la mano destra (MD).
+2. Viene richiesto l'inserimento dell'ottava e della nota desiderata (es. '2 FA#', '1 SIb', '3 DO') oppure semplicemente l'invio vuoto per uscire e tornare al menu principale.
+   - Le ottave valide vanno da 1 a 4 (la quarta ottava supporta solo DO e RE).
+   - Il formato della nota si adegua automaticamente alla nomenclatura scelta nelle Impostazioni (latina o anglosassone).
+3. Chitabry mostrerà la diteggiatura esatta (dita da premere per ciascuna mano), fornendo eventuali consigli e descrivendo le posizioni alternative consigliate per quella specifica nota.
+
+
+
+  Metronomo
 
 Questa voce avvia il metronomo testuale avanzato integrato in Chitabry. Di seguito il manuale completo per l'utilizzo del Metronomo.
 

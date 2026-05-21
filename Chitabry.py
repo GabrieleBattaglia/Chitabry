@@ -1,8 +1,9 @@
-# Chitabry - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 2.5 Pro
+# Chitabry - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 3.5 Flash
 # Data concepimento: venerdì 7 febbraio 2020.
 # 28 giugno 2024 copiato su Github
 # 22 ottobre 2025, versione 4 con importante refactoring
 # 7 maggio 2026, versione 4.9 con supporto multi-strumento
+# 20 maggio 2026, versione 6.8.1 - correzione chiavi menu costruttore accordi
 
 from time import sleep as aspetta
 from music21 import pitch, scale, harmony
@@ -16,13 +17,12 @@ import json
 import re
 import inspect
 import clitronomo
-import midistudy
 import GBAudio
 from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.8.0 del 17 maggio 2026."
+VERSIONE = "6.8.1 del 20 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -2237,8 +2237,7 @@ def CostruttoreAccordi():
             tab_menu_list.append("x" if tab[j] == -1 else str(tab[j]))
         
         tab_titolo = "-".join(tab_menu_list)
-        # Pad con spazio se a singola cifra, così ' 1' viene prima di '10' nell'ordinamento testuale.
-        chiave_menu = f"{i+1:2d}"
+        chiave_menu = str(i)
         
         dettagli = f"Tablatura (dalla corda più grave): {' '.join(tab_str)}\n"
         dettagli += f"Difficoltà Generale: {meta['difficolta_score_perc']}% | Estensione: {meta['difficolta_stretch_perc']}% ({meta['stretch_tasti']} tasti)\n"
@@ -2266,9 +2265,8 @@ def CostruttoreAccordi():
     else:
         while True:
             print(f"\n--- Le {top_n} migliori diteggiature per {nome_accordo_display} ---")
-            # Ordiniamo le opzioni per numero (1, 2, 3...) per evitare che l'opzione 10 finisca a caso
             menu_ordinato = dict(sorted(menu_diteggiature.items(), key=lambda item: int(item[0])))
-            scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero (es. 1) per ascoltare: ")
+            scelta_tab = menu(d=menu_ordinato, keyslist=True, show=True, numbered=False, ntf="Scelta non valida", p="Scegli il numero (es. 0) per ascoltare: ")
             
             if scelta_tab is None:
                 break

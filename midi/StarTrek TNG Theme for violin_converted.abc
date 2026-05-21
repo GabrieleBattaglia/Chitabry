@@ -1,0 +1,63 @@
+X: 1
+T: from E:\git\Mine\Chitabry\midi\StarTrek TNG Theme for violin.mid
+M: 6/8
+L: 1/8
+Q:1/4=120
+K:C % 0 sharps
+V:1
+%%MIDI program 40
+%%MIDI program 45
+%%MIDI program 44
+F4^Ad| \
+c4^G=g| \
+f6| \
+z^G^d f=gd|
+f3 ^d3| \
+d3 d^Ad| \
+c6| \
+F4^Ad|
+c4^G=g| \
+f6| \
+z^G^d f=gd| \
+f3 ^d3|
+d3 d^Ad| \
+c6| \
+a6| \
+^f4db|
+a6| \
+^f6| \
+a3 b3| \
+^c'3 b3|
+ada g3-| \
+g6| \
+f4^Ad| \
+c4^G=g|
+f6| \
+z^G^d f=gd| \
+f3 ^d3| \
+d4^Ad|
+c6| \
+^f6| \
+^d4B^g| \
+^f6|
+^d6| \
+^f3 ^g3| \
+^a3 ^g3| \
+^fBf e3-|
+e6| \
+e4dc| \
+d4A^f| \
+ezc d3-|
+d6| \
+e3 ^f3| \
+g3 f3| \
+fec d3-|
+dad' z3| \
+D4GB| \
+A4Fe| \
+d6|
+zFc dec| \
+d3 e3| \
+f3 ^d3| \
+g3 [GG,][GG,][GG,]|
+[GG,]
