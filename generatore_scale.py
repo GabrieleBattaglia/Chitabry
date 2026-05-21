@@ -74,15 +74,11 @@ class ScalePathfinder:
                     dfs(midi_idx + 1, current_path)
                     current_path.pop()
                 else:
-                    last_pos = current_path[-1]
-                    # Vincolo fisico: per salire di pitch, 
-                    # la corda deve essere uguale o più acuta (indice maggiore o uguale)
-                    if cand['string'] >= last_pos['string']:
-                        # Se cambia corda, non dovrebbe saltare corde se non necessario,
-                        # ma le scale normali non lo fanno. Accettiamo string >= last_string
-                        current_path.append(cand)
-                        dfs(midi_idx + 1, current_path)
-                        current_path.pop()
+                    # Rimosso il vincolo rigido che impedisce di tornare a corde inferiori (più gravi).
+                    # Qualsiasi combinazione di corde all'interno del box è ora considerata valida.
+                    current_path.append(cand)
+                    dfs(midi_idx + 1, current_path)
+                    current_path.pop()
 
         dfs(0, [])
         
@@ -96,6 +92,21 @@ class ScalePathfinder:
 
     def _score_and_finger_path(self, path, min_fret, max_fret, priorita_caged):
         score = 1000
+        
+        # Valutazione fluidità passaggi di corda consecutivi
+        for i in range(len(path) - 1):
+            p1 = path[i]
+            p2 = path[i+1]
+            diff_string = p2['string'] - p1['string']
+            
+            # Se si torna su una corda più grave (arretramento)
+            if diff_string < 0:
+                score += diff_string * 150  # diff_string è negativo, quindi sottrae
+                
+            # Se si saltano corde (differenza assoluta > 1)
+            dist_string = abs(diff_string)
+            if dist_string > 1:
+                score -= (dist_string - 1) * 100
         
         notes_per_string = {s: 0 for s in range(self.model.num_strings)}
         open_strings = 0

@@ -208,52 +208,67 @@ class AccordoSolver:
         has_barre = False
         
         if tasti_premuti_idx:
-            corde_per_tasto = {}
-            for i in tasti_premuti_idx:
-                t = tasti[i]
-                if t not in corde_per_tasto:
-                    corde_per_tasto[t] = []
-                corde_per_tasto[t].append(i)
+            if len(tasti_premuti_idx) > 4:
+                min_tasto = min([tasti[i] for i in tasti_premuti_idx])
                 
-            min_tasto = min(corde_per_tasto.keys())
-            dito_corrente = 1
-            
-            for t in sorted(corde_per_tasto.keys()):
-                corde = sorted(corde_per_tasto[t])
-                
-                # Check barré sul tasto minimo (solo se ci sono > 4 corde premute, che rende il barré obbligatorio)
-                if t == min_tasto and len(corde) >= 2 and len(tasti_premuti_idx) > 4:
+                # Assegnazione delle note al tasto minimo (Dito 1)
+                corde_min_tasto = [i for i in tasti_premuti_idx if tasti[i] == min_tasto]
+                if len(corde_min_tasto) >= 2:
                     has_barre = True
-                    barre_fret = t
-                    for c in corde:
-                        diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} (Barré al tasto {t})"
-                    dito_corrente += 1
+                    barre_fret = min_tasto
+                    for c in corde_min_tasto:
+                        diteggiatura_raw[f"C{c}"] = f"Dito 1 (Barré al tasto {min_tasto})"
+                else:
+                    for c in corde_min_tasto:
+                        diteggiatura_raw[f"C{c}"] = f"Dito 1 al tasto {min_tasto}"
                 
-                # Check piccolo barré su tasti superiori (deve partire dal cantino, index 5)
-                elif 5 in corde and len(tasti_premuti_idx) > 4:
-                    mini_barre_corde = []
-                    for c in range(5, -1, -1):
-                        if c in corde:
-                            mini_barre_corde.append(c)
-                        else:
+                # Note rimanenti (tasto > min_tasto)
+                rimanenti_idx = [i for i in tasti_premuti_idx if tasti[i] > min_tasto]
+                dito_corrente = 2
+                i = 0
+                while i < len(rimanenti_idx):
+                    curr_idx = rimanenti_idx[i]
+                    curr_tasto = tasti[curr_idx]
+                    
+                    gruppo = [curr_idx]
+                    j = i + 1
+                    while j < len(rimanenti_idx):
+                        next_idx = rimanenti_idx[j]
+                        if tasti[next_idx] != curr_tasto:
                             break
                             
-                    if len(mini_barre_corde) >= 2:
-                        for c in reversed(mini_barre_corde):
-                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} (Piccolo barré al tasto {t})"
-                        dito_corrente += 1
-                        
-                        for c in corde:
-                            if c not in mini_barre_corde:
-                                diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {t}"
-                                dito_corrente += 1
-                    else:
-                        for c in corde:
-                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {t}"
-                            dito_corrente += 1
+                        ostacolo = False
+                        for k in range(curr_idx + 1, next_idx):
+                            if tasti[k] > 0 and tasti[k] != curr_tasto:
+                                ostacolo = True
+                                break
+                        if ostacolo:
+                            break
+                            
+                        gruppo.append(next_idx)
+                        j += 1
                     
-                # Dita separate
-                else:
+                    is_mini_barre = len(gruppo) >= 2
+                    for c in gruppo:
+                        if is_mini_barre:
+                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} (Piccolo barré al tasto {curr_tasto})"
+                        else:
+                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {curr_tasto}"
+                    
+                    dito_corrente += 1
+                    i = j
+            else:
+                # Caso standard con <= 4 tasti premuti: assegnazione sequenziale
+                corde_per_tasto = {}
+                for i in tasti_premuti_idx:
+                    t = tasti[i]
+                    if t not in corde_per_tasto:
+                        corde_per_tasto[t] = []
+                    corde_per_tasto[t].append(i)
+                
+                dito_corrente = 1
+                for t in sorted(corde_per_tasto.keys()):
+                    corde = sorted(corde_per_tasto[t])
                     for c in corde:
                         diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {t}"
                         dito_corrente += 1

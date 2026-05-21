@@ -122,8 +122,22 @@ def avvia_gioco(impostazioni, get_nota, NOTE_LATINE, NOTE_STD, NOTE_ANGLO, on_sa
                         # Translate to std
                         if impostazioni['nomenclatura'] == 'latino':
                             mappa_inversa = dict(zip(NOTE_LATINE, NOTE_STD))
+                            mappa_inversa.update({
+                                'REB': 'C#',
+                                'MIB': 'D#',
+                                'SOLB': 'F#',
+                                'LAB': 'G#',
+                                'SIB': 'A#'
+                            })
                         else:
                             mappa_inversa = dict(zip(NOTE_ANGLO, NOTE_STD))
+                            mappa_inversa.update({
+                                'DB': 'C#',
+                                'EB': 'D#',
+                                'GB': 'F#',
+                                'AB': 'G#',
+                                'BB': 'A#'
+                            })
                             
                         if nota_nome not in mappa_inversa:
                             print(f"Nota non valida in {impostazioni['nomenclatura']}.")

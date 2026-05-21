@@ -4,6 +4,9 @@
 # 22 ottobre 2025, versione 4 con importante refactoring
 # 7 maggio 2026, versione 4.9 con supporto multi-strumento
 # 20 maggio 2026, versione 6.8.1 - correzione chiavi menu costruttore accordi
+# 21 maggio 2026, versione 6.8.2 - bemolli in ear training e manutenzione midi non distruttiva
+# 21 maggio 2026, versione 6.8.3 - elasticità diteggiature scale (Pathfinder flessibile)
+# 21 maggio 2026, versione 6.8.4 - diteggiature accordi realistiche (Issue #31)
 
 from time import sleep as aspetta
 from music21 import pitch, scale, harmony
@@ -22,7 +25,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.8.1 del 20 maggio 2026."
+VERSIONE = "6.8.4 del 21 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """

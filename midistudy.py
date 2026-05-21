@@ -1,4 +1,4 @@
-# Ultima modifica: 6 gennaio 2026 (v0.4.6)
+# Ultima modifica: 21 maggio 2026 (v0.4.8)
 
 import os
 import sys
@@ -15,7 +15,7 @@ from fractions import Fraction
 import GBAudio
 
 # Costanti
-MIDISTUDY_VERSION = "0.4.7 (Alpha) del 6 gennaio 2026"
+MIDISTUDY_VERSION = "0.4.8 (Alpha) del 21 maggio 2026"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_MIDI_DIR = os.path.join(BASE_DIR, "midi")
 SETTINGS_FILE = os.path.join(BASE_DIR, "chitabry-settings.json")
@@ -803,11 +803,21 @@ def studia_traccia(part, label, filepath, idx, tot):
 def check_midi_folder_cleanup():
     import datetime
     from GBUtils import enter_escape
+    from Chitabry import impostazioni, salva_impostazioni
     
     if not os.path.exists(DEFAULT_MIDI_DIR):
         return
         
     oggi = datetime.datetime.now()
+    ultimo_controllo_str = impostazioni.get("ultimo_controllo_pulizia_midi")
+    if ultimo_controllo_str:
+        try:
+            ultimo_controllo = datetime.datetime.strptime(ultimo_controllo_str, "%Y-%m-%d")
+            if (oggi - ultimo_controllo).days < 30:
+                return
+        except ValueError:
+            pass
+            
     un_anno_fa = oggi - datetime.timedelta(days=365)
     
     file_vecchi = []
@@ -824,6 +834,9 @@ def check_midi_folder_cleanup():
                 pass
                 
     if not file_vecchi:
+        # Se non ci sono file vecchi, segniamo comunque che abbiamo fatto il controllo oggi
+        impostazioni["ultimo_controllo_pulizia_midi"] = oggi.strftime("%Y-%m-%d")
+        salva_impostazioni()
         return
         
     print("\n" + "="*50)
@@ -849,20 +862,15 @@ def check_midi_folder_cleanup():
                     print(f"Impossibile cancellare {path}: {e}")
             print(f"\nPulizia completata. {cancellati} file eliminati.")
         else:
-            print("\nOperazione annullata. Aggiorno la data di modifica dei file vecchi alla data odierna...")
-            for _, path, _ in file_vecchi:
-                try:
-                    os.utime(path, None) # Sets access and modified time to current time
-                except Exception: pass
-            print("Date di modifica aggiornate.")
+            print("\nOperazione annullata.")
     else:
-        print("\nAggiorno la data di modifica dei file vecchi alla data odierna per non chiedertelo più...")
-        for _, path, _ in file_vecchi:
-            try:
-                os.utime(path, None)
-            except Exception: pass
-        print("Date di modifica aggiornate.")
+        print("\nOperazione rimandata di 30 giorni.")
+        
     print("="*50 + "\n")
+    
+    # Aggiorna la data dell'ultimo controllo in ogni caso
+    impostazioni["ultimo_controllo_pulizia_midi"] = oggi.strftime("%Y-%m-%d")
+    salva_impostazioni()
 
 def MidiStudyMain():
     _header()

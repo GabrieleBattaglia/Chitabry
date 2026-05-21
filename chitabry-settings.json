@@ -3383,6 +3383,13 @@
             "durata_sec": 300.3556544780731,
             "durata_str": "05.00.355",
             "data": "2026-05-15 18:52:57"
+        },
+        {
+            "nome": "Gabryufficio",
+            "precisione": 74.02777777777777,
+            "durata_sec": 217.38088035583496,
+            "durata_str": "03.37.380",
+            "data": "2026-05-21 15:29:59"
         }
     ],
     "classifica_freq": [
