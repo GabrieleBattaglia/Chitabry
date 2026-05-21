@@ -44,8 +44,17 @@ class AccordoSolver:
         
         variabili = [f"C{i}" for i in range(self.model.num_corde)]
         
-        for var in variabili:
-            prob.addVariable(var, tasti_possibili)
+        # Filtra i domini per includere solo frets con note nell'accordo target o -1
+        for i, var in enumerate(variabili):
+            tasti_validi = []
+            for t in tasti_possibili:
+                if t == -1:
+                    tasti_validi.append(t)
+                else:
+                    nota_pc = self.model.manico_pc[i, t]
+                    if nota_pc in self.target:
+                        tasti_validi.append(t)
+            prob.addVariable(var, tasti_validi)
             
         def has_root(*tasti):
             for c, t in enumerate(tasti):
@@ -65,12 +74,7 @@ class AccordoSolver:
             tasti_premuti = [t for t in tasti if t > 0]
             if not tasti_premuti:
                 return True
-            # Se abbiamo note a vuoto (0) e note premute, lo stretch effettivo 
-            # parte dal tasto minimo premuto. L'utente specifica che da 3 a 6 c'è stretch 4.
-            # Se un dito preme, lo stretch si calcola solo sui tasti premuti.
             stretch = max(tasti_premuti) - min(tasti_premuti)
-            # Se la mano è molto vicina al capotasto, possiamo essere più permissivi 
-            # ma il limite biomeccanico si riferisce alla distanza tra indice e mignolo.
             return stretch <= max_stretch
 
         def max_fingers_constraint(*tasti):
@@ -109,19 +113,11 @@ class AccordoSolver:
                 i = j
                 
             return dita_usate <= 3
-
-        def no_wrong_notes(*tasti):
-            for c, t in enumerate(tasti):
-                if t != -1:
-                    if self.model.manico_pc[c, t] not in self.target:
-                        return False
-            return True
             
         prob.addConstraint(has_root, variabili)
         prob.addConstraint(has_all_notes, variabili)
         prob.addConstraint(max_stretch_constraint, variabili)
         prob.addConstraint(max_fingers_constraint, variabili)
-        prob.addConstraint(no_wrong_notes, variabili)
         
         soluzioni = prob.getSolutions()
         return soluzioni
@@ -209,70 +205,84 @@ class AccordoSolver:
         has_barre = False
         
         if tasti_premuti_idx:
-            if len(tasti_premuti_idx) > 4:
-                min_tasto = min([tasti[i] for i in tasti_premuti_idx])
-                
-                # Assegnazione delle note al tasto minimo (Dito 1)
-                corde_min_tasto = [i for i in tasti_premuti_idx if tasti[i] == min_tasto]
-                if len(corde_min_tasto) >= 2:
-                    has_barre = True
-                    barre_fret = min_tasto
-                    for c in corde_min_tasto:
-                        diteggiatura_raw[f"C{c}"] = f"Dito 1 (Barré al tasto {min_tasto})"
+            min_tasto = min([tasti[i] for i in tasti_premuti_idx])
+            corde_min_tasto = [i for i in tasti_premuti_idx if tasti[i] == min_tasto]
+            
+            is_barre = False
+            is_piccolo_barre = False
+            
+            if len(corde_min_tasto) >= 2:
+                distanza = max(corde_min_tasto) - min(corde_min_tasto) + 1
+                if distanza >= 4:
+                    is_barre = True
                 else:
-                    for c in corde_min_tasto:
-                        diteggiatura_raw[f"C{c}"] = f"Dito 1 al tasto {min_tasto}"
-                
-                # Note rimanenti (tasto > min_tasto)
-                rimanenti_idx = [i for i in tasti_premuti_idx if tasti[i] > min_tasto]
-                dito_corrente = 2
-                i = 0
-                while i < len(rimanenti_idx):
-                    curr_idx = rimanenti_idx[i]
-                    curr_tasto = tasti[curr_idx]
-                    
-                    gruppo = [curr_idx]
-                    j = i + 1
-                    while j < len(rimanenti_idx):
-                        next_idx = rimanenti_idx[j]
-                        if tasti[next_idx] != curr_tasto:
-                            break
-                            
-                        ostacolo = False
-                        for k in range(curr_idx + 1, next_idx):
-                            if tasti[k] > 0 and tasti[k] != curr_tasto:
-                                ostacolo = True
-                                break
-                        if ostacolo:
-                            break
-                            
-                        gruppo.append(next_idx)
-                        j += 1
-                    
-                    is_mini_barre = len(gruppo) >= 2
-                    for c in gruppo:
-                        if is_mini_barre:
-                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} (Piccolo barré al tasto {curr_tasto})"
-                        else:
-                            diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {curr_tasto}"
-                    
-                    dito_corrente += 1
-                    i = j
+                    # Piccolo barrè solo se le corde sono consecutive
+                    if len(corde_min_tasto) == distanza:
+                        is_piccolo_barre = True
+                        
+            # Assegnazione del Dito 1
+            if is_barre:
+                has_barre = True
+                barre_fret = min_tasto
+                for c in corde_min_tasto:
+                    diteggiatura_raw[f"C{c}"] = f"Dito 1 (Barré al tasto {min_tasto})"
+                rimanenti_idx = [i for i in tasti_premuti_idx if i not in corde_min_tasto]
+            elif is_piccolo_barre:
+                for c in corde_min_tasto:
+                    diteggiatura_raw[f"C{c}"] = f"Dito 1 (Piccolo barré al tasto {min_tasto})"
+                rimanenti_idx = [i for i in tasti_premuti_idx if i not in corde_min_tasto]
             else:
-                # Caso standard con <= 4 tasti premuti: assegnazione sequenziale
-                corde_per_tasto = {}
-                for i in tasti_premuti_idx:
-                    t = tasti[i]
-                    if t not in corde_per_tasto:
-                        corde_per_tasto[t] = []
-                    corde_per_tasto[t].append(i)
+                # Dito 1 alla singola nota al min_tasto più grave
+                corda_dito1 = corde_min_tasto[0]
+                diteggiatura_raw[f"C{corda_dito1}"] = f"Dito 1 al tasto {min_tasto}"
+                rimanenti_idx = [i for i in tasti_premuti_idx if i != corda_dito1]
                 
-                dito_corrente = 1
-                for t in sorted(corde_per_tasto.keys()):
-                    corde = sorted(corde_per_tasto[t])
-                    for c in corde:
-                        diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {t}"
+            # Assegnazione delle altre dita (2, 3, 4)
+            if rimanenti_idx:
+                if len(rimanenti_idx) <= 3:
+                    # Ordiniamo per tasto crescente, poi per corda crescente
+                    rimanenti_ordinate = sorted(rimanenti_idx, key=lambda idx: (tasti[idx], idx))
+                    dito_corrente = 2
+                    for c in rimanenti_ordinate:
+                        diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {tasti[c]}"
                         dito_corrente += 1
+                else:
+                    # Altrimenti raggruppiamo con i piccoli barrè (fallback per troppe note)
+                    rimanenti_ordinate = sorted(rimanenti_idx)
+                    dito_corrente = 2
+                    i = 0
+                    while i < len(rimanenti_ordinate):
+                        curr_idx = rimanenti_ordinate[i]
+                        curr_tasto = tasti[curr_idx]
+                        
+                        gruppo = [curr_idx]
+                        j = i + 1
+                        while j < len(rimanenti_ordinate):
+                            next_idx = rimanenti_ordinate[j]
+                            if tasti[next_idx] != curr_tasto:
+                                break
+                                
+                            # Controlliamo ostacoli in mezzo
+                            ostacolo = False
+                            for k in range(curr_idx + 1, next_idx):
+                                if tasti[k] > 0 and tasti[k] != curr_tasto:
+                                    ostacolo = True
+                                    break
+                            if ostacolo:
+                                break
+                                
+                            gruppo.append(next_idx)
+                            j += 1
+                        
+                        is_mini = len(gruppo) >= 2
+                        for c in gruppo:
+                            if is_mini:
+                                diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} (Piccolo barré al tasto {curr_tasto})"
+                            else:
+                                diteggiatura_raw[f"C{c}"] = f"Dito {dito_corrente} al tasto {curr_tasto}"
+                        
+                        dito_corrente += 1
+                        i = j
 
         # Aggreghiamo le descrizioni
         dita_desc = {}
@@ -286,7 +296,7 @@ class AccordoSolver:
                 
             if desc not in dita_desc:
                 dita_desc[desc] = []
-            corda_std = str(6 - i) # Convertiamo 0..5 in 6..1 (Standard)
+            corda_std = str(6 - i) # Convertiamo 0..5 in 6..1
             dita_desc[desc].append(corda_std)
             
         diteggiatura_formattata = []
@@ -299,7 +309,6 @@ class AccordoSolver:
                 else:
                     diteggiatura_formattata.append(f"{desc} sulla Corda {corde[0]}")
 
-        # Mappatura empirica: 1250 = 0% diff, 850 = 100% diff
         diff_punteggio = ((1250 - score) / 400.0) * 100
         diff_punteggio = max(0, min(100, int(diff_punteggio)))
         
@@ -307,7 +316,7 @@ class AccordoSolver:
         diff_stretch = 0
         if tasti_premuti_idx:
             tasti_premuti_vals = [tasti[i] for i in tasti_premuti_idx]
-            stretch_val = max(tasti_premuti_vals) - min(tasti_premuti_vals) + 1 # estensione effettiva in tasti
+            stretch_val = max(tasti_premuti_vals) - min(tasti_premuti_vals) + 1
             mappa_stretch = {1: 0, 2: 10, 3: 30, 4: 60, 5: 100}
             diff_stretch = mappa_stretch.get(stretch_val, 100)
             

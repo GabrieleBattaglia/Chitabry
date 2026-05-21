@@ -1,13 +1,5 @@
 # Chitabry - Studio sulla Chitarra e sulla teoria musicale - di Gabriele Battaglia e Gemini 3.5 Flash
 # Data concepimento: venerdì 7 febbraio 2020.
-# 28 giugno 2024 copiato su Github
-# 22 ottobre 2025, versione 4 con importante refactoring
-# 7 maggio 2026, versione 4.9 con supporto multi-strumento
-# 20 maggio 2026, versione 6.8.1 - correzione chiavi menu costruttore accordi
-# 21 maggio 2026, versione 6.8.2 - bemolli in ear training e manutenzione midi non distruttiva
-# 21 maggio 2026, versione 6.8.3 - elasticità diteggiature scale (Pathfinder flessibile)
-# 21 maggio 2026, versione 6.8.4 - diteggiature accordi realistiche (Issue #31)
-# 21 maggio 2026, versione 6.8.5 - diteggiature barrè in top 10 e penalità corde stoppate
 
 from time import sleep as aspetta
 from music21 import pitch, scale, harmony
@@ -26,7 +18,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.8.5 del 21 maggio 2026."
+VERSIONE = "6.8.8 del 21 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -943,7 +935,7 @@ def Suona(tablatura):
     for i in range(NUM_CORDE):
         corda = 6 - i
         tasto = tablatura[i]
-        pan_val = 0.8 - (i * 0.32) 
+        pan_val = -0.8 + (i * 0.32)
         note_pan.append(pan_val)
         poly_player.set_pan(i, pan_val)
         
@@ -978,7 +970,7 @@ def Suona(tablatura):
             if scelta.isdigit():
                 key_int = int(scelta) if scelta != '0' else 10
                 if 1 <= key_int <= min(NUM_CORDE, 10):
-                    corda_idx_py = NUM_CORDE - key_int
+                    corda_idx_py = key_int - 1
                     if note_da_suonare[corda_idx_py]:
                         # Ottieni l'audio mono renderizzato
                         note_audio_stereo = renderers[corda_idx_py].render()
@@ -1080,7 +1072,7 @@ def SuonaAccordoTeorico(note_pitch_list):
     s_kind = suono.get('kind', 1)
     s_adsr = suono.get('adsr', [0,0,0,0])
 
-    # 4. Calcola Panning (Grave=+0.8 -> Acuto=-0.8)
+    # 4. Calcola Panning (Grave=-0.8 sinistra -> Acuto=+0.8 destra)
     pan_values = []
     if num_notes == 1:
         pan_values.append(0.0) # Centro se una sola nota

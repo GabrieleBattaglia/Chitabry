@@ -7,7 +7,6 @@ import numpy as np
 from scipy import signal
 import re
 import sounddevice as sd
-import threading
 
 # --- Costanti Globali ---
 FS = 44100  # Aumentata frequenza di campionamento per KS
@@ -108,12 +107,12 @@ class PolyphonicPlayer:
         # Panning base (modificabile via set_pan)
         self.pans = np.zeros(num_strings, dtype=np.float32)
         
-        self.lock = threading.Lock()
+        self.is_running = False
+
         self.stream = sd.OutputStream(
             samplerate=self.fs, channels=2, dtype=np.float32,
             callback=self._audio_callback, latency='low'
         )
-        self.is_running = False
 
     def start(self):
         if not self.is_running:
@@ -132,46 +131,41 @@ class PolyphonicPlayer:
     def pluck(self, string_idx, audio_mono):
         """Suona una corda. Sostituisce il suo bus interrompendone il suono precedente."""
         if 0 <= string_idx < self.num_strings:
-            with self.lock:
-                self.buses[string_idx] = audio_mono
-                self.indices[string_idx] = 0
+            self.buses[string_idx] = audio_mono
+            self.indices[string_idx] = 0
 
     def mute(self, string_idx=None):
         """Silenzia una corda specifica o tutte."""
-        with self.lock:
-            if string_idx is None:
-                for i in range(self.num_strings):
-                    self.buses[i] = np.zeros(0, dtype=np.float32)
-                    self.indices[i] = 0
-            elif 0 <= string_idx < self.num_strings:
-                self.buses[string_idx] = np.zeros(0, dtype=np.float32)
-                self.indices[string_idx] = 0
+        if string_idx is None:
+            for i in range(self.num_strings):
+                self.buses[i] = np.zeros(0, dtype=np.float32)
+                self.indices[i] = 0
+        elif 0 <= string_idx < self.num_strings:
+            self.buses[string_idx] = np.zeros(0, dtype=np.float32)
+            self.indices[string_idx] = 0
 
     def _audio_callback(self, outdata, frames, time, status):
         mix = np.zeros((frames, 2), dtype=np.float32)
-        
-        with self.lock:
-            for i in range(self.num_strings):
-                buf = self.buses[i]
-                idx = self.indices[i]
-                buf_len = len(buf)
-                
-                if idx < buf_len:
-                    remaining = buf_len - idx
-                    chunk_len = min(frames, remaining)
-                    
-                    pan = self.pans[i]
-                    pan_l = np.cos((pan + 1.0) * np.pi / 4.0)
-                    pan_r = np.sin((pan + 1.0) * np.pi / 4.0)
-                    
-                    mono_chunk = buf[idx : idx + chunk_len]
-                    
-                    mix[:chunk_len, 0] += mono_chunk * pan_l
-                    mix[:chunk_len, 1] += mono_chunk * pan_r
-                    
-                    self.indices[i] += chunk_len
-                    
-        # Hard limiter per evitare clipping polifonico
+        for i in range(self.num_strings):
+            buf = self.buses[i]
+            idx = self.indices[i]
+            buf_len = len(buf)
+
+            if idx < buf_len:
+                remaining = buf_len - idx
+                chunk_len = min(frames, remaining)
+
+                pan = self.pans[i]
+                pan_l = np.cos((pan + 1.0) * np.pi / 4.0)
+                pan_r = np.sin((pan + 1.0) * np.pi / 4.0)
+
+                mono_chunk = buf[idx : idx + chunk_len]
+
+                mix[:chunk_len, 0] += mono_chunk * pan_l
+                mix[:chunk_len, 1] += mono_chunk * pan_r
+
+                self.indices[i] += chunk_len
+
         mix = np.clip(mix, -1.0, 1.0)
         outdata[:] = mix
 

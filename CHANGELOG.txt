@@ -1,6 +1,54 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.8.8 (21 maggio 2026)
+--------------------------------
+*   **Audio Engine (GBAudio - Fix Issue #32):**
+    *   Resa lock-free la callback audio di `PolyphonicPlayer` eliminando `threading.Lock`. Questo previene dropouts audio (underflow) dovuti a priority inversion durante l'esecuzione concorrente di `pluck` o `mute`.
+*   **Audio Panning (Fix Issue #41):**
+    *   Corretto il panning delle note nel player accordi (`Suona()`): le corde gravi (es. corda 6) suonano a sinistra (-0.8) e quelle acute (es. corda 1) a destra (+0.8). Aggiornati i commenti in `SuonaAccordoTeorico()`.
+*   **Metronomo (clitronomo.py - Fix Issue #34):**
+    *   Implementato il caching dei campioni di beep (accento, beat e suddivisione). La generazione del buffer della battuta avviene ora tramite slicing di array numpy pre-calcolati, riducendo drasticamente il consumo di CPU (specie per rampe e cambi di BPM).
+
+Versione 6.8.7 (21 maggio 2026)
+--------------------------------
+*   **Costruttore Accordi:**
+    *   Rilevamento intelligente del Barrè: la diteggiatura ora distingue correttamente tra Barrè completi e Piccoli Barrè (mini barrè), eliminando combinazioni biomeccanicamente impossibili (es. Piccolo Barrè al tasto 3 sulle corde 5 e 4 in Fa maggiore).
+    *   Se le note rimanenti oltre al barrè sono tre o meno, vengono assegnate individualmente a dita singole per garantire diteggiature naturali ed ergonomiche.
+    *   Ottimizzato il motore del solutore limitando a priori i domini dei tasti per ciascuna corda solo a quelli appartenenti alle note dell'accordo cercato. Questa ottimizzazione riduce i tempi di calcolo di oltre 1000 volte (da ~23 secondi a meno di 20 millisecondi per accordo).
+
+Versione 6.8.6 (21 maggio 2026)
+--------------------------------
+*   **Player Accordi (UX):**
+    *   Allineato il comportamento dei tasti numerici del player interattivo delle corde (1-X) all'ordine visivo delle note sul display. Ora il tasto `1` (a sinistra sulla tastiera) riproduce la prima nota a sinistra a schermo (corda 6, grave), mentre i tasti successivi si sviluppano verso destra fino alla corda più acuta.
+
+Versione 6.8.5 (21 maggio 2026)
+--------------------------------
+*   **Costruttore Accordi:**
+    *   Ottimizzato il calcolo delle diteggiature barrè all'interno della Top 10.
+    *   Introdotta una penalizzazione specifica per le corde stoppate nel calcolo del punteggio di difficoltà.
+
+Versione 6.8.4 (21 maggio 2026)
+--------------------------------
+*   **Diteggiature Accordi (Fix Issue #31):**
+    *   Migliorata la generazione dei percorsi per rendere le forme degli accordi più ergonomiche e realistiche sulle corde.
+
+Versione 6.8.3 (21 maggio 2026)
+--------------------------------
+*   **Scale Pathfinder:**
+    *   Introdotta maggiore flessibilità ed elasticità nella generazione delle diteggiature per le scale musicali.
+
+Versione 6.8.2 (21 maggio 2026)
+--------------------------------
+*   **Ear Training & MIDI:**
+    *   Aggiunto il supporto per la visualizzazione corretta dei bemolli nei moduli di Ear Training.
+    *   Implementata la manutenzione non distruttiva dei file musicali MIDI.
+
+Versione 6.8.1 (20 maggio 2026)
+--------------------------------
+*   **Costruttore Accordi:**
+    *   Risolto il problema di ordinamento alfabetico fallito all'interno della Top 10 diteggiature per l'interazione con `menu()`. Le chiavi di selezione sono state semplificate in numeri semplici da 0 (migliore) a 9 (peggiore).
+
 Versione 6.8.0 (17 maggio 2026)
 --------------------------------
 *   **MidiStudy (Major Update):**

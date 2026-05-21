@@ -122,6 +122,9 @@ class Metronome:
         self.active_buffer = np.array([], dtype=np.int16) # Il nastro audio in riproduzione
         self.pending_buffer = None # Il nastro audio che prepariamo quando cambia un parametro
         self.buffer_lock = threading.RLock()
+        self.cached_accent_beep = None
+        self.cached_tick_beep = None
+        self.cached_sub_beep = None
         self.playback_index = 0 # La nostra "puntina" sul nastro
         self.config_accento = {
             "beep_duration_ms": 70, "volume_perc": 50, "attack_ms": 5,
@@ -220,6 +223,9 @@ class Metronome:
             "decay_ms": 8, "frequency_hz": 1030.0
         }
         
+        self.cached_accent_beep = None
+        self.cached_tick_beep = None
+        self.cached_sub_beep = None
         print("\n>> Metronomo resettato alle impostazioni di fabbrica.")
         self._request_buffer_rebuild()
     def set_state(self, state, preset_id):
@@ -236,6 +242,9 @@ class Metronome:
             self.current_preset_id = preset_id
             self.is_dirty = False
             self.program = state.get("program", [])
+            self.cached_accent_beep = None
+            self.cached_tick_beep = None
+            self.cached_sub_beep = None
             print(f"Stato del preset ID{preset_id} applicato.")
             self._request_buffer_rebuild()
             
@@ -262,10 +271,18 @@ class Metronome:
         # 2. Crea un "nastro" vuoto (silenzio)
         measure_buffer = np.zeros(samples_per_measure, dtype=np.float32)
 
-        # 3. Genera i singoli "beep" (accento, tick e suddivisione)
-        accent_beep = genera_suono_mono_int16(self.config_accento).astype(np.float32) / 32767.0
-        tick_beep = genera_suono_mono_int16(self.config_tick).astype(np.float32) / 32767.0
-        sub_beep = genera_suono_mono_int16(self.config_subdivision).astype(np.float32) / 32767.0
+        # 3. Genera i singoli "beep" (accento, tick e suddivisione) usando la cache se disponibile
+        with self.buffer_lock:
+            if self.cached_accent_beep is None:
+                self.cached_accent_beep = genera_suono_mono_int16(self.config_accento).astype(np.float32) / 32767.0
+            if self.cached_tick_beep is None:
+                self.cached_tick_beep = genera_suono_mono_int16(self.config_tick).astype(np.float32) / 32767.0
+            if self.cached_sub_beep is None:
+                self.cached_sub_beep = genera_suono_mono_int16(self.config_subdivision).astype(np.float32) / 32767.0
+            
+            accent_beep = self.cached_accent_beep
+            tick_beep = self.cached_tick_beep
+            sub_beep = self.cached_sub_beep
         
         # 4. "Disegna" i suoni sul nastro, beat per beat
         for beat_num in range(self.beats_per_measure):
@@ -340,6 +357,12 @@ class Metronome:
                 
             target_dict[param_key] = val
             print(f"\n{param_key} per {'accento' if target_char == '1' else 'tick' if target_char == '2' else 'suddivisione'} impostato a {val}.")
+            if target_char == '1':
+                self.cached_accent_beep = None
+            elif target_char == '2':
+                self.cached_tick_beep = None
+            elif target_char == '3':
+                self.cached_sub_beep = None
             self.is_dirty = True
             self._request_buffer_rebuild()
 
