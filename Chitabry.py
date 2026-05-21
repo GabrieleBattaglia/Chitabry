@@ -7,6 +7,7 @@
 # 21 maggio 2026, versione 6.8.2 - bemolli in ear training e manutenzione midi non distruttiva
 # 21 maggio 2026, versione 6.8.3 - elasticità diteggiature scale (Pathfinder flessibile)
 # 21 maggio 2026, versione 6.8.4 - diteggiature accordi realistiche (Issue #31)
+# 21 maggio 2026, versione 6.8.5 - diteggiature barrè in top 10 e penalità corde stoppate
 
 from time import sleep as aspetta
 from music21 import pitch, scale, harmony
@@ -25,7 +26,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.8.4 del 21 maggio 2026."
+VERSIONE = "6.8.5 del 21 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """

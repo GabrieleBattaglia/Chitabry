@@ -137,7 +137,7 @@ class AccordoSolver:
         
         # 1. Premio per le corde a vuoto
         corde_vuote = tasti.count(0)
-        score += corde_vuote * 30  # Aumentato drasticamente per premiare le posizioni con corde aperte
+        score += corde_vuote * 10
         
         # 2. Penalità per le corde mute (-1) e corde a vuoto impossibili (barré spezzato)
         suonanti_idx = [i for i, t in enumerate(tasti) if t != -1]
@@ -147,27 +147,28 @@ class AccordoSolver:
             for i, t in enumerate(tasti):
                 if t == -1:
                     if i < min_idx or i > max_idx:
-                        # Corda muta ai bordi (es. x x 0 2 3 2): lieve penalità o nessuna
-                        score -= 2
+                        # Corda muta ai bordi (es. x x 0 2 3 2)
+                        score -= 10
                     else:
-                        # Corda muta in mezzo (es. 1 x 2...): usata in ottave o power chords estesi, penalità ridotta
-                        score -= 15
+                        # Corda muta in mezzo (es. 1 x 2...)
+                        score -= 50
         
         # 3. Penalità per lo stretch (più largo = più difficile)
         if tasti_premuti:
             stretch = max(tasti_premuti) - min(tasti_premuti)
             score -= stretch * 20
             
-            # Penalità per suonare troppo in alto sul manico senza motivo (MOLTO severa per favorire il capotasto)
-            score -= min(tasti_premuti) * 20
+            # Penalità per suonare troppo in alto sul manico senza motivo (ridotta sui primi tasti)
+            min_tasto = min(tasti_premuti)
+            score -= max(0, min_tasto - 1) * 10
             
-            # Penalità severa per i barré (richiedono molta forza fisica!)
+            # Penalità per i barré (richiedono molta forza fisica!)
             if len(tasti_premuti) > 4:
-                min_tasto = min(tasti_premuti)
+                corde_min_tasto = []
                 if min_tasto > 0:
                     corde_min_tasto = [i for i, t in enumerate(tasti) if t == min_tasto]
                     if len(corde_min_tasto) >= 2:
-                        score -= 80 # Faticoso!
+                        score -= 30
                         
                         primo_barre = min(corde_min_tasto)
                         for i in range(primo_barre, self.model.num_corde):
