@@ -1,6 +1,32 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 6.8.12 (21 maggio 2026)
+--------------------------------
+*   **Player Scale (Ottimizzazione Display Braille):**
+    *   Riprogettati i prompt dell'esercizio scale per posizionare le note all'inizio (primi 40 caratteri a sinistra).
+    *   Introdotte indicazioni di stato ultra-compatte a destra: `S1`/`S2` per il tipo di suono, `L` per il loop, `asc`/`dis` per la direzione.
+
+Versione 6.8.11 (21 maggio 2026)
+--------------------------------
+*   **Player Scale & Player Generico (Feedback Visivo):**
+    *   Migliorato il feedback visivo del cambio suono in tempo reale durante l'esercizio delle scale e nella tastiera virtuale (player generico).
+    *   Incluso il tipo di suono corrente direttamente nei prompt persistenti delle scale e nei messaggi del player generico, prevenendo scompensi visivi per display Braille.
+
+Versione 6.8.10 (21 maggio 2026)
+--------------------------------
+*   **Player Scale (Fix Bug Commutazione Suono):**
+    *   Risolto il bug che impediva alla barra spaziatrice di commutare il suono tra sintetico e chitarra durante l'esercitazione interattiva (tasti 1-8).
+    *   Modificata la funzione `aggiorna_renderers` per accettare esplicitamente la chiave del suono come parametro, eliminando problemi di closure dello scope.
+
+Versione 6.8.9 (21 maggio 2026)
+--------------------------------
+*   **Player Scale (Fix Issue #42):**
+    *   Integrato il player delle scale con `GBAudio.PolyphonicPlayer` per una riproduzione polifonica in tempo reale.
+    *   Ordinato l'audio, il panning (da -0.8 a +0.8) ed i tasti numerici 1-8 in senso ascendente (dal grave all'acuto).
+    *   Gestito lo spegnimento della nota precedente (mute) durante la riproduzione automatica e in loop prima del pluck successivo.
+    *   Ottimizzato l'output video per display Braille rimuovendo le cancellazioni distruttive di riga.
+
 Versione 6.8.8 (21 maggio 2026)
 --------------------------------
 *   **Audio Engine (GBAudio - Fix Issue #32):**

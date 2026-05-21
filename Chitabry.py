@@ -18,7 +18,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import strumento
 
 # --- Costanti ---
-VERSIONE = "6.8.8 del 21 maggio 2026."
+VERSIONE = "6.8.12 del 21 maggio 2026."
 # --- Costanti Diteggiatura Flauto ---
 
 _FLAUTO_INTRO = """
@@ -1319,6 +1319,7 @@ def VisualizzaEsercitatiScala():
     note_per_audio_asc = []
     note_per_audio_desc = []
     is_microtonal_scale = False
+    poly_player = None
 
     try:
         # --- Gestione selezione: Menu diretto o Ricerca Fuzzy ---
@@ -1604,121 +1605,209 @@ def VisualizzaEsercitatiScala():
             loop_attivo = False
             loop_count = 1
             ultima_direzione = 'a'
-            audio_data_asc = None
-            audio_data_desc = None
             menu_esercizio = {"1-8": "Suona nota singola", "a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "i": "Indietro"}
-            menu_mostrato_iniziale = False
             loop_messaggio_stampato = False
 
+            num_notes = len(note_per_audio_asc)
+            poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=num_notes)
+            renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_notes)]
+
+            def aggiorna_renderers(suono_key):
+                suono = impostazioni[suono_key]
+                hardness = suono.get('pluck_hardness', 0.6)
+                damping = suono.get('damping_factor', 0.997)
+                pick_pos = suono.get('pick_position', 0.15)
+                bright = suono.get('brightness', 0.4)
+                dur = suono.get('dur_accordi', 9.0)
+                vol = suono.get('volume', 0.35)
+                s_kind = suono.get('kind', 1)
+                s_adsr = suono.get('adsr', [0,0,0,0])
+                
+                for i in range(num_notes):
+                    freq = note_per_audio_asc[i]
+                    if freq is None:
+                        freq = 0.0
+                    pan_val = -0.8
+                    if num_notes > 1:
+                        pan_val = -0.8 + i * (1.6 / (num_notes - 1))
+                    poly_player.set_pan(i, pan_val)
+                    
+                    if 'pluck_hardness' in suono:
+                        renderers[i].set_params(freq, dur, vol, pan_val, 
+                                                pluck_hardness=hardness, damping_factor=damping,
+                                                pick_position=pick_pos, brightness=bright)
+                    else:
+                        renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
+
+            poly_player.start()
+            aggiorna_renderers(suono_attivo_key)
+
+            key_map_scala = {str(i+1): i for i in range(min(num_notes, 9))}
+            if num_notes >= 10:
+                key_map_scala['0'] = 9
+
+            nota_precedente_loop = None
+
             while True: # Inizio Loop Esercizio
-                audio_to_play = None
-                dur_totale = 0.0
-                scelta_raw = "" # Inizializza input grezzo
-                scelta = None   # Inizializza comando valido
+                scelta_raw = ""
+                
                 if loop_attivo: # Modalità Loop
-                    if not loop_messaggio_stampato: print("Loop ATTIVO. Premi 'L' per fermare."); loop_messaggio_stampato = True
+                    if not loop_messaggio_stampato:
+                        print(f"\rLoop ATTIVO. Premi 'L' per fermare.{' '*20}\r", end="", flush=True)
+                        loop_messaggio_stampato = True
+                    
                     note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
-                    print(f"Numero ripetizione: {loop_count} - Note: {note_scala_loop_str}" + " "*10, end="\r", flush=True)
-                    tasto = key(attesa=0.1)
-                    if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop(); loop_messaggio_stampato = False; continue
-                    elif tasto and tasto == ' ':
-                        suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
-                        print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
-                        audio_data_asc = None; audio_data_desc = None; sd.stop(); loop_messaggio_stampato = False; scelta = ultima_direzione; continue
-                    else: scelta = ultima_direzione
+                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                    dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
+                    print(f"\r{note_scala_loop_str} | L:{loop_count} {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
+                    
+                    seq = list(range(num_notes)) if ultima_direzione == 'a' else list(range(num_notes - 1, -1, -1))
+                    dur_step = 60.0 / bpm
+                    
+                    interrotto = False
+                    for idx in seq:
+                        if nota_precedente_loop is not None:
+                            poly_player.mute(nota_precedente_loop)
+                            
+                        freq = note_per_audio_asc[idx]
+                        if freq is not None and freq > 0:
+                            note_audio_stereo = renderers[idx].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                nota_precedente_loop = idx
+                                
+                        passi = int(dur_step / 0.02)
+                        for _ in range(passi):
+                            tasto = key(attesa=0.02)
+                            if tasto:
+                                tasto_lower = tasto.lower()
+                                if tasto_lower == 'l':
+                                    loop_attivo = False
+                                    poly_player.mute()
+                                    nota_precedente_loop = None
+                                    print(f"\rLoop disattivato.{' '*40}\r", end="", flush=True)
+                                    loop_messaggio_stampato = False
+                                    interrotto = True
+                                    break
+                                elif tasto_lower == ' ':
+                                    suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                                    aggiorna_renderers(suono_attivo_key)
+                                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                                    dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
+                                    print(f"\r{note_scala_loop_str} | L:{loop_count} {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
+                                elif tasto == chr(27):
+                                    loop_attivo = False
+                                    poly_player.mute()
+                                    nota_precedente_loop = None
+                                    interrotto = True
+                                    break
+                        if interrotto:
+                            break
+                        
+                        rimanente = dur_step - (passi * 0.02)
+                        if rimanente > 0:
+                            aspetta(rimanente)
+                            
+                    if interrotto:
+                        if not loop_attivo and tasto == chr(27):
+                            break
+                        continue
+                    
+                    loop_count += 1
+                    
                 else: # Modalità Menu Interattivo
                     loop_messaggio_stampato = False
-                    prompt_scale = f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}"
-                    if note_asc_str != note_desc_str and note_desc_str: prompt_scale += f" | (Desc): {note_desc_str}"
-                    if not menu_mostrato_iniziale:
-                        print(f"Note (Asc): {note_asc_str if note_asc_str else '(vuota)'}")
-                        if note_asc_str != note_desc_str and note_desc_str: print(f"Note (Desc): {note_desc_str}")
-                        scelta = menu(d=menu_esercizio, keyslist=True, ntf="Scelta non valida", show=True, p="> ")
-                        menu_mostrato_iniziale = True
-                    else:
-                        note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
-                        direzione_str = "Asc" if ultima_direzione == 'a' else "Desc"
-                        print(f"Note ({direzione_str}): {note_da_mostrare if note_da_mostrare else '(vuota)'} (Premi '?' per aiuto)" + " "*20, end="\r", flush=True)
-                        scelta_raw = key().lower()
-                        scelta = scelta_raw if scelta_raw in menu_esercizio else None
-                        if scelta_raw == '?': menu(d=menu_esercizio, show=True, p="> "); continue
-                        elif scelta_raw == ' ':
-                            suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
-                            print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
-                            audio_data_asc = None; audio_data_desc = None; continue
-                        elif scelta_raw.isdigit() and '1' <= scelta_raw <= '8':
-                            idx = int(scelta_raw) - 1
-                            if idx < len(note_per_audio_asc):
-                                freq = note_per_audio_asc[idx]
-                                if freq is not None and freq > 0:
-                                    note_audio = GBAudio.render_scale_audio([freq], impostazioni[suono_attivo_key], 60)
-                                    sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
-                            continue
-
-                # --- Gestione Scelte Menu Esercizio ---
-                exit_pressed = (not loop_attivo and scelta_raw == chr(27))
-                if scelta == 'i' or exit_pressed:
-                    if loop_attivo: loop_attivo = False; print("\nLoop disattivato." + " "*30); sd.stop()
-                    if menu_mostrato_iniziale and not loop_attivo: print(" " * 80, end="\r") # Pulisci riga note
-                    break
-                elif scelta == 'l': # ... (codice 'l') ...
-                    loop_attivo = not loop_attivo
-                    if loop_attivo: loop_count = 1; print(" " * 80, end="\r")
-                    else: print("\nLoop disattivato." + " "*30); sd.stop()
-                    continue
-                elif scelta == 'b': # ... (codice 'b') ...
-                    global archivio_modificato
-                    print(" " * 80, end="\r")
-                    nuovo_bpm = dgt(f"Nuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
-                    if nuovo_bpm != bpm:
-                        bpm = nuovo_bpm; impostazioni['default_bpm'] = bpm; archivio_modificato = True
-                        print(f"BPM predefiniti aggiornati a {bpm}.")
-                        audio_data_asc = None; audio_data_desc = None
-                elif scelta == 'a': # ... (codice 'a') ...
-                    ultima_direzione = 'a'
-                    valid_notes_asc = [f for f in note_per_audio_asc if f is not None]
-                    if not valid_notes_asc: print("\nNote ascendenti non disponibili per l'audio."); continue
-                    if audio_data_asc is None: audio_data_asc = GBAudio.render_scale_audio(note_per_audio_asc, impostazioni[suono_attivo_key], bpm)
-                    audio_to_play = audio_data_asc
-                    dur_totale = len(note_per_audio_asc) * (60.0 / bpm)
-                elif scelta == 'd': # ... (codice 'd') ...
-                    ultima_direzione = 'd'
-                    valid_notes_desc = [f for f in note_per_audio_desc if f is not None]
-                    if not valid_notes_desc: print("\nNote discendenti non disponibili per l'audio."); continue
-                    if audio_data_desc is None: audio_data_desc = GBAudio.render_scale_audio(note_per_audio_desc, impostazioni[suono_attivo_key], bpm)
-                    audio_to_play = audio_data_desc
-                    dur_totale = len(note_per_audio_desc) * (60.0 / bpm)
-                elif scelta is None and not loop_attivo: # Input non valido
-                    print("\nComando non valido. Premi '?' per aiuto.")
-                    continue
-
-                # --- Riproduzione Audio (indentato) ---
-                if audio_to_play is not None and audio_to_play.size > 0:
-                    if not loop_attivo:
-                        print(" " * 80, end="\r")
-                    sd.play(audio_to_play, samplerate=GBAudio.FS, blocking=False)
-                    if loop_attivo:
-                        step = 0.05; passi_totali = int(dur_totale / step) if dur_totale > 0 else 0
-                        tempo_rimanente = dur_totale - (passi_totali * step)
-                        for _ in range(passi_totali):
-                            tasto = key(attesa=step)
-                            if tasto and tasto.lower() == 'l': loop_attivo = False; print("\nLoop fermato." + " "*30); sd.stop(); break
-                            elif tasto and tasto == ' ':
-                                suono_attivo_key = 'suono_1' if suono_attivo_key == 'suono_2' else 'suono_2'
-                                print(f"\n[Suono: {impostazioni[suono_attivo_key]['descrizione']}]" + " "*20)
-                                audio_data_asc = None; audio_data_desc = None; sd.stop(); break
-                        if not loop_attivo: continue
-                        if tempo_rimanente > 0: aspetta(tempo_rimanente)
-                        loop_count += 1
-                    else:
-                        if dur_totale > 0: aspetta(dur_totale)
-                elif not loop_attivo: # Messaggio "Nessun audio"
-                    print(" " * 80, end="\r")
-                    print("Nessun audio da riprodurre per la selezione.")
-                    key("Premi un tasto...")
-
-            # --- Fine Loop Esercizio ---
-            print(" " * 80, end="\r")
+                    note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
+                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                    dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
+                    print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev} (1-8, A, D, L, B, SPAZIO, ?, ESC):\r", end="", flush=True)
+                    
+                    scelta_raw = key()
+                    if not scelta_raw:
+                        continue
+                    scelta_lower = scelta_raw.lower()
+                    
+                    if scelta_lower == chr(27):
+                        break
+                    elif scelta_lower == '?':
+                        print("\n--- Aiuto Esercizio Scala ---")
+                        for k, v in menu_esercizio.items():
+                            print(f"  Tasto '{k}': {v}")
+                        print("  Tasto 'SPAZIO': Cambia Suono")
+                        print("  Tasto 'ESC': Torna al menu principale")
+                        print("-----------------------------\n")
+                        continue
+                    elif scelta_lower == ' ':
+                        suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                        aggiorna_renderers(suono_attivo_key)
+                        continue
+                    elif scelta_lower in key_map_scala:
+                        idx = key_map_scala[scelta_lower]
+                        freq = note_per_audio_asc[idx]
+                        if freq is not None and freq > 0:
+                            note_audio_stereo = renderers[idx].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                        continue
+                    elif scelta_lower == 'l':
+                        loop_attivo = True
+                        loop_count = 1
+                        nota_precedente_loop = None
+                        continue
+                    elif scelta_lower == 'b':
+                        global archivio_modificato
+                        nuovo_bpm = dgt(f"\rNuovi BPM (attuale: {bpm}): ", kind='i', imin=20, imax=300, default=bpm)
+                        if nuovo_bpm != bpm:
+                            bpm = nuovo_bpm
+                            impostazioni['default_bpm'] = bpm
+                            archivio_modificato = True
+                            print(f"\rBPM predefiniti aggiornati a {bpm}.{' '*20}")
+                            aggiorna_renderers(suono_attivo_key)
+                        continue
+                    elif scelta_lower == 'a' or scelta_lower == 'd':
+                        ultima_direzione = scelta_lower
+                        seq = list(range(num_notes)) if scelta_lower == 'a' else list(range(num_notes - 1, -1, -1))
+                        dur_step = 60.0 / bpm
+                        
+                        nota_precedente_singolo = None
+                        interrotto = False
+                        
+                        for idx in seq:
+                            if nota_precedente_singolo is not None:
+                                poly_player.mute(nota_precedente_singolo)
+                            
+                            freq = note_per_audio_asc[idx]
+                            if freq is not None and freq > 0:
+                                note_audio_stereo = renderers[idx].render()
+                                if note_audio_stereo.size > 0:
+                                    mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                    poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                    nota_precedente_singolo = idx
+                                    
+                            passi = int(dur_step / 0.02)
+                            for _ in range(passi):
+                                tasto = key(attesa=0.02)
+                                if tasto:
+                                    tasto_lower = tasto.lower()
+                                    if tasto_lower == ' ':
+                                        suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                                        aggiorna_renderers(suono_attivo_key)
+                                        suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                                        dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
+                                        print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
+                                    elif tasto == chr(27):
+                                        poly_player.mute()
+                                        interrotto = True
+                                        break
+                            if interrotto:
+                                break
+                            
+                            rimanente = dur_step - (passi * 0.02)
+                            if rimanente > 0:
+                                aspetta(rimanente)
+                        continue
 
         print("Fine esercizio.") 
 
@@ -1730,6 +1819,9 @@ def VisualizzaEsercitatiScala():
         print(f"\nErrore imprevisto durante la generazione della scala: {e}")
         if usi_string: print(f"USI tentato: '{usi_string}'")
         key("Premi un tasto...")
+    finally:
+        if poly_player is not None:
+            poly_player.stop()
 # --- Funzioni Segnaposto (Stub per Fase 2) ---
 
 def ModificaSuono(suono_key):
@@ -2354,7 +2446,7 @@ def PlayerGenerico():
             elif ch == ' ':
                 suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
                 p = get_synth_params(suono_attivo_key)
-                print(f"\rSuono: {impostazioni[suono_attivo_key]['descrizione']}{' '*30}\r", end="", flush=True)
+                print(f"\r[Suono: {impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
             elif ch in ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'):
                 if ch == 'f1': base_octave = 2
                 elif ch == 'f2': base_octave = 3
@@ -2364,7 +2456,7 @@ def PlayerGenerico():
                 elif ch == 'f6': base_octave = 7
                 elif ch == 'f7': base_octave = 8
                 elif ch == 'f8': base_octave = 9
-                print(f"\rOttava Base impostata a: {base_octave}{' '*30}\r", end="", flush=True)
+                print(f"\r[Suono: {impostazioni[suono_attivo_key]['descrizione']}] Ottava Base impostata a: {base_octave}{' '*20}\r", end="", flush=True)
             elif ch in KB_MAP:
                 semitones, oct_offset = KB_MAP[ch]
                 actual_octave = base_octave + oct_offset
