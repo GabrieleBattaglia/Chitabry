@@ -98,7 +98,7 @@ def seleziona_file_midi():
     if scelta: return os.path.join(DEFAULT_MIDI_DIR, scelta)
     return None
 def gestisci_tools_abc(filepath):
-    from Chitabry import impostazioni, salva_impostazioni
+    from config import impostazioni, salva_impostazioni
     from GBUtils import dgt
     import subprocess
 
@@ -803,7 +803,7 @@ def studia_traccia(part, label, filepath, idx, tot):
 def check_midi_folder_cleanup():
     import datetime
     from GBUtils import enter_escape
-    from Chitabry import impostazioni, salva_impostazioni
+    from config import impostazioni, salva_impostazioni
     
     if not os.path.exists(DEFAULT_MIDI_DIR):
         return
