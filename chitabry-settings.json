@@ -11,7 +11,7 @@
     },
     "suono_2": {
         "descrizione": "Suono sintetico (onda semplice)",
-        "kind": 2,
+        "kind": 4,
         "volume": 0.4,
         "adsr": [
             1.0,
@@ -3400,5 +3400,6 @@
             "durata_str": "04.51.868",
             "data": "2026-05-15 13:32:18"
         }
-    ]
+    ],
+    "ultimo_controllo_pulizia_midi": "2026-05-23"
 }
