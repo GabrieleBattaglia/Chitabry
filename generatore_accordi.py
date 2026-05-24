@@ -1,6 +1,6 @@
-import numpy as np
 from constraint import Problem
-from music21 import harmony, pitch
+from music21 import harmony
+from strumento import InstrumentModel
 
 class HarmonicParser:
     """Modulo 1: Analizza l'accordo e restituisce le pitch classes necessarie."""
@@ -10,19 +10,6 @@ class HarmonicParser:
         target_pc = {p.pitchClass for p in c.pitches}
         root_pc = c.root().pitchClass
         return target_pc, root_pc
-
-class InstrumentModel:
-    """Modulo 2: Crea la matrice delle note (pitch classes) sul manico."""
-    def __init__(self, accordatura: list[str], num_tasti: int):
-        self.num_corde = len(accordatura)
-        self.num_tasti = num_tasti
-        
-        self.accordatura_midi = [pitch.Pitch(nota).midi for nota in accordatura]
-        
-        self.manico_pc = np.zeros((self.num_corde, self.num_tasti + 1), dtype=int)
-        for c in range(self.num_corde):
-            for t in range(self.num_tasti + 1):
-                self.manico_pc[c, t] = (self.accordatura_midi[c] + t) % 12
 
 class AccordoSolver:
     """Modulo 3: Il cuore dell'algoritmo CSP."""

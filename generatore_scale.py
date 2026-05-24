@@ -1,12 +1,6 @@
 
 # MIDI notes per accordatura standard (0 = E2 grave, 5 = E4 cantino)
-DEFAULT_TUNING_MIDI = [40, 45, 50, 55, 59, 64] 
-
-class InstrumentModel:
-    def __init__(self, tuning_midi=None, num_frets=22):
-        self.tuning_midi = tuning_midi if tuning_midi else DEFAULT_TUNING_MIDI
-        self.num_strings = len(self.tuning_midi)
-        self.num_frets = num_frets
+DEFAULT_TUNING_MIDI = [40, 45, 50, 55, 59, 64]
 
 class ScalePathfinder:
     def __init__(self, model, target_pc_list, root_pc):

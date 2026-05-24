@@ -1049,7 +1049,8 @@ def VisualizzaEsercitatiScala():
                         
                         tuning_midi = [pitch.Pitch(n).midi for n in accordatura_lista]
                         
-                        from generatore_scale import InstrumentModel, ScalePathfinder
+                        from strumento import InstrumentModel
+                        from generatore_scale import ScalePathfinder
                         model_strum = InstrumentModel(tuning_midi=tuning_midi, num_frets=num_tasti_strum)
                         
                         target_pc_list = []
@@ -1842,7 +1843,8 @@ def CostruttoreAccordi():
         key("Premi un tasto...")
         return
 
-    from generatore_accordi import InstrumentModel, AccordoSolver
+    from strumento import InstrumentModel
+    from generatore_accordi import AccordoSolver
     model = InstrumentModel(accordatura_lista, num_tasti)
     solver = AccordoSolver(model, target_pc, root_pc)
     

@@ -40,3 +40,41 @@ def build_fretboard_data(note_std: List[str], accordatura: List[str], num_tasti:
             corde[f"{corda}.{tasto}"] = scalacromatica_std[idx_cromatico]
             
     return scalacromatica_std, capotasti, corde
+
+
+class InstrumentModel:
+    """Modello unificato dello strumento che descrive corde, tasti, accordatura e Pitch Classes sul manico."""
+    def __init__(self, accordatura: List[str] = None, num_tasti: int = 22, tuning_midi: List[int] = None, num_frets: int = None):
+        if tuning_midi is not None:
+            self.tuning_midi = tuning_midi
+            self.accordatura_midi = tuning_midi
+            self.num_corde = len(tuning_midi)
+            self.num_strings = self.num_corde
+            self.num_tasti = num_frets if num_frets is not None else num_tasti
+            self.num_frets = self.num_tasti
+        else:
+            if accordatura is None:
+                # Accordatura standard chitarra di default
+                self.tuning_midi = [40, 45, 50, 55, 59, 64]
+                self.accordatura_midi = self.tuning_midi
+                self.num_corde = len(self.tuning_midi)
+                self.num_strings = self.num_corde
+                self.num_tasti = num_frets if num_frets is not None else num_tasti
+                self.num_frets = self.num_tasti
+            else:
+                self.accordatura = accordatura
+                self.num_corde = len(accordatura)
+                self.num_strings = self.num_corde
+                self.num_tasti = num_tasti if num_tasti is not None else (num_frets if num_frets is not None else 22)
+                self.num_frets = self.num_tasti
+                
+                from music21 import pitch
+                self.tuning_midi = [pitch.Pitch(nota).midi for nota in accordatura]
+                self.accordatura_midi = self.tuning_midi
+        
+        import numpy as np
+        self.manico_pc = np.zeros((self.num_corde, self.num_tasti + 1), dtype=int)
+        for c in range(self.num_corde):
+            for t in range(self.num_tasti + 1):
+                self.manico_pc[c, t] = (self.tuning_midi[c] + t) % 12
+

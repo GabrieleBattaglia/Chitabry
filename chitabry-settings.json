@@ -11,13 +11,13 @@
     },
     "suono_2": {
         "descrizione": "Suono sintetico (onda semplice)",
-        "kind": 4,
+        "kind": 3,
         "volume": 0.4,
         "adsr": [
             1.0,
+            99.0,
             0.0,
-            100.0,
-            1.0
+            0.0
         ]
     },
     "chordpedia": {
