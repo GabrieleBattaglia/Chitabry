@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 8, di mercoledì 20 maggio 2026.
+L'ultima revisione di questo documento e' la numero 9, di domenica 24 maggio 2026.
 A cura di Gabriele Battaglia.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 3.5 Flash, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
@@ -171,23 +171,24 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
 | `pa <durata> <bpm/m>`| Inserimento 'One-Liner' ultra-rapido. Es: 'pa 8 130' (aggiunge in coda 8 battute a 130 bpm). 'pa 4 m' (4 battute mute). | `pa 8 130` |
 | `pc <battuta>`| Cancella un passo specificando la sua battuta d'inizio. | `pc 16` |
 
+  Allenamento (Ghost Bars)
 
+| Comando | Spiegazione | Esempio |
+| : | : | : |
+| `gb <attive> <mute>` | Attiva le Ghost Bars cicliche (es. suona 3 battute, ne silenzia 1). | `gb 3 1` |
+| `gb r <prob>` | Attiva le Ghost Bars casuali con percentuale di probabilità di muto (es. 25%). | `gb r 25` |
+| `gb off` | Disattiva la modalità Ghost Bars. | `gb off` |
 
- Sviluppatori
+  Sviluppatori
 
-   Gabriele Battaglia (IZ4APU) - Concept e sviluppo principale.
-   Partner di Programmazione (Gemini) - Code review, debugging e implementazione di nuove feature.
+    Gabriele Battaglia (IZ4APU) - Concept e sviluppo principale.
+    Partner di Programmazione (Gemini) - Code review, debugging e implementazione di nuove feature.
 
+  Idee per Sviluppi Futuri (Roadmap)
 
-
- Idee per Sviluppi Futuri (Roadmap)
-
-   Pattern Ritmici: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
-   Tap Tempo: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
-   Supporto Suoni `.wav`: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
-   Modalità "Ghost Bars": Aggiungere una modalità di allenamento che silenzia casualmente una o più battute per testare la stabilità ritmica dell'utente.
-
-
+    Pattern Ritmici: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
+    Tap Tempo: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
+    Supporto Suoni `.wav`: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
 
  MidiStudy
 

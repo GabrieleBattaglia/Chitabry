@@ -19,6 +19,7 @@ COMANDI = {
     'ms', 'm', 'ml', 'mc',
     'q', 'i', 'x',
     'p', 'pa', 'pc',
+    'gb',
 }
 HELP_STRING = """
 --- Menu Comandi Metronomo ---
@@ -34,6 +35,7 @@ HELP_STRING = """
   b <bpm>     - Imposta i BPM (es. b 120 o b 180 in 2m)
   t <n/d>     - Imposta il tempo (es. t 7/8)
   0,1,2,3     - Attiva/Disattiva Suddivisioni (0=off, 1=8vi, 2=16vi, 3=32vi)
+  gb          - Impostazioni Ghost Bars (es: gb c 3 1, gb r 25, gb off)
 
 >> PARAMETRI SUONO (n = 1:Accento, 2:Beat, 3:Sub)
   l<n> <ms>   - Durata del beep (es. l1 100)
@@ -139,6 +141,15 @@ class Metronome:
         self.is_muted_by_program = False        # Flag per le sezioni mute
         self.bpm_ramp_active = False            # Flag per le transizioni di BPM
         self.bpm_increment_per_measure = 0.0
+        # Attributi per Ghost Bars
+        self.ghost_mode = None
+        self.ghost_cyclic_audible = 3
+        self.ghost_cyclic_silent = 1
+        self.ghost_random_probability = 25
+        self.ghost_random_duration_min = 1
+        self.ghost_random_duration_max = 2
+        self.ghost_silent_bars_left = 0
+        self.is_muted_by_ghost = False
     def display_status(self, preset_manager):
         """Mostra una tabella riassuntiva di tutte le impostazioni correnti."""
         print("\n--- Stato Attuale Metronomo ---")
@@ -178,6 +189,13 @@ class Metronome:
             print(f"{label:<12} | {str(v1):<10} {unit:<2} | {str(v2):<10} {unit:<2} | {str(v3):<10} {unit:<2}")
         
         print("---------------------------------------------------------")
+        mode_str = "Disattivato"
+        if getattr(self, 'ghost_mode', None) == 'cyclic':
+            mode_str = f"Ciclico ({self.ghost_cyclic_audible} a tempo, {self.ghost_cyclic_silent} mute)"
+        elif getattr(self, 'ghost_mode', None) == 'random':
+            mode_str = f"Casuale (Probabilità: {self.ghost_random_probability}%, durata: {self.ghost_random_duration_min}-{self.ghost_random_duration_max} battute)"
+        print(f"Ghost Bars: {mode_str}")
+        print("---------------------------------------------------------")
     def display_program(self):
         """Mostra il programma corrente in un formato leggibile."""
         print("\n--- Programma Corrente ---")
@@ -208,6 +226,14 @@ class Metronome:
         self.program = []
         self.current_preset_id = None
         self.is_dirty = False
+        self.ghost_mode = None
+        self.ghost_cyclic_audible = 3
+        self.ghost_cyclic_silent = 1
+        self.ghost_random_probability = 25
+        self.ghost_random_duration_min = 1
+        self.ghost_random_duration_max = 2
+        self.ghost_silent_bars_left = 0
+        self.is_muted_by_ghost = False
 
         # Ripristina anche i parametri dei suoni
         self.config_accento = {
@@ -242,6 +268,14 @@ class Metronome:
             self.current_preset_id = preset_id
             self.is_dirty = False
             self.program = state.get("program", [])
+            self.ghost_mode = state.get("ghost_mode", None)
+            self.ghost_cyclic_audible = state.get("ghost_cyclic_audible", 3)
+            self.ghost_cyclic_silent = state.get("ghost_cyclic_silent", 1)
+            self.ghost_random_probability = state.get("ghost_random_probability", 25)
+            self.ghost_random_duration_min = state.get("ghost_random_duration_min", 1)
+            self.ghost_random_duration_max = state.get("ghost_random_duration_max", 2)
+            self.ghost_silent_bars_left = 0
+            self.is_muted_by_ghost = False
             self.cached_accent_beep = None
             self.cached_tick_beep = None
             self.cached_sub_beep = None
@@ -386,6 +420,7 @@ class Metronome:
                 if self.playback_index >= buffer_len:
                     self._check_program_events()
                     self._update_ramp()
+                    self._update_ghost_bars()
                     
                     if self.pending_buffer is not None:
                         self.active_buffer = self.pending_buffer
@@ -399,8 +434,11 @@ class Metronome:
                 frames_to_write = min(needed_frames - written_frames, remaining_in_buffer)
                 
                 if frames_to_write > 0:
-                    outdata[written_frames : written_frames + frames_to_write] = \
-                        self.active_buffer[self.playback_index : self.playback_index + frames_to_write].reshape(-1, 1)
+                    if getattr(self, 'is_muted_by_ghost', False) or self.is_muted_by_program:
+                        outdata[written_frames : written_frames + frames_to_write] = 0
+                    else:
+                        outdata[written_frames : written_frames + frames_to_write] = \
+                            self.active_buffer[self.playback_index : self.playback_index + frames_to_write].reshape(-1, 1)
 
                     self.playback_index += frames_to_write
                     written_frames += frames_to_write
@@ -531,7 +569,13 @@ class Metronome:
             "config_accento": self.config_accento,
             "config_tick": self.config_tick,
             "config_subdivision": self.config_subdivision,
-            "program": self.program
+            "program": self.program,
+            "ghost_mode": self.ghost_mode,
+            "ghost_cyclic_audible": self.ghost_cyclic_audible,
+            "ghost_cyclic_silent": self.ghost_cyclic_silent,
+            "ghost_random_probability": self.ghost_random_probability,
+            "ghost_random_duration_min": self.ghost_random_duration_min,
+            "ghost_random_duration_max": self.ghost_random_duration_max
         }
     def add_program_segment_interactive(self, one_liner_args=None):
         """Avvia una procedura guidata o elabora un comando one-liner per aggiungere un nuovo segmento."""
@@ -782,6 +826,38 @@ class Metronome:
             
             self._request_buffer_rebuild()
             print("\n P: Fine segmento.",end="")
+    def _update_ghost_bars(self):
+        if not getattr(self, 'ghost_mode', None):
+            self.is_muted_by_ghost = False
+            return
+
+        next_bar_idx = self.session_measure_count + 1
+        was_muted = getattr(self, 'is_muted_by_ghost', False)
+        is_silent = False
+
+        if self.ghost_mode == 'cyclic':
+            cycle_len = self.ghost_cyclic_audible + self.ghost_cyclic_silent
+            pos = next_bar_idx % cycle_len
+            if pos == 0 or pos > self.ghost_cyclic_audible:
+                is_silent = True
+            self.is_muted_by_ghost = is_silent
+
+        elif self.ghost_mode == 'random':
+            if self.ghost_silent_bars_left > 0:
+                is_silent = True
+                self.ghost_silent_bars_left -= 1
+            else:
+                import random
+                if random.random() * 100 < self.ghost_random_probability:
+                    self.ghost_silent_bars_left = random.randint(self.ghost_random_duration_min, self.ghost_random_duration_max)
+                    is_silent = True
+                    self.ghost_silent_bars_left -= 1
+            self.is_muted_by_ghost = is_silent
+
+        if is_silent and not was_muted:
+            print(" [GHOST MUTO]", end="", flush=True)
+        elif not is_silent and was_muted:
+            print(" [GHOST SUONO]", end="", flush=True)
 
 class PresetManager:
     """Gestisce la lettura, scrittura e manipolazione dei preset da file JSON."""
@@ -1163,6 +1239,71 @@ def main():
             clitronomo.is_dirty = False
             clitronomo.current_preset_id = preset_id
             
+        elif command == 'gb':
+            if value is None:
+                # Mostra aiuto e stato corrente
+                print("\n--- Impostazioni Ghost Bars (Battute Fantasma) ---")
+                mode_str = "Disattivato"
+                if clitronomo.ghost_mode == 'cyclic':
+                    mode_str = f"Ciclico ({clitronomo.ghost_cyclic_audible} a tempo, {clitronomo.ghost_cyclic_silent} mute)"
+                elif clitronomo.ghost_mode == 'random':
+                    mode_str = f"Casuale (Probabilità: {clitronomo.ghost_random_probability}%, durata: {clitronomo.ghost_random_duration_min}-{clitronomo.ghost_random_duration_max} battute)"
+                print(f"Stato attuale: {mode_str}")
+                print("\nUso del comando:")
+                print("  gb off              - Disattiva le battute fantasma")
+                print("  gb c <suonano> <mute> - Imposta modalità ciclica (es: gb c 3 1)")
+                print("  gb r <prob> [<min>-<max>] - Imposta modalità casuale (es: gb r 30 o gb r 25 1-2)")
+            else:
+                val_parts = value.split()
+                subcmd = val_parts[0].lower()
+                if subcmd == 'off':
+                    clitronomo.ghost_mode = None
+                    clitronomo.is_muted_by_ghost = False
+                    clitronomo.is_dirty = True
+                    print("\nGhost Bars disattivate.")
+                elif subcmd in ('c', 'cyclic'):
+                    try:
+                        audible = int(val_parts[1])
+                        silent = int(val_parts[2])
+                        if audible < 1 or silent < 1:
+                            raise ValueError()
+                        clitronomo.ghost_mode = 'cyclic'
+                        clitronomo.ghost_cyclic_audible = audible
+                        clitronomo.ghost_cyclic_silent = silent
+                        clitronomo.is_muted_by_ghost = False
+                        clitronomo.is_dirty = True
+                        print(f"\nGhost Bars impostate su Ciclico: {audible} battute a tempo, {silent} mute.")
+                    except (IndexError, ValueError):
+                        print("\nErrore: per la modalità ciclica usa 'gb c <suonano> <mute>' con numeri >= 1 (es. gb c 3 1).")
+                elif subcmd in ('r', 'random'):
+                    try:
+                        prob = int(val_parts[1])
+                        if not (1 <= prob <= 100):
+                            raise ValueError("La probabilità deve essere tra 1 e 100")
+                        
+                        dur_min = 1
+                        dur_max = 2
+                        if len(val_parts) > 2:
+                            dur_str = val_parts[2]
+                            if '-' in dur_str:
+                                dmin, dmax = map(int, dur_str.split('-'))
+                                if dmin >= 1 and dmax >= dmin:
+                                    dur_min, dur_max = dmin, dmax
+                            else:
+                                dur_min = dur_max = int(dur_str)
+                        
+                        clitronomo.ghost_mode = 'random'
+                        clitronomo.ghost_random_probability = prob
+                        clitronomo.ghost_random_duration_min = dur_min
+                        clitronomo.ghost_random_duration_max = dur_max
+                        clitronomo.ghost_silent_bars_left = 0
+                        clitronomo.is_muted_by_ghost = False
+                        clitronomo.is_dirty = True
+                        print(f"\nGhost Bars impostate su Casuale: probabilità {prob}%, durata {dur_min}-{dur_max} battute.")
+                    except (IndexError, ValueError):
+                        print("\nErrore: per la modalità casuale usa 'gb r <prob_percentuale>' (es. gb r 25) o 'gb r <prob> <min>-<max>'.")
+                else:
+                    print(f"\nSotto-comando '{subcmd}' non riconosciuto. Usa off, c/cyclic, o r/random.")
         elif command == 't' and value is not None:
             try:
                 if '/' in value:

@@ -14,22 +14,50 @@ BLOCK_SIZE = 256
 HARMONICS = [1, 0.5, 0.33, 0.25, 0.2, 0.17, 0.14, 0.125, 0.11, 0.1, 0.09, 0.08, 0.07]
 
 def note_to_freq(note):
-    """Converte la notazione (es. "C4") in frequenza (Hz)."""
+    """Converte la notazione (es. "C4", "F~5", "B`5") in frequenza (Hz)."""
     if isinstance(note, (int, float)): return float(note)
     if isinstance(note, str):
         note_lower = note.lower()
         if note_lower == 'p': return 0.0 # Pausa
         note_lower = note_lower.replace('-', 'b')
-        match = re.match(r"^([a-g])([#b]?)(\d)$", note_lower)
-        if not match: return 0.0
-        note_letter, accidental, octave_str = match.groups()
-        try: octave = int(octave_str)
-        except ValueError: return 0.0
-        note_base = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
-        semitone = note_base[note_letter]
-        if accidental == '#': semitone += 1
-        elif accidental == 'b': semitone -= 1
-        midi_num = 12 + semitone + 12 * octave
+        
+        # Estrai l'ottava (cifre finali)
+        match_octave = re.search(r"\d+$", note_lower)
+        if not match_octave:
+            return 0.0
+        octave_str = match_octave.group()
+        try:
+            octave = int(octave_str)
+        except ValueError:
+            return 0.0
+            
+        # Rimuovi l'ottava per ottenere la nota e le alterazioni
+        note_base = note_lower[:-len(octave_str)]
+        
+        # Estrai i simboli microtonali alla fine di note_base
+        micro_offset = 0.0
+        # Ordina dal più lungo al più corto per evitare match parziali
+        possible_micros = [("~~", 1.5), ("``", -1.5), ("~", 0.5), ("`", -0.5)]
+        for micro, offset in possible_micros:
+            if note_base.endswith(micro):
+                micro_offset = offset
+                note_base = note_base[:-len(micro)]
+                break
+                
+        # Ora note_base contiene solo la nota e le alterazioni standard (es. "c", "c#", "eb")
+        match_std = re.match(r"^([a-g])([#b]?)$", note_base)
+        if not match_std:
+            return 0.0
+        note_letter, accidental = match_std.groups()
+        
+        note_base_semitones = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
+        semitone = note_base_semitones[note_letter]
+        if accidental == '#':
+            semitone += 1
+        elif accidental == 'b':
+            semitone -= 1
+            
+        midi_num = 12 + semitone + 12 * octave + micro_offset
         freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
         return freq
     return 0.0

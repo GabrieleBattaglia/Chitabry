@@ -3238,7 +3238,7 @@
             ]
         ]
     },
-    "default_bpm": 110,
+    "default_bpm": 75,
     "strumenti": {
         "Chitarra Standard": {
             "accordatura": [

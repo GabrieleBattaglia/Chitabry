@@ -300,8 +300,15 @@ def visualizza_note_su_manico(lista_note: list[str], maninf: int = 0, mansup: in
     manico_filtrato = {c: [] for c in range(config.NUM_CORDE, 0, -1)}
     
     # Nota: lista_note contiene nomi base (es. 'C#', 'Bb', 'A')
-    # Li mettiamo in un set per una ricerca velocissima (O(1))
-    note_da_cercare = set(lista_note)
+    # Normalizziamo le note bemolli nei rispettivi diesis per compatibilità con config.CORDE
+    note_da_cercare = set()
+    mappa_bemolli = {
+        'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
+        'C-': 'B', 'D-': 'C#', 'E-': 'D#', 'F-': 'E', 'G-': 'F#', 'A-': 'G#', 'B-': 'A#'
+    }
+    for n in lista_note:
+        n_clean = n.replace('-', 'b')
+        note_da_cercare.add(mappa_bemolli.get(n_clean, n_clean))
 
     # 2. Itera su config.CORDE (l'intero manico) UNA SOLA VOLTA
     for posizione, nota_std_con_ottava in config.CORDE.items():
@@ -1157,12 +1164,45 @@ def VisualizzaEsercitatiScala():
             loop_attivo = False
             loop_count = 1
             ultima_direzione = 'a'
-            menu_esercizio = {"1-8": "Suona nota singola", "a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "i": "Indietro"}
+            menu_esercizio = {"1-8": "Suona nota singola", "a": "Ascolta ascendente", "d": "Ascolta discendente", "l": "Attiva/Disattiva Loop", "b": "Imposta BPM", "m": "Attiva/Disattiva Metronomo", "i": "Indietro"}
             loop_messaggio_stampato = False
 
             num_notes = len(note_per_audio_asc)
-            poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=num_notes)
+            poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=num_notes + 1)
+            poly_player.set_pan(num_notes, 0.0) # Metronomo centrato
             renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_notes)]
+
+            # Caricamento del preset di metronomo attivo
+            metronomo_attivo = False
+            import clitronomo
+            import sys
+            import io
+            
+            old_stdout = sys.stdout
+            sys.stdout = io.StringIO()
+            try:
+                preset_mgr = clitronomo.PresetManager()
+                _, last_state = preset_mgr.get_last_used_preset()
+            except Exception:
+                last_state = None
+            finally:
+                sys.stdout = old_stdout
+
+            if last_state:
+                config_accento = last_state.get('config_accento')
+                config_tick = last_state.get('config_tick')
+            else:
+                config_accento = {
+                    "beep_duration_ms": 70, "volume_perc": 50, "attack_ms": 5,
+                    "decay_ms": 8, "frequency_hz": 915.0
+                }
+                config_tick = {
+                    "beep_duration_ms": 40, "volume_perc": 35, "attack_ms": 5,
+                    "decay_ms": 12, "frequency_hz": 550.0
+                }
+
+            accent_beep = clitronomo.genera_suono_mono_int16(config_accento).astype(np.float32) / 32767.0
+            tick_beep = clitronomo.genera_suono_mono_int16(config_tick).astype(np.float32) / 32767.0
 
             def aggiorna_renderers(suono_key):
                 suono = config.impostazioni[suono_key]
@@ -1214,21 +1254,39 @@ def VisualizzaEsercitatiScala():
                     print(f"\r{note_scala_loop_str} | L:{loop_count} {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
                     
                     seq = list(range(num_notes)) if ultima_direzione == 'a' else list(range(num_notes - 1, -1, -1))
+                    
+                    if metronomo_attivo:
+                        extra_beats = (4 - (num_notes % 4)) % 4
+                    else:
+                        extra_beats = 0
+                        
                     dur_step = 60.0 / bpm
                     
                     interrotto = False
-                    for idx in seq:
+                    beat_in_measure = 0
+                    for idx_step in range(num_notes + extra_beats):
                         if nota_precedente_loop is not None:
                             poly_player.mute(nota_precedente_loop)
                             
-                        freq = note_per_audio_asc[idx]
-                        if freq is not None and freq > 0:
-                            note_audio_stereo = renderers[idx].render()
-                            if note_audio_stereo.size > 0:
-                                mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
-                                poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
-                                nota_precedente_loop = idx
+                        if idx_step < num_notes:
+                            idx = seq[idx_step]
+                            freq = note_per_audio_asc[idx]
+                            if freq is not None and freq > 0:
+                                note_audio_stereo = renderers[idx].render()
+                                if note_audio_stereo.size > 0:
+                                    mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                    poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                    nota_precedente_loop = idx
+                        else:
+                            nota_precedente_loop = None
                                 
+                        if metronomo_attivo:
+                            is_accent = (beat_in_measure % 4 == 0)
+                            click_audio = accent_beep if is_accent else tick_beep
+                            if click_audio.size > 0:
+                                poly_player.pluck(string_idx=num_notes, audio_mono=click_audio)
+                            beat_in_measure += 1
+
                         passi = int(dur_step / 0.02)
                         for _ in range(passi):
                             tasto = key(attesa=0.02)
@@ -1273,7 +1331,7 @@ def VisualizzaEsercitatiScala():
                     note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
                     suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
                     dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
-                    print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev} (1-8, A, D, L, B, SPAZIO, ?, ESC):\r", end="", flush=True)
+                    print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev}{' (M)' if metronomo_attivo else ''} (1-8, A, D, L, B, M, SPAZIO, ?, ESC):\r", end="", flush=True)
                     
                     scelta_raw = key()
                     if not scelta_raw:
@@ -1289,6 +1347,11 @@ def VisualizzaEsercitatiScala():
                         print("  Tasto 'SPAZIO': Cambia Suono")
                         print("  Tasto 'ESC': Torna al menu principale")
                         print("-----------------------------\n")
+                        continue
+                    elif scelta_lower == 'm':
+                        metronomo_attivo = not metronomo_attivo
+                        stato_metro = "ATTIVO" if metronomo_attivo else "DISATTIVATO"
+                        print(f"\rMetronomo {stato_metro} per l'esercizio.{' '*20}")
                         continue
                     elif scelta_lower == ' ':
                         suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
@@ -1320,23 +1383,41 @@ def VisualizzaEsercitatiScala():
                     elif scelta_lower == 'a' or scelta_lower == 'd':
                         ultima_direzione = scelta_lower
                         seq = list(range(num_notes)) if scelta_lower == 'a' else list(range(num_notes - 1, -1, -1))
+                        
+                        if metronomo_attivo:
+                            extra_beats = (4 - (num_notes % 4)) % 4
+                        else:
+                            extra_beats = 0
+                            
                         dur_step = 60.0 / bpm
                         
                         nota_precedente_singolo = None
                         interrotto = False
+                        beat_in_measure = 0
                         
-                        for idx in seq:
+                        for idx_step in range(num_notes + extra_beats):
                             if nota_precedente_singolo is not None:
                                 poly_player.mute(nota_precedente_singolo)
                             
-                            freq = note_per_audio_asc[idx]
-                            if freq is not None and freq > 0:
-                                note_audio_stereo = renderers[idx].render()
-                                if note_audio_stereo.size > 0:
-                                    mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
-                                    poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
-                                    nota_precedente_singolo = idx
+                            if idx_step < num_notes:
+                                idx = seq[idx_step]
+                                freq = note_per_audio_asc[idx]
+                                if freq is not None and freq > 0:
+                                    note_audio_stereo = renderers[idx].render()
+                                    if note_audio_stereo.size > 0:
+                                        mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                        poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                        nota_precedente_singolo = idx
+                            else:
+                                nota_precedente_singolo = None
                                     
+                            if metronomo_attivo:
+                                is_accent = (beat_in_measure % 4 == 0)
+                                click_audio = accent_beep if is_accent else tick_beep
+                                if click_audio.size > 0:
+                                    poly_player.pluck(string_idx=num_notes, audio_mono=click_audio)
+                                beat_in_measure += 1
+
                             passi = int(dur_step / 0.02)
                             for _ in range(passi):
                                 tasto = key(attesa=0.02)

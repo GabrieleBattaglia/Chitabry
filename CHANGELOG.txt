@@ -1,6 +1,19 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.4.5 (24 maggio 2026)
+--------------------------------
+*   **Scale e Diteggiature (Fix & Miglioramenti):**
+    *   Risolto il problema per cui le note bemolli (es. Bb, Eb) non venivano visualizzate correttamente sul manico della chitarra.
+    *   Fornito supporto alle frequenze microtonali con suffissi speciali (~, ~~, `, ``) nella conversione frequenza-nota e nell'audio.
+    *   Chiarito il funzionamento globale del manico: la visualizzazione evidenzia tutte le ottave di una classe di nota contenuta nella scala (es. il MI5 nella scala Minor Wing causa l'evidenziazione di qualsiasi MI sul manico, inclusa la corda 6 open).
+*   **Integrazione Metronomo e Scale:**
+    *   Collegato l'esercizio scale al metronomo attivo, riproducendone il tempo (BPM), la suddivisione e gli esatti suoni fisici (frequenza/accento).
+    *   Risolto il "singhiozzo ritmico" di riavvio scala a fine battuta: se la scala non ha note divisibili per 4, vengono inseriti battiti silenti per completare la battuta di 4/4 prima che il ciclo riparta (o si fermi).
+*   **Ghost Bars nel Metronomo (Nuova Funzionalità):**
+    *   Implementata la modalità *Ghost Bars* per l'allenamento sul tempo interno: silenzia ciclicamente (es. gb 3 1) o casualmente (es. gb r 25 per il 25% di probabilità) intere battute del metronomo.
+    *   Aggiornati i comandi, lo stato dei preset, il salvataggio e il manuale d'uso.
+
 Versione 7.3.2 (24 maggio 2026)
 --------------------------------
 *   **Accordatore Acustico Cromatico (Nuova Funzionalità):**
