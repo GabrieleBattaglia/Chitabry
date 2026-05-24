@@ -9,6 +9,7 @@ from GBAudio import FS, NoteRenderer, note_to_freq
 import config
 import scale_catalog
 
+
 _FLAUTO_INTRO = """
 Benvenuto nel modulo di diteggiatura del Flauto Traverso.
 
@@ -2058,3 +2059,181 @@ def GiocaColSuono():
         
     gioca_suono.avvia_gioco(config.impostazioni, get_nota, config.NOTE_LATINE, config.NOTE_STD, config.NOTE_ANGLO, cb_salva)
 
+def Accordatore():
+    """Accordatore cromatico: rileva la nota fondamentale dal microfono usando sounddevice e numpy FFT."""
+    import math
+    import threading
+
+    # Selezione dispositivo di input
+    devices = sd.query_devices()
+    input_devices = {}
+    for idx, dev in enumerate(devices):
+        if dev['max_input_channels'] > 0:
+            try:
+                api_name = sd.query_hostapis(dev['hostapi'])['name']
+            except Exception:
+                api_name = "Sconosciuto"
+            input_devices[str(idx)] = f"{dev['name']} [{api_name}]"
+    if not input_devices:
+        print("\nErrore: Nessun dispositivo di input audio (microfono) trovato.")
+        key("Premi un tasto per continuare...")
+        return
+    print("\n--- Dispositivi di Input Disponibili ---")
+    scelta_device = menu(d=input_devices, p="Seleziona il dispositivo di input: ", show=True, numbered=True)
+    if scelta_device is None:
+        return
+    device_idx = int(scelta_device)
+    dev_info = sd.query_devices(device_idx, 'input')
+    device_sr = int(dev_info['default_samplerate'])
+    BLOCK_SIZE = 4096
+    RMS_THRESHOLD = 0.002
+    pitch_readings = []
+    current_rms = [0.0]
+    pitch_lock = threading.Lock()
+    stop_event = threading.Event()
+    def _parabolic_interp(mag, peak_idx):
+        if peak_idx <= 0 or peak_idx >= len(mag) - 1:
+            return float(peak_idx)
+        alpha = mag[peak_idx - 1]
+        beta = mag[peak_idx]
+        gamma = mag[peak_idx + 1]
+        denom = alpha - 2.0 * beta + gamma
+        if abs(denom) < 1e-12:
+            return float(peak_idx)
+        p = 0.5 * (alpha - gamma) / denom
+        return peak_idx + p
+    def _audio_callback(indata, frames, time_info, status):
+        if stop_event.is_set():
+            raise sd.CallbackAbort
+        mono = indata[:, 0]
+        rms = float(np.sqrt(np.mean(mono ** 2)))
+        current_rms[0] = rms
+        if rms < RMS_THRESHOLD:
+            return
+        windowed = mono * np.hanning(len(mono))
+        fft_data = np.fft.rfft(windowed)
+        magnitudes = np.abs(fft_data)
+        freq_per_bin = device_sr / len(mono)
+        min_bin = max(1, int(50 / freq_per_bin))
+        max_bin = min(
+            len(magnitudes) - 1,
+            int(2000 / freq_per_bin)
+        )
+        if min_bin >= max_bin:
+            return
+        search_region = magnitudes[min_bin:max_bin]
+        peak_bin = int(np.argmax(search_region)) + min_bin
+        refined_bin = _parabolic_interp(
+            magnitudes, peak_bin
+        )
+        detected_freq = refined_bin * freq_per_bin
+        with pitch_lock:
+            pitch_readings.append(detected_freq)
+    print("Accordatore cromatico.")
+    print("ESC per uscire.")
+    try:
+        stream = sd.InputStream(
+            device=device_idx,
+            samplerate=device_sr,
+            channels=1,
+            blocksize=BLOCK_SIZE,
+            dtype='float32',
+            callback=_audio_callback
+        )
+        stream.start()
+    except Exception as e:
+        print(f"Errore apertura audio: {e}")
+        key("Premi un tasto...")
+        return
+    import time
+    last_print_time = 0
+    last_nota = "---"
+    last_cents = 0.0
+    last_freq = 0.0
+    all_midi = []
+    all_freqs = []
+    all_dbs = []
+    try:
+        while True:
+            ch = key(attesa=0.05)
+            if ch == '\x1b':
+                break
+            current_time = time.time()
+            if current_time - last_print_time >= 1.0:
+                with pitch_lock:
+                    readings = pitch_readings.copy()
+                    pitch_readings.clear()
+                rms = current_rms[0]
+                db_val = 20 * math.log10(rms / 1e-5) if rms > 1e-5 else 0.0
+                above_threshold = (rms >= RMS_THRESHOLD)
+                if rms > 1e-6:
+                    all_dbs.append(db_val)
+                if readings and above_threshold:
+                    avg_freq = float(np.median(readings))
+                    if 30.0 <= avg_freq <= 2000.0:
+                        midi_num = 69 + 12 * math.log2(
+                            avg_freq / 440.0
+                        )
+                        target_midi = round(midi_num)
+                        cents = (midi_num - target_midi) * 100
+                        nota_nome = get_nota(
+                            pitch.Pitch(midi=target_midi).nameWithOctave.replace('-', 'b')
+                        )
+                        last_nota = nota_nome
+                        last_cents = cents
+                        last_freq = avg_freq
+                        all_midi.append(target_midi)
+                        all_freqs.append(avg_freq)
+                if last_nota == "---":
+                    cents_str = "0%"
+                    hz_str = "---"
+                else:
+                    s = "+" if last_cents >= 0 else ""
+                    cents_str = f"{s}{last_cents:.0f}%"
+                    hz_str = f"{last_freq:.1f}"
+                db_str = f"dB:{db_val:.0f}"
+                db_formatted = f"[{db_str}]" if above_threshold else f"<{db_str}>"
+                line = (
+                    f"N:{last_nota} "
+                    f"({cents_str}) "
+                    f"Hz:{hz_str} "
+                    f"{db_formatted}"
+                )
+                print(
+                    f"\r{line:<40}\r",
+                    end="", flush=True
+                )
+                last_print_time = current_time
+    finally:
+        stop_event.set()
+        stream.stop()
+        stream.close()
+        print("\nAccordatore chiuso.")
+        if all_midi and all_freqs and all_dbs:
+            if len(all_midi) >= 3:
+                trimmed_midi = sorted(all_midi)[1:-1]
+                trimmed_freqs = sorted(all_freqs)[1:-1]
+                trimmed_dbs = sorted(all_dbs)[1:-1]
+            else:
+                trimmed_midi = all_midi
+                trimmed_freqs = all_freqs
+                trimmed_dbs = all_dbs
+
+            min_midi = min(trimmed_midi)
+            max_midi = max(trimmed_midi)
+            med_midi = int(round(np.median(trimmed_midi)))
+            nota_min = get_nota(pitch.Pitch(midi=min_midi).nameWithOctave.replace('-', 'b'))
+            nota_max = get_nota(pitch.Pitch(midi=max_midi).nameWithOctave.replace('-', 'b'))
+            nota_med = get_nota(pitch.Pitch(midi=med_midi).nameWithOctave.replace('-', 'b'))
+            
+            min_f = min(trimmed_freqs)
+            max_f = max(trimmed_freqs)
+            med_f = np.median(trimmed_freqs)
+            
+            min_db = min(trimmed_dbs)
+            max_db = max(trimmed_dbs)
+            med_db = np.median(trimmed_dbs)
+            
+            print(f"\nNote ascoltate: {nota_min} ({nota_med}) {nota_max}")
+            print(f"Frequenze (Hz): {min_f:.1f} ({med_f:.1f}) {max_f:.1f}")
+            print(f"Volumi (dB): {min_db:.0f} ({med_db:.0f}) {max_db:.0f}")

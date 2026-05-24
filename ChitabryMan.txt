@@ -230,6 +230,24 @@ Notazione:
 - Accordi: Note racchiuse tra parentesi quadre, es. `[DO4 MI4 SOL4]`.
 - Legature: Il simbolo `~` a fine riga indica che l'ultima nota continua nella battuta successiva.
 
+  Accordatore
+
+Questa funzione avvia l'accordatore acustico cromatico in tempo reale per il tuo strumento.
+
+Il processo:
+1. All'avvio della funzione, l'applicazione rileva tutti i dispositivi di input audio disponibili sul sistema.
+2. Viene presentata la lista dei dispositivi di input: seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS).
+3. Suona una corda sul tuo strumento. L'accordatore mostrerà in tempo reale:
+   - La nota rilevata (espressa nella nomenclatura attiva in Impostazioni), preceduta da "N:".
+   - La deviazione in centesimi di semitono (espressa in percentuale), es. "(+12%)" o "(-5%)". Deviazione positiva indica nota crescente (allenta), negativa indica calante (tendi).
+   - La frequenza in Hz, preceduta da "Hz:".
+   - Il volume in dB (scala logaritmica positiva con base a 0dB come silenzio assoluto). Se il segnale è sufficiente, compare in parentesi quadre, es. "[dB:54]". Se è sotto soglia, compare in parentesi angolari, es. "<dB:28>", congelando l'ultima nota valida e aggiornando solo il volume ogni 1 secondo.
+4. L'output è formattato in un'unica stringa ultra-compatta ≤ 40 caratteri per ottimizzare la lettura su display Braille.
+5. All'uscita (tasto ESC), viene applicato un trimming statistico (rimozione di min e max assoluto per escludere glitch) e stampata una sintesi:
+   - Note ascoltate: minima (mediana) massima.
+   - Frequenze (Hz): minima (mediana) massima.
+   - Volumi (dB): minimo (mediano) massimo.
+
 
 
   Scale

@@ -1,6 +1,18 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.3.2 (24 maggio 2026)
+--------------------------------
+*   **Accordatore Acustico Cromatico (Nuova Funzionalità):**
+    *   Sviluppato un accordatore acustico integrato che acquisisce audio in tempo reale da microfono via `sounddevice` e rileva il pitch fondamentale con algoritmo FFT (numpy) + interpolazione parabolica per precisione sub-Hz.
+    *   Ottimizzato il display per lettori Braille e sintesi vocale: stringa ultra-compatta ≤ 40 caratteri nel formato `N:{nota} ({dev}%) Hz:{freq} {db_formatted}`.
+    *   Il volume in dB (scala logaritmica positiva) viene mostrato tra parentesi quadre `[dB:XX]` quando attivo e tra parentesi angolari `<dB:XX>` quando sotto la soglia minima di sensibilità. Sotto soglia, nota e frequenza vengono congelate e si aggiorna solo il volume ogni 1 secondo.
+    *   All'uscita viene stampata una tabella di telemetria con trimming statistico (esclusione dei minimi e massimi assoluti per eliminare i glitch di avvio/spegnimento) che riporta minimo, mediana e massimo per Note, Frequenze e Volumi.
+    *   Mappati dinamicamente i canali in ingresso per supportare interfacce audio professionali multicanale (es. Audient iD44).
+*   **Menu Principale (UX / Accessibilità):**
+    *   Nascosta la visualizzazione automatica delle voci del menu all'avvio e ad ogni ritorno al menu principale (`show=False`), offrendo una navigazione più rapida ed efficiente per ipovedenti e non vedenti.
+    *   Aggiunto invito a premere `?` per visualizzare l'elenco delle opzioni disponibili.
+
 Versione 6.8.12 (21 maggio 2026)
 --------------------------------
 *   **Player Scale (Ottimizzazione Display Braille):**

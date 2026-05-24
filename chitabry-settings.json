@@ -11,11 +11,11 @@
     },
     "suono_2": {
         "descrizione": "Suono sintetico (onda semplice)",
-        "kind": 3,
-        "volume": 0.4,
+        "kind": 1,
+        "volume": 0.7,
         "adsr": [
-            1.0,
-            99.0,
+            0.2,
+            99.8,
             0.0,
             0.0
         ]

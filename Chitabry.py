@@ -9,11 +9,12 @@ import scale_catalog
 import views
 
 # --- Costanti ---
-VERSIONE = "7.0.2 del 24 maggio 2026."
+VERSIONE = "7.3.2 del 24 maggio 2026."
 
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Tastiera": "Suona liberamente con la tastiera del PC",
+    "Accordatore": "Avvia l'accordatore acustico per il tuo strumento",
     "Flauto": "Consulta la diteggiatura del flauto traverso",
     "Metronomo": "Avvia il Metronomo",
     "MidiStudy": "Analizza e studia file MIDI",
@@ -78,10 +79,10 @@ def main():
     scale_catalog.USER_CHORD_DICT = scale_catalog.get_user_chord_dictionary()
     print(f"Riconosciuti {len(scale_catalog.SCALE_TYPES_DICT)} tipi di scale e {len(scale_catalog.USER_CHORD_DICT)-1} tipi di accordi.")
 
-    print("\n--- Menu Principale ---")
+    print("\nPremere '?' per visualizzare il menu delle opzioni.")
     
     while True:
-        scelta = menu(d=MAINMENU, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
+        scelta = menu(d=MAINMENU, keyslist=True, show=False, show_on_filter=False, ntf="Scelta non valida")
         
         if scelta is None:
             break
@@ -92,6 +93,8 @@ def main():
             views.CostruttoreAccordi()
         elif scelta == "Tastiera":
             views.PlayerGenerico()
+        elif scelta == "Accordatore":
+            views.Accordatore()
         elif scelta == "Gioca col suono":
             views.GiocaColSuono()
         elif scelta == "Metronomo":
