@@ -1,6 +1,14 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.5.0 (28 maggio 2026)
+--------------------------------
+*   **Accordatore (Rilevamento Automatico Periferica):**
+    *   Aggiunta la possibilità di richiedere il rilevamento automatico della periferica di input attiva all'apertura dell'accordatore tramite la funzione `enter_escape`.
+    *   Se abilitato, esegue un ascolto in parallelo di 5 secondi su tutte le periferiche di input monitorando il livello di picco RMS.
+    *   Nel caso in cui alcuni dispositivi falliscano l'inizializzazione concorrente in parallelo (per blocchi di risorsa), viene eseguito automaticamente un test in serie.
+    *   Vengono proposte in elenco solo le periferiche con segnale utile (RMS >= 0.002) indicandone il livello rilevato. In caso di assenza totale di rumore, vengono proposte tutte le periferiche come fallback di sicurezza.
+
 Versione 7.4.5 (24 maggio 2026)
 --------------------------------
 *   **Scale e Diteggiature (Fix & Miglioramenti):**

@@ -236,8 +236,8 @@ Notazione:
 Questa funzione avvia l'accordatore acustico cromatico in tempo reale per il tuo strumento.
 
 Il processo:
-1. All'avvio della funzione, l'applicazione rileva tutti i dispositivi di input audio disponibili sul sistema.
-2. Viene presentata la lista dei dispositivi di input: seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS).
+1. All'avvio, l'applicazione chiede se desideri il rilevamento automatico della periferica attiva. Se rispondi Sì (INVIO), esegue un ascolto di 5 secondi per individuare i dispositivi con segnale attivo (RMS >= 0.002). Se rispondi No (ESC) o se non viene rilevato alcun segnale, viene mostrata la lista di tutti i dispositivi di input disponibili sul sistema.
+2. Viene presentata la lista dei dispositivi (filtrata o completa): seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS).
 3. Suona una corda sul tuo strumento. L'accordatore mostrerà in tempo reale:
    - La nota rilevata (espressa nella nomenclatura attiva in Impostazioni), preceduta da "N:".
    - La deviazione in centesimi di semitono (espressa in percentuale), es. "(+12%)" o "(-5%)". Deviazione positiva indica nota crescente (allenta), negativa indica calante (tendi).

@@ -2144,8 +2144,9 @@ def Accordatore():
     """Accordatore cromatico: rileva la nota fondamentale dal microfono usando sounddevice e numpy FFT."""
     import math
     import threading
+    from GBUtils import enter_escape
+    import time
 
-    # Selezione dispositivo di input
     devices = sd.query_devices()
     input_devices = {}
     for idx, dev in enumerate(devices):
@@ -2159,8 +2160,82 @@ def Accordatore():
         print("\nErrore: Nessun dispositivo di input audio (microfono) trovato.")
         key("Premi un tasto per continuare...")
         return
+    auto_detect = enter_escape("Desideri il rilevamento automatico della periferica di input attiva? (INVIO per Si, ESC per No): ")
+    filtered_devices = {}
+    if auto_detect:
+        print("\nRilevamento automatico in corso...")
+        print("Ascolto di tutte le periferiche per 5 secondi...")
+        results = {}
+        failed_parallel = []
+        lock = threading.Lock()
+        def test_device(device_idx):
+            try:
+                dev_info = sd.query_devices(device_idx, 'input')
+                sr = int(dev_info['default_samplerate'])
+                max_rms = [0.0]
+                def callback(indata, frames, time_info, status):
+                    mono = indata[:, 0]
+                    rms = float(np.sqrt(np.mean(mono ** 2)))
+                    if rms > max_rms[0]:
+                        max_rms[0] = rms
+                stream = sd.InputStream(
+                    device=device_idx,
+                    samplerate=sr,
+                    channels=1,
+                    blocksize=4096,
+                    dtype='float32',
+                    callback=callback
+                )
+                with stream:
+                    time.sleep(5.0)
+                with lock:
+                    results[device_idx] = max_rms[0]
+            except Exception:
+                with lock:
+                    failed_parallel.append(device_idx)
+        threads = []
+        for idx_str in input_devices.keys():
+            t = threading.Thread(target=test_device, args=(int(idx_str),))
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
+        if failed_parallel:
+            for idx in failed_parallel:
+                try:
+                    dev_info = sd.query_devices(idx, 'input')
+                    sr = int(dev_info['default_samplerate'])
+                    max_rms = [0.0]
+                    def callback(indata, frames, time_info, status):
+                        mono = indata[:, 0]
+                        rms = float(np.sqrt(np.mean(mono ** 2)))
+                        if rms > max_rms[0]:
+                            max_rms[0] = rms
+                    stream = sd.InputStream(
+                        device=idx,
+                        samplerate=sr,
+                        channels=1,
+                        blocksize=4096,
+                        dtype='float32',
+                        callback=callback
+                    )
+                    with stream:
+                        time.sleep(5.0)
+                    results[idx] = max_rms[0]
+                except Exception:
+                    results[idx] = 0.0
+        for idx_str, name in input_devices.items():
+            idx = int(idx_str)
+            rms_val = results.get(idx, 0.0)
+            if rms_val >= 0.002:
+                filtered_devices[idx_str] = f"{name} (Rumore: {rms_val:.4f})"
+        if not filtered_devices:
+            print("\nNessun segnale significativo rilevato (sotto 0.002 RMS). Vengono mostrati tutti i dispositivi.")
+            filtered_devices = input_devices
+    else:
+        filtered_devices = input_devices
     print("\n--- Dispositivi di Input Disponibili ---")
-    scelta_device = menu(d=input_devices, p="Seleziona il dispositivo di input: ", show=True, numbered=True)
+    scelta_device = menu(d=filtered_devices, p="Seleziona il dispositivo di input: ", show=True, numbered=True)
     if scelta_device is None:
         return
     device_idx = int(scelta_device)
