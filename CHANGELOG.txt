@@ -1,6 +1,13 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.5.1 (29 maggio 2026)
+--------------------------------
+*   **Accordatore Acustico Cromatico (Ottimizzazione Algoritmo):**
+    *   Sostituito il rilevamento del picco FFT con un algoritmo basato su autocorrelazione normalizzata (McLeod Pitch Method semplificato) per una corretta individuazione della fondamentale ed eliminazione degli errori di ottava.
+    *   Implementata una lookup table interna per la conversione da MIDI a nota, rimuovendo la dipendenza da `music21` all'interno del loop di callback per ridurre la latenza.
+    *   Aggiunto il filtro EMA (media mobile esponenziale, alpha=0.4) sulla frequenza letta per un display più fluido e stabile.
+
 Versione 7.5.0 (28 maggio 2026)
 --------------------------------
 *   **Accordatore (Rilevamento Automatico Periferica):**

@@ -2140,13 +2140,21 @@ def GiocaColSuono():
         
     gioca_suono.avvia_gioco(config.impostazioni, get_nota, config.NOTE_LATINE, config.NOTE_STD, config.NOTE_ANGLO, cb_salva)
 
+def _midi_to_note_std(midi_num):
+    """Lookup table per conversione MIDI → nome nota standard (es. 'C#4', 'Eb3').
+    Evita l'istanziazione di music21.pitch.Pitch nel loop dell'accordatore."""
+    note_names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    note_idx = int(midi_num) % 12
+    octave = (int(midi_num) // 12) - 1
+    return f"{note_names[note_idx]}{octave}"
+
 def Accordatore():
-    """Accordatore cromatico: rileva la nota fondamentale dal microfono usando sounddevice e numpy FFT."""
+    """Accordatore cromatico: rileva la nota fondamentale dal microfono
+    usando autocorrelazione (McLeod semplificato) con FFT zero-padded di supporto."""
     import math
     import threading
     from GBUtils import enter_escape
     import time
-
     devices = sd.query_devices()
     input_devices = {}
     for idx, dev in enumerate(devices):
@@ -2243,21 +2251,77 @@ def Accordatore():
     device_sr = int(dev_info['default_samplerate'])
     BLOCK_SIZE = 4096
     RMS_THRESHOLD = 0.002
+    # Autocorrelazione: soglia per il primo picco significativo
+    AUTOCORR_THRESHOLD = 0.5
     pitch_readings = []
     current_rms = [0.0]
     pitch_lock = threading.Lock()
     stop_event = threading.Event()
-    def _parabolic_interp(mag, peak_idx):
-        if peak_idx <= 0 or peak_idx >= len(mag) - 1:
+    # EMA: stato persistente per smoothing della frequenza visualizzata
+    ema_state = {'freq': 0.0, 'active': False}
+    EMA_ALPHA = 0.4
+    def _parabolic_interp(data, peak_idx):
+        """Interpolazione parabolica per raffinare la posizione del picco."""
+        if peak_idx <= 0 or peak_idx >= len(data) - 1:
             return float(peak_idx)
-        alpha = mag[peak_idx - 1]
-        beta = mag[peak_idx]
-        gamma = mag[peak_idx + 1]
+        alpha = data[peak_idx - 1]
+        beta = data[peak_idx]
+        gamma = data[peak_idx + 1]
         denom = alpha - 2.0 * beta + gamma
         if abs(denom) < 1e-12:
             return float(peak_idx)
         p = 0.5 * (alpha - gamma) / denom
         return peak_idx + p
+    def _detect_pitch_autocorr(mono, sr):
+        """Pitch detection tramite autocorrelazione normalizzata (McLeod semplificato).
+        Immune agli errori d'ottava: cerca la periodicità, non il picco spettrale."""
+        N = len(mono)
+        # Limiti di lag: 50 Hz (max) → sr/50, 2000 Hz (min) → sr/2000
+        min_lag = max(2, int(sr / 2000))
+        max_lag = min(N // 2, int(sr / 50))
+        if min_lag >= max_lag:
+            return 0.0
+        # Autocorrelazione normalizzata via FFT (O(N log N))
+        windowed = mono * np.hanning(N)
+        fft_size = 1
+        while fft_size < 2 * N:
+            fft_size *= 2
+        fft_x = np.fft.rfft(windowed, n=fft_size)
+        autocorr_full = np.fft.irfft(fft_x * np.conj(fft_x))
+        autocorr = autocorr_full[:N]
+        # Normalizzazione: r[τ] / r[0]
+        if autocorr[0] < 1e-10:
+            return 0.0
+        autocorr_norm = autocorr / autocorr[0]
+        # Cerca il primo "dip" sotto la soglia, poi il primo picco sopra
+        region = autocorr_norm[min_lag:max_lag]
+        if len(region) < 3:
+            return 0.0
+        # Trova il punto in cui scende sotto la soglia
+        below = np.where(region < AUTOCORR_THRESHOLD)[0]
+        if len(below) == 0:
+            return 0.0
+        search_start = below[0]
+        # Cerca il primo picco dopo il dip
+        remaining = region[search_start:]
+        if len(remaining) < 3:
+            return 0.0
+        above = np.where(remaining > AUTOCORR_THRESHOLD)[0]
+        if len(above) == 0:
+            return 0.0
+        peak_region_start = search_start + above[0]
+        # Trova il massimo locale nella regione sopra-soglia
+        peak_end = peak_region_start
+        while peak_end < len(region) - 1 and region[peak_end] > AUTOCORR_THRESHOLD:
+            peak_end += 1
+        local_peak = peak_region_start + int(np.argmax(region[peak_region_start:peak_end + 1]))
+        # Converti indice locale → indice lag assoluto
+        abs_peak = local_peak + min_lag
+        # Interpolazione parabolica sul lag per precisione sub-campione
+        refined_lag = _parabolic_interp(autocorr_norm, abs_peak)
+        if refined_lag <= 0:
+            return 0.0
+        return sr / refined_lag
     def _audio_callback(indata, frames, time_info, status):
         if stop_event.is_set():
             raise sd.CallbackAbort
@@ -2266,25 +2330,11 @@ def Accordatore():
         current_rms[0] = rms
         if rms < RMS_THRESHOLD:
             return
-        windowed = mono * np.hanning(len(mono))
-        fft_data = np.fft.rfft(windowed)
-        magnitudes = np.abs(fft_data)
-        freq_per_bin = device_sr / len(mono)
-        min_bin = max(1, int(50 / freq_per_bin))
-        max_bin = min(
-            len(magnitudes) - 1,
-            int(2000 / freq_per_bin)
-        )
-        if min_bin >= max_bin:
-            return
-        search_region = magnitudes[min_bin:max_bin]
-        peak_bin = int(np.argmax(search_region)) + min_bin
-        refined_bin = _parabolic_interp(
-            magnitudes, peak_bin
-        )
-        detected_freq = refined_bin * freq_per_bin
-        with pitch_lock:
-            pitch_readings.append(detected_freq)
+        # Pitch detection via autocorrelazione
+        detected_freq = _detect_pitch_autocorr(mono, device_sr)
+        if detected_freq > 0.0:
+            with pitch_lock:
+                pitch_readings.append(detected_freq)
     print("Accordatore cromatico.")
     print("ESC per uscire.")
     try:
@@ -2301,7 +2351,6 @@ def Accordatore():
         print(f"Errore apertura audio: {e}")
         key("Premi un tasto...")
         return
-    import time
     last_print_time = 0
     last_nota = "---"
     last_cents = 0.0
@@ -2327,19 +2376,25 @@ def Accordatore():
                 if readings and above_threshold:
                     avg_freq = float(np.median(readings))
                     if 30.0 <= avg_freq <= 2000.0:
-                        midi_num = 69 + 12 * math.log2(
-                            avg_freq / 440.0
-                        )
+                        # EMA smoothing
+                        if ema_state['active']:
+                            avg_freq = EMA_ALPHA * avg_freq + (1 - EMA_ALPHA) * ema_state['freq']
+                        ema_state['freq'] = avg_freq
+                        ema_state['active'] = True
+                        # Conversione freq → MIDI → nota (senza music21)
+                        midi_num = 69 + 12 * math.log2(avg_freq / 440.0)
                         target_midi = round(midi_num)
                         cents = (midi_num - target_midi) * 100
-                        nota_nome = get_nota(
-                            pitch.Pitch(midi=target_midi).nameWithOctave.replace('-', 'b')
-                        )
+                        nota_nome = get_nota(_midi_to_note_std(target_midi))
                         last_nota = nota_nome
                         last_cents = cents
                         last_freq = avg_freq
                         all_midi.append(target_midi)
                         all_freqs.append(avg_freq)
+                    else:
+                        ema_state['active'] = False
+                else:
+                    ema_state['active'] = False
                 if last_nota == "---":
                     cents_str = "0%"
                     hz_str = "---"
@@ -2374,22 +2429,18 @@ def Accordatore():
                 trimmed_midi = all_midi
                 trimmed_freqs = all_freqs
                 trimmed_dbs = all_dbs
-
             min_midi = min(trimmed_midi)
             max_midi = max(trimmed_midi)
             med_midi = int(round(np.median(trimmed_midi)))
-            nota_min = get_nota(pitch.Pitch(midi=min_midi).nameWithOctave.replace('-', 'b'))
-            nota_max = get_nota(pitch.Pitch(midi=max_midi).nameWithOctave.replace('-', 'b'))
-            nota_med = get_nota(pitch.Pitch(midi=med_midi).nameWithOctave.replace('-', 'b'))
-            
+            nota_min = get_nota(_midi_to_note_std(min_midi))
+            nota_max = get_nota(_midi_to_note_std(max_midi))
+            nota_med = get_nota(_midi_to_note_std(med_midi))
             min_f = min(trimmed_freqs)
             max_f = max(trimmed_freqs)
             med_f = np.median(trimmed_freqs)
-            
             min_db = min(trimmed_dbs)
             max_db = max(trimmed_dbs)
             med_db = np.median(trimmed_dbs)
-            
             print(f"\nNote ascoltate: {nota_min} ({nota_med}) {nota_max}")
             print(f"Frequenze (Hz): {min_f:.1f} ({med_f:.1f}) {max_f:.1f}")
             print(f"Volumi (dB): {min_db:.0f} ({med_db:.0f}) {max_db:.0f}")
