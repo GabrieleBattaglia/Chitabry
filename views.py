@@ -465,8 +465,14 @@ def Suona(tablatura):
     print(f"Tasti da {keys_str}, (A) pennata in levare, (Q) pennata in battere")
     print("ESC per uscire.")
     
-    suono_attivo_key = 'suono_1'
-    suono = config.impostazioni[suono_attivo_key]
+    suono_attivo_key = config.impostazioni.get('tipo_suono', 'suono_1')
+    
+    # Pre-carica parametri di default
+    if suono_attivo_key != 'midi':
+        suono = config.impostazioni[suono_attivo_key]
+    else:
+        suono = config.impostazioni['suono_1']
+        
     hardness = suono.get('pluck_hardness', 0.6)
     damping = suono.get('damping_factor', 0.997)
     pick_pos = suono.get('pick_position', 0.15)
@@ -482,6 +488,7 @@ def Suona(tablatura):
     
     note_da_suonare = []
     note_freq = []
+    midi_nums = []
     note_pan = []
     note_names_display = []
 
@@ -494,19 +501,23 @@ def Suona(tablatura):
         poly_player.set_pan(i, pan_val)
         
         freq = 0.0
+        midi_num = None
         if tasto.isdigit() and f"{corda}.{tasto}" in config.CORDE:
             nota_std = config.CORDE[f"{corda}.{tasto}"]
             freq = note_to_freq(nota_std)
+            midi_num = GBAudio.note_to_midi(nota_std)
         
         note_freq.append(freq)
+        midi_nums.append(midi_num)
         note_da_suonare.append(freq > 0) 
         
-        if 'pluck_hardness' in suono:
-            renderers[i].set_params(freq, dur, vol, pan_val, 
-                                    pluck_hardness=hardness, damping_factor=damping,
-                                    pick_position=pick_pos, brightness=bright)
-        else:
-            renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
+        if suono_attivo_key != 'midi':
+            if 'pluck_hardness' in suono:
+                renderers[i].set_params(freq, dur, vol, pan_val, 
+                                        pluck_hardness=hardness, damping_factor=damping,
+                                        pick_position=pick_pos, brightness=bright)
+            else:
+                renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
         
         if tasto.isdigit() and f"{corda}.{tasto}" in config.CORDE:
             note_names_display.append(get_nota(config.CORDE[f"{corda}.{tasto}"]))
@@ -526,40 +537,47 @@ def Suona(tablatura):
                 if 1 <= key_int <= min(config.NUM_CORDE, 10):
                     corda_idx_py = key_int - 1
                     if note_da_suonare[corda_idx_py]:
-                        # Ottieni l'audio mono renderizzato
-                        note_audio_stereo = renderers[corda_idx_py].render()
-                        if note_audio_stereo.size > 0:
-                            # Prende solo il canale L o divide per il mix
-                            # NoteRenderer outputta stereo. Selezioniamo il canale sinistro senza panning, perché il panning lo fa il PolyphonicPlayer.
-                            # Dobbiamo estrarre l'audio mono prima del panning di NoteRenderer
-                            # Oppure modifichiamo provvisoriamente NoteRenderer per outputtare mono o resettiamo il pan_l a 1.0.
-                            # Ma in PolyphonicPlayer, pluck si aspetta audio_mono.
-                            # NoteRenderer resitituisce: wave * envelope, poi lo panna. 
-                            # Se mettiamo pan_val a 0 in renderers e prendiamo canale 0 (mono=stereo/0.707):
-                            mono_audio = note_audio_stereo[:, 0] / renderers[corda_idx_py].pan_l if renderers[corda_idx_py].pan_l != 0 else note_audio_stereo[:, 0]
-                            poly_player.pluck(string_idx=corda_idx_py, audio_mono=mono_audio)
+                        if suono_attivo_key == 'midi':
+                            if midi_nums[corda_idx_py] is not None:
+                                GBAudio.play_midi_note_temp(midi_nums[corda_idx_py], dur)
+                        else:
+                            note_audio_stereo = renderers[corda_idx_py].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[corda_idx_py].pan_l if renderers[corda_idx_py].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=corda_idx_py, audio_mono=mono_audio)
                             
             elif scelta == ' ':
-                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
-                suono = config.impostazioni[suono_attivo_key]
-                hardness = suono.get('pluck_hardness', 0.6)
-                damping = suono.get('damping_factor', 0.997)
-                pick_pos = suono.get('pick_position', 0.15)
-                bright = suono.get('brightness', 0.4)
-                dur = suono.get('dur_accordi', 9.0)
-                vol = suono.get('volume', 0.35)
-                s_kind = suono.get('kind', 1)
-                s_adsr = suono.get('adsr', [0,0,0,0])
-                
-                for i in range(config.NUM_CORDE):
-                    if note_da_suonare[i]:
-                        if 'pluck_hardness' in suono:
-                            renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], 
-                                                    pluck_hardness=hardness, damping_factor=damping,
-                                                    pick_position=pick_pos, brightness=bright)
-                        else:
-                            renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
-                print(f"\n[Suono: {suono['descrizione']}]" + " "*20)
+                # Cicla tra suono_1 -> suono_2 -> midi -> suono_1
+                if suono_attivo_key == 'suono_1':
+                    suono_attivo_key = 'suono_2'
+                elif suono_attivo_key == 'suono_2':
+                    suono_attivo_key = 'midi'
+                else:
+                    suono_attivo_key = 'suono_1'
+
+                if suono_attivo_key != 'midi':
+                    suono = config.impostazioni[suono_attivo_key]
+                    hardness = suono.get('pluck_hardness', 0.6)
+                    damping = suono.get('damping_factor', 0.997)
+                    pick_pos = suono.get('pick_position', 0.15)
+                    bright = suono.get('brightness', 0.4)
+                    dur = suono.get('dur_accordi', 9.0)
+                    vol = suono.get('volume', 0.35)
+                    s_kind = suono.get('kind', 1)
+                    s_adsr = suono.get('adsr', [0,0,0,0])
+                    
+                    for i in range(config.NUM_CORDE):
+                        if note_da_suonare[i]:
+                            if 'pluck_hardness' in suono:
+                                renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], 
+                                                        pluck_hardness=hardness, damping_factor=damping,
+                                                        pick_position=pick_pos, brightness=bright)
+                            else:
+                                renderers[i].set_params(note_freq[i], dur, vol, note_pan[i], kind=s_kind, adsr_list=s_adsr)
+                    print(f"\n[Suono: {suono['descrizione']}]" + " "*20)
+                else:
+                    inst_idx = config.impostazioni.get('midi_strumento', 0)
+                    print(f"\n[Suono: MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})]" + " "*20)
                         
             elif scelta == chr(27): # ESC
                 print("\nUscita dal menù ascolto.")
@@ -571,10 +589,14 @@ def Suona(tablatura):
                 
                 for i in note_order:
                     if note_da_suonare[i]:
-                        note_audio_stereo = renderers[i].render()
-                        if note_audio_stereo.size > 0:
-                            mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
-                            poly_player.pluck(string_idx=i, audio_mono=mono_audio)
+                        if suono_attivo_key == 'midi':
+                            if midi_nums[i] is not None:
+                                GBAudio.play_midi_note_temp(midi_nums[i], dur)
+                        else:
+                            note_audio_stereo = renderers[i].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=i, audio_mono=mono_audio)
                         aspetta(strum_delay_sec)
                         
             else:
@@ -616,8 +638,12 @@ def SuonaAccordoTeorico(note_pitch_list):
     num_notes = len(pitches_to_play)
 
     # 3. Prepara parametri audio
-    suono_attivo_key = 'suono_1'
-    suono = config.impostazioni[suono_attivo_key]
+    suono_attivo_key = config.impostazioni.get('tipo_suono', 'suono_1')
+    if suono_attivo_key != 'midi':
+        suono = config.impostazioni[suono_attivo_key]
+    else:
+        suono = config.impostazioni['suono_1']
+        
     dur = suono.get('dur_accordi', 9.0)
     vol = suono.get('volume', 0.35)
     hardness = suono.get('pluck_hardness', 0.6)
@@ -663,12 +689,13 @@ def SuonaAccordoTeorico(note_pitch_list):
         pan_val = pan_values[i]
         poly_player.set_pan(i, pan_val)
         
-        if 'pluck_hardness' in suono:
-            renderers[i].set_params(freq, dur, vol, pan_val, 
-                                    pluck_hardness=hardness, damping_factor=damping,
-                                    pick_position=pick_pos, brightness=bright)        
-        else:
-            renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
+        if suono_attivo_key != 'midi':
+            if 'pluck_hardness' in suono:
+                renderers[i].set_params(freq, dur, vol, pan_val, 
+                                        pluck_hardness=hardness, damping_factor=damping,
+                                        pick_position=pick_pos, brightness=bright)        
+            else:
+                renderers[i].set_params(freq, dur, vol, pan_val, kind=s_kind, adsr_list=s_adsr)
             
         # Stampa info nota (con tasto associato)
         tasto_associato = "N/A"
@@ -698,35 +725,51 @@ def SuonaAccordoTeorico(note_pitch_list):
                 note_idx = key_map[scelta]
                 if 0 <= note_idx < num_notes:
                     if note_freqs[note_idx] > 0:
-                        note_audio_stereo = renderers[note_idx].render()
-                        if note_audio_stereo.size > 0:
-                            mono_audio = note_audio_stereo[:, 0] / renderers[note_idx].pan_l if renderers[note_idx].pan_l != 0 else note_audio_stereo[:, 0]
-                            poly_player.pluck(string_idx=note_idx, audio_mono=mono_audio)
+                        if suono_attivo_key == 'midi':
+                            p = pitches_to_play[note_idx]
+                            if p and p.midi is not None:
+                                GBAudio.play_midi_note_temp(p.midi, dur)
+                        else:
+                            note_audio_stereo = renderers[note_idx].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[note_idx].pan_l if renderers[note_idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=note_idx, audio_mono=mono_audio)
                     else:
                         print("Nota non valida o senza frequenza.")
                 else:
                      print("Indice nota non valido?") # Debug
                      
             elif scelta == ' ':
-                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
-                suono = config.impostazioni[suono_attivo_key]
-                dur = suono.get('dur_accordi', 9.0)
-                vol = suono.get('volume', 0.35)
-                hardness = suono.get('pluck_hardness', 0.6)
-                damping = suono.get('damping_factor', 0.997)
-                pick_pos = suono.get('pick_position', 0.15)
-                bright = suono.get('brightness', 0.4)
-                s_kind = suono.get('kind', 1)
-                s_adsr = suono.get('adsr', [0,0,0,0])
-                
-                for i in range(num_notes):
-                    if 'pluck_hardness' in suono:
-                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], 
-                                                pluck_hardness=hardness, damping_factor=damping,
-                                                pick_position=pick_pos, brightness=bright)
-                    else:
-                        renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
-                print(f"\n[Suono impostato su: {suono['descrizione']}]")
+                # Cicla tra suono_1 -> suono_2 -> midi -> suono_1
+                if suono_attivo_key == 'suono_1':
+                    suono_attivo_key = 'suono_2'
+                elif suono_attivo_key == 'suono_2':
+                    suono_attivo_key = 'midi'
+                else:
+                    suono_attivo_key = 'suono_1'
+
+                if suono_attivo_key != 'midi':
+                    suono = config.impostazioni[suono_attivo_key]
+                    dur = suono.get('dur_accordi', 9.0)
+                    vol = suono.get('volume', 0.35)
+                    hardness = suono.get('pluck_hardness', 0.6)
+                    damping = suono.get('damping_factor', 0.997)
+                    pick_pos = suono.get('pick_position', 0.15)
+                    bright = suono.get('brightness', 0.4)
+                    s_kind = suono.get('kind', 1)
+                    s_adsr = suono.get('adsr', [0,0,0,0])
+                    
+                    for i in range(num_notes):
+                        if 'pluck_hardness' in suono:
+                            renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], 
+                                                    pluck_hardness=hardness, damping_factor=damping,
+                                                    pick_position=pick_pos, brightness=bright)
+                        else:
+                            renderers[i].set_params(note_freqs[i], dur, vol, pan_values[i], kind=s_kind, adsr_list=s_adsr)
+                    print(f"\n[Suono impostato su: {suono['descrizione']}]")
+                else:
+                    inst_idx = config.impostazioni.get('midi_strumento', 0)
+                    print(f"\n[Suono impostato su: MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})]")
 
             elif scelta == chr(27): # ESC
                 print("\nUscita dal player accordo.")
@@ -738,10 +781,15 @@ def SuonaAccordoTeorico(note_pitch_list):
                 
                 for i in note_order:
                     if note_freqs[i] > 0:
-                        note_audio_stereo = renderers[i].render()
-                        if note_audio_stereo.size > 0:
-                            mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
-                            poly_player.pluck(string_idx=i, audio_mono=mono_audio)
+                        if suono_attivo_key == 'midi':
+                            p = pitches_to_play[i]
+                            if p and p.midi is not None:
+                                GBAudio.play_midi_note_temp(p.midi, dur)
+                        else:
+                            note_audio_stereo = renderers[i].render()
+                            if note_audio_stereo.size > 0:
+                                mono_audio = note_audio_stereo[:, 0] / renderers[i].pan_l if renderers[i].pan_l != 0 else note_audio_stereo[:, 0]
+                                poly_player.pluck(string_idx=i, audio_mono=mono_audio)
                         aspetta(strum_delay_sec)
 
             else:
@@ -836,7 +884,7 @@ def MostraCorde(nota_std, rp=False, maninf=0, mansup=None):
 
 def VisualizzaEsercitatiScala():
     """ Versione Finale Ibrida con gestione microtoni completa e indentazione corretta """
-    suono_attivo_key = 'suono_2'
+    suono_attivo_key = config.impostazioni.get('tipo_suono', 'suono_2')
 
     print("\n--- Visualizza ed Esercitati sulle Scale (music21 - Catalogo) ---")
 
@@ -1205,6 +1253,8 @@ def VisualizzaEsercitatiScala():
             tick_beep = clitronomo.genera_suono_mono_int16(config_tick).astype(np.float32) / 32767.0
 
             def aggiorna_renderers(suono_key):
+                if suono_key == 'midi':
+                    return
                 suono = config.impostazioni[suono_key]
                 hardness = suono.get('pluck_hardness', 0.6)
                 damping = suono.get('damping_factor', 0.997)
@@ -1249,7 +1299,10 @@ def VisualizzaEsercitatiScala():
                         loop_messaggio_stampato = True
                     
                     note_scala_loop_str = note_asc_str if ultima_direzione == 'a' else note_desc_str
-                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                    if suono_attivo_key == 'midi':
+                        suono_abbrev = "MID"
+                    else:
+                        suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
                     dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
                     print(f"\r{note_scala_loop_str} | L:{loop_count} {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
                     
@@ -1272,11 +1325,15 @@ def VisualizzaEsercitatiScala():
                             idx = seq[idx_step]
                             freq = note_per_audio_asc[idx]
                             if freq is not None and freq > 0:
-                                note_audio_stereo = renderers[idx].render()
-                                if note_audio_stereo.size > 0:
-                                    mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
-                                    poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
-                                    nota_precedente_loop = idx
+                                if suono_attivo_key == 'midi':
+                                    midi_num = GBAudio.freq_to_midi(freq)
+                                    GBAudio.play_midi_note_temp(midi_num, dur_step)
+                                else:
+                                    note_audio_stereo = renderers[idx].render()
+                                    if note_audio_stereo.size > 0:
+                                        mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                        poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                        nota_precedente_loop = idx
                         else:
                             nota_precedente_loop = None
                                 
@@ -1301,9 +1358,17 @@ def VisualizzaEsercitatiScala():
                                     interrotto = True
                                     break
                                 elif tasto_lower == ' ':
-                                    suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                                    if suono_attivo_key == 'suono_1':
+                                        suono_attivo_key = 'suono_2'
+                                    elif suono_attivo_key == 'suono_2':
+                                        suono_attivo_key = 'midi'
+                                    else:
+                                        suono_attivo_key = 'suono_1'
                                     aggiorna_renderers(suono_attivo_key)
-                                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                                    if suono_attivo_key == 'midi':
+                                        suono_abbrev = "MID"
+                                    else:
+                                        suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
                                     dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
                                     print(f"\r{note_scala_loop_str} | L:{loop_count} {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
                                 elif tasto == chr(27):
@@ -1329,7 +1394,10 @@ def VisualizzaEsercitatiScala():
                 else: # Modalità Menu Interattivo
                     loop_messaggio_stampato = False
                     note_da_mostrare = note_asc_str if ultima_direzione == 'a' else note_desc_str
-                    suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                    if suono_attivo_key == 'midi':
+                        suono_abbrev = "MID"
+                    else:
+                        suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
                     dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
                     print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev}{' (M)' if metronomo_attivo else ''} (1-8, A, D, L, B, M, SPAZIO, ?, ESC):\r", end="", flush=True)
                     
@@ -1354,17 +1422,27 @@ def VisualizzaEsercitatiScala():
                         print(f"\rMetronomo {stato_metro} per l'esercizio.{' '*20}")
                         continue
                     elif scelta_lower == ' ':
-                        suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                        if suono_attivo_key == 'suono_1':
+                            suono_attivo_key = 'suono_2'
+                        elif suono_attivo_key == 'suono_2':
+                            suono_attivo_key = 'midi'
+                        else:
+                            suono_attivo_key = 'suono_1'
                         aggiorna_renderers(suono_attivo_key)
                         continue
                     elif scelta_lower in key_map_scala:
                         idx = key_map_scala[scelta_lower]
                         freq = note_per_audio_asc[idx]
                         if freq is not None and freq > 0:
-                            note_audio_stereo = renderers[idx].render()
-                            if note_audio_stereo.size > 0:
-                                mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
-                                poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                            if suono_attivo_key == 'midi':
+                                midi_num = GBAudio.freq_to_midi(freq)
+                                dur_play = config.impostazioni['suono_1'].get('dur_accordi', 2.0)
+                                GBAudio.play_midi_note_temp(midi_num, dur_play)
+                            else:
+                                note_audio_stereo = renderers[idx].render()
+                                if note_audio_stereo.size > 0:
+                                    mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                    poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
                         continue
                     elif scelta_lower == 'l':
                         loop_attivo = True
@@ -1403,11 +1481,15 @@ def VisualizzaEsercitatiScala():
                                 idx = seq[idx_step]
                                 freq = note_per_audio_asc[idx]
                                 if freq is not None and freq > 0:
-                                    note_audio_stereo = renderers[idx].render()
-                                    if note_audio_stereo.size > 0:
-                                        mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
-                                        poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
-                                        nota_precedente_singolo = idx
+                                    if suono_attivo_key == 'midi':
+                                        midi_num = GBAudio.freq_to_midi(freq)
+                                        GBAudio.play_midi_note_temp(midi_num, dur_step)
+                                    else:
+                                        note_audio_stereo = renderers[idx].render()
+                                        if note_audio_stereo.size > 0:
+                                            mono_audio = note_audio_stereo[:, 0] / renderers[idx].pan_l if renderers[idx].pan_l != 0 else note_audio_stereo[:, 0]
+                                            poly_player.pluck(string_idx=idx, audio_mono=mono_audio)
+                                            nota_precedente_singolo = idx
                             else:
                                 nota_precedente_singolo = None
                                     
@@ -1424,9 +1506,17 @@ def VisualizzaEsercitatiScala():
                                 if tasto:
                                     tasto_lower = tasto.lower()
                                     if tasto_lower == ' ':
-                                        suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
+                                        if suono_attivo_key == 'suono_1':
+                                            suono_attivo_key = 'suono_2'
+                                        elif suono_attivo_key == 'suono_2':
+                                            suono_attivo_key = 'midi'
+                                        else:
+                                            suono_attivo_key = 'suono_1'
                                         aggiorna_renderers(suono_attivo_key)
-                                        suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
+                                        if suono_attivo_key == 'midi':
+                                            suono_abbrev = "MID"
+                                        else:
+                                            suono_abbrev = "S2" if suono_attivo_key == 'suono_2' else "S1"
                                         dir_abbrev = "asc" if ultima_direzione == 'a' else "dis"
                                         print(f"\r{note_da_mostrare if note_da_mostrare else '(vuota)'} | {dir_abbrev} {suono_abbrev}{' '*15}\r", end="", flush=True)
                                     elif tasto == chr(27):
@@ -1664,12 +1754,22 @@ def GestoreImpostazioni():
     print("\n--- Gestore Impostazioni ---")
     
     while True:
-        # Il menu mostra dinamicamente l'impostazione corrente
+        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
+        if tipo_suono == 'suono_1':
+            descr_suono = "Sintesi Karplus-Strong"
+        elif tipo_suono == 'suono_2':
+            descr_suono = "Sintesi Onda Semplice"
+        else:
+            inst_idx = config.impostazioni.get('midi_strumento', 0)
+            descr_suono = f"MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})"
+
         menu_impostazioni = {
             's': f"Gestisci Strumenti (Attivo: {config.impostazioni.get('strumento_attivo')})",
             'n': f"Cambia nomenclatura (attuale: {config.impostazioni['nomenclatura']})",
+            't': f"Cambia Tipo Suono Attivo (attuale: {descr_suono})",
             '1': f"Modifica {config.impostazioni['suono_1']['descrizione']}",
-            '2': f"Modifica {config.impostazioni['suono_2']['descrizione']}"
+            '2': f"Modifica {config.impostazioni['suono_2']['descrizione']}",
+            '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})"
         }
         
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
@@ -1678,7 +1778,6 @@ def GestoreImpostazioni():
             GestoreStrumenti()
         
         elif scelta == 'n':
-            # Inverti l'impostazione
             if config.impostazioni['nomenclatura'] == 'latino':
                 config.impostazioni['nomenclatura'] = 'anglosassone'
             else:
@@ -1687,12 +1786,50 @@ def GestoreImpostazioni():
             print(f"Nomenclatura impostata su: {config.impostazioni['nomenclatura']}")
             config.archivio_modificato = True
             key("Premi un tasto...")
+
+        elif scelta == 't':
+            menu_tipi = {
+                '1': "Sintesi Karplus-Strong",
+                '2': "Sintesi Onda Semplice",
+                '3': "Strumento MIDI del Banco Attivo"
+            }
+            print("\nSeleziona il tipo di suono attivo:")
+            scelta_t = menu(d=menu_tipi, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
+            if scelta_t == '1':
+                config.impostazioni['tipo_suono'] = 'suono_1'
+                config.archivio_modificato = True
+                print("Tipo suono attivo impostato su: Sintesi Karplus-Strong.")
+            elif scelta_t == '2':
+                config.impostazioni['tipo_suono'] = 'suono_2'
+                config.archivio_modificato = True
+                print("Tipo suono attivo impostato su: Sintesi Onda Semplice.")
+            elif scelta_t == '3':
+                config.impostazioni['tipo_suono'] = 'midi'
+                config.archivio_modificato = True
+                print("Tipo suono attivo impostato su: Strumento MIDI.")
+            key("Premi un tasto...")
             
         elif scelta == '1':
             ModificaSuono('suono_1')
             
         elif scelta == '2':
             ModificaSuono('suono_2')
+
+        elif scelta == '3':
+            midi_dict = {name: name for name in GBAudio.MIDI_INSTRUMENTS}
+            print("\nSeleziona uno strumento MIDI iniziando a digitare il nome per filtrare:")
+            scelta_idx = menu(d=midi_dict, keyslist=True, show=True, show_on_filter=False, ntf="Strumento non valido")
+            if scelta_idx is not None:
+                program = GBAudio.MIDI_INSTRUMENTS.index(scelta_idx)
+                config.impostazioni['midi_strumento'] = program
+                config.impostazioni['tipo_suono'] = 'midi'
+                config.archivio_modificato = True
+                print(f"Strumento MIDI impostato su: {scelta_idx} e attivato.")
+                try:
+                    GBAudio.get_midi_out().select_instrument(program)
+                except Exception:
+                    pass
+            key("Premi un tasto...")
             
         elif scelta == 'i' or scelta is None:
             print("Ritorno al menu principale.")
@@ -1756,29 +1893,34 @@ def TrovaPosizione():
         nota_std = config.CORDE[s]
         print(f"Sulla corda {s.split('.')[0]}, tasto {s.split('.')[1]}, si trova la nota: {get_nota(nota_std)}")
         
+        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
         suono_1 = config.impostazioni['suono_1']
-        
-        freq = note_to_freq(nota_std)
-        corda_idx_zero_based = 6 - int(s.split('.')[0])
-        pan = -0.8 + (corda_idx_zero_based * 0.32)
         dur = suono_1['dur_accordi']
-        vol = suono_1['volume'] 
         
-        # Crea un singolo renderer
-        hardness = suono_1.get('pluck_hardness', 0.6)
-        damping = suono_1.get('damping_factor', 0.997)        
-        renderer = NoteRenderer(fs=FS)
-        
-        # Imposta i parametri
-        renderer.set_params(freq, dur, vol, pan, 
-                            pluck_hardness=hardness, 
-                            damping_factor=damping)        
-        # Renderizza la nota e la ottiene
-        note_audio = renderer.render()
-        
-        # Suona (non bloccante) sul buffer renderizzato
-        if note_audio.size > 0:
-            sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
+        if tipo_suono == 'midi':
+            midi_num = GBAudio.note_to_midi(nota_std)
+            GBAudio.play_midi_note_temp(midi_num, dur)
+        else:
+            freq = note_to_freq(nota_std)
+            corda_idx_zero_based = 6 - int(s.split('.')[0])
+            pan = -0.8 + (corda_idx_zero_based * 0.32)
+            vol = suono_1['volume'] 
+            
+            # Crea un singolo renderer
+            hardness = suono_1.get('pluck_hardness', 0.6)
+            damping = suono_1.get('damping_factor', 0.997)        
+            renderer = NoteRenderer(fs=FS)
+            
+            # Imposta i parametri
+            renderer.set_params(freq, dur, vol, pan, 
+                                pluck_hardness=hardness, 
+                                damping_factor=damping)        
+            # Renderizza la nota e la ottiene
+            note_audio = renderer.render()
+            
+            # Suona (non bloccante) sul buffer renderizzato
+            if note_audio.size > 0:
+                sd.play(note_audio, samplerate=GBAudio.FS, blocking=False)
         
     elif s == "":
         print("Operazione annullata.")
@@ -2022,7 +2164,7 @@ def PlayerGenerico():
     print("  ESC: Esci")
 
     base_octave = 3
-    suono_attivo_key = 'suono_1'
+    suono_attivo_key = config.impostazioni.get('tipo_suono', 'suono_1')
 
     # Mappa tastiera italiana per il player virtuale
     # (semitoni rispetto a Do, offset_ottava)
@@ -2068,11 +2210,17 @@ def PlayerGenerico():
             'adsr': s.get('adsr', [0,0,0,0])
         }
     
-    p = get_synth_params(suono_attivo_key)
-    print(f"\n[Suono: {config.impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}")
+    def get_desc_suono(s_key):
+        if s_key == 'midi':
+            inst_idx = config.impostazioni.get('midi_strumento', 0)
+            return f"MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})"
+        return config.impostazioni[s_key]['descrizione']
+
+    p = get_synth_params('suono_1' if suono_attivo_key == 'midi' else suono_attivo_key)
+    print(f"\n[Suono: {get_desc_suono(suono_attivo_key)}] Ottava Base: {base_octave}")
 
     try:
-        print(f"\r[Suono: {config.impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
+        print(f"\r[Suono: {get_desc_suono(suono_attivo_key)}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
         while True:
             ch = key()
             if not ch: continue
@@ -2080,9 +2228,16 @@ def PlayerGenerico():
             if ch == chr(27): # ESC
                 break
             elif ch == ' ':
-                suono_attivo_key = 'suono_2' if suono_attivo_key == 'suono_1' else 'suono_1'
-                p = get_synth_params(suono_attivo_key)
-                print(f"\r[Suono: {config.impostazioni[suono_attivo_key]['descrizione']}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
+                # Cicla tra suono_1 -> suono_2 -> midi -> suono_1
+                if suono_attivo_key == 'suono_1':
+                    suono_attivo_key = 'suono_2'
+                elif suono_attivo_key == 'suono_2':
+                    suono_attivo_key = 'midi'
+                else:
+                    suono_attivo_key = 'suono_1'
+                
+                p = get_synth_params('suono_1' if suono_attivo_key == 'midi' else suono_attivo_key)
+                print(f"\r[Suono: {get_desc_suono(suono_attivo_key)}] Ottava Base: {base_octave}{' '*20}\r", end="", flush=True)
             elif ch in ('f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'):
                 if ch == 'f1': base_octave = 2
                 elif ch == 'f2': base_octave = 3
@@ -2092,7 +2247,7 @@ def PlayerGenerico():
                 elif ch == 'f6': base_octave = 7
                 elif ch == 'f7': base_octave = 8
                 elif ch == 'f8': base_octave = 9
-                print(f"\r[Suono: {config.impostazioni[suono_attivo_key]['descrizione']}] Ottava Base impostata a: {base_octave}{' '*20}\r", end="", flush=True)
+                print(f"\r[Suono: {get_desc_suono(suono_attivo_key)}] Ottava Base impostata a: {base_octave}{' '*20}\r", end="", flush=True)
             elif ch in KB_MAP:
                 semitones, oct_offset = KB_MAP[ch]
                 actual_octave = base_octave + oct_offset
@@ -2104,21 +2259,26 @@ def PlayerGenerico():
                 midi_num = 12 + semitones + 12 * actual_octave
                 freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
                 
-                v = voice_idx % num_voices
-                voice_idx += 1
-                
-                suono = config.impostazioni[suono_attivo_key]
-                if 'pluck_hardness' in suono:
-                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, 
-                                            pluck_hardness=p['hardness'], damping_factor=p['damping'],
-                                            pick_position=p['pick_pos'], brightness=p['bright'])
+                if suono_attivo_key == 'midi':
+                    suono_1 = config.impostazioni['suono_1']
+                    dur = suono_1.get('dur_accordi', 2.0)
+                    GBAudio.play_midi_note_temp(midi_num, dur)
                 else:
-                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, kind=p['kind'], adsr_list=p['adsr'])
-                
-                note_audio = renderers[v].render()
-                if note_audio.size > 0:
-                    mono_audio = note_audio[:, 0] / renderers[v].pan_l if renderers[v].pan_l != 0 else note_audio[:, 0]
-                    poly_player.pluck(string_idx=v, audio_mono=mono_audio)
+                    v = voice_idx % num_voices
+                    voice_idx += 1
+                    
+                    suono = config.impostazioni[suono_attivo_key]
+                    if 'pluck_hardness' in suono:
+                        renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, 
+                                                pluck_hardness=p['hardness'], damping_factor=p['damping'],
+                                                pick_position=p['pick_pos'], brightness=p['bright'])
+                    else:
+                        renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, kind=p['kind'], adsr_list=p['adsr'])
+                    
+                    note_audio = renderers[v].render()
+                    if note_audio.size > 0:
+                        mono_audio = note_audio[:, 0] / renderers[v].pan_l if renderers[v].pan_l != 0 else note_audio[:, 0]
+                        poly_player.pluck(string_idx=v, audio_mono=mono_audio)
                 
                 # Calcola il nome della nota per il display
                 nota_obj = pitch.Pitch(midi=midi_num)

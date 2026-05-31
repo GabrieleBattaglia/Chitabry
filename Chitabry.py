@@ -9,7 +9,7 @@ import scale_catalog
 import views
 
 # --- Costanti ---
-VERSIONE = "7.6.0 del 31 maggio 2026."
+VERSIONE = "7.7.0 del 31 maggio 2026."
 
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
