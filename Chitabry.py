@@ -9,7 +9,7 @@ import scale_catalog
 import views
 
 # --- Costanti ---
-VERSIONE = "7.5.1 del 29 maggio 2026."
+VERSIONE = "7.6.0 del 31 maggio 2026."
 
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
@@ -82,6 +82,14 @@ def main():
     print("\nPremere '?' per visualizzare il menu delle opzioni.")
     
     while True:
+        # Pulisci eventuali voci del manico precedenti per evitare accumuli
+        for k in list(MAINMENU.keys()):
+            if k.startswith("Manico dello strumento"):
+                del MAINMENU[k]
+
+        strum_attivo = config.impostazioni.get("strumento_attivo", "Chitarra Standard")
+        MAINMENU[f"Manico dello strumento {strum_attivo}"] = f"Mostra lo schema del manico per {strum_attivo}"
+
         scelta = menu(d=MAINMENU, keyslist=True, show=False, show_on_filter=False, ntf="Scelta non valida")
         
         if scelta is None:
@@ -115,6 +123,8 @@ def main():
             views.TrovaNota()
         elif scelta == "Trova Posizione":
             views.TrovaPosizione()
+        elif scelta.startswith("Manico dello strumento"):
+            views.VisualizzaManico()
         elif scelta == "Guida":
             from GBUtils import manuale
             manuale("ChitabryMan.txt")

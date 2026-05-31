@@ -1,6 +1,13 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.6.0 (31 maggio 2026)
+--------------------------------
+*   **Visualizzazione Manico Strumento (Nuova Funzionalità):**
+    *   Aggiunta l'opzione "Manico dello strumento <nomestrumento>" nel menu principale per visualizzare graficamente la disposizione delle note sulla tastiera.
+    *   Lo schema è allineato verticalmente e ottimizzato per lettori di Barra Braille tramite spaziatura fissa e righe vuote di separazione per migliorare la leggibilità.
+    *   La visualizzazione si adatta automaticamente all'accordatura, alla nomenclatura scelta (latina o anglosassone) e al numero di tasti dello strumento attivo.
+
 Versione 7.5.1 (29 maggio 2026)
 --------------------------------
 *   **Accordatore Acustico Cromatico (Ottimizzazione Algoritmo):**

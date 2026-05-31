@@ -2444,3 +2444,84 @@ def Accordatore():
             print(f"\nNote ascoltate: {nota_min} ({nota_med}) {nota_max}")
             print(f"Frequenze (Hz): {min_f:.1f} ({med_f:.1f}) {max_f:.1f}")
             print(f"Volumi (dB): {min_db:.0f} ({med_db:.0f}) {max_db:.0f}")
+
+
+def VisualizzaManico():
+    """
+    Costruisce e mostra lo schema grafico del manico dello strumento attivo,
+    ottimizzato per Barra Braille.
+    """
+    strum_attivo = config.impostazioni.get("strumento_attivo", "Chitarra Standard")
+    num_tasti = config.NUM_TASTI
+    num_corde = config.NUM_CORDE
+
+    nome_basso = strum_attivo.lower()
+    if nome_basso.startswith("chitarra"):
+        articolo = "della"
+    elif nome_basso.startswith("ukulele"):
+        articolo = "dell'"
+    elif nome_basso.startswith("basso") or nome_basso.startswith("mandolino") or nome_basso.startswith("banjo") or nome_basso.startswith("guitalele"):
+        articolo = "del"
+    else:
+        articolo = "dello strumento"
+
+    if articolo.endswith("'"):
+        print(f"\nIl manico {articolo}{strum_attivo.lower()}.")
+    else:
+        print(f"\nIl manico {articolo} {strum_attivo.lower()}.")
+    print()
+
+    col0_width = len(str(num_corde))
+
+    # Calcoliamo la lunghezza massima delle stringhe grezze per l'allineamento delle colonne
+    max_len = len("[T0]")
+    for tasto in range(1, num_tasti + 1):
+        max_len = max(max_len, len(f" T{tasto}"))
+
+    for corda in range(1, num_corde + 1):
+        for tasto in range(num_tasti + 1):
+            key_pos = f"{corda}.{tasto}"
+            if key_pos in config.CORDE:
+                nota_tradotta = get_nota(config.CORDE[key_pos])
+                if tasto == 0:
+                    max_len = max(max_len, len(f"[{nota_tradotta}]"))
+                else:
+                    max_len = max(max_len, len(f" {nota_tradotta}"))
+
+    col_width = max_len
+
+    # Costruiamo la riga dell'intestazione
+    col0_head = f"{'C':<{col0_width}}"
+    cells_head = ["[T0]"] + [f" T{t}".ljust(col_width) for t in range(1, num_tasti + 1)]
+    header_line = f"{col0_head}|" + "|".join(cells_head) + "|"
+
+    # Linea di separazione allineata con i pipe
+    separator_line = f"{' ' * col0_width}|{'-' * (len(header_line) - col0_width - 2)}|"
+
+    # Stampa dello schema per accessibilità Braille (senza righe vuote interne)
+    print(separator_line)
+    print(header_line)
+    
+    for corda in range(1, num_corde + 1):
+        row_cells = []
+        for tasto in range(num_tasti + 1):
+            key_pos = f"{corda}.{tasto}"
+            if key_pos in config.CORDE:
+                nota_tradotta = get_nota(config.CORDE[key_pos])
+            else:
+                nota_tradotta = ""
+            
+            if tasto == 0:
+                cell_val = f"[{nota_tradotta}]"
+            else:
+                cell_val = f" {nota_tradotta}"
+            row_cells.append(cell_val.ljust(col_width))
+        
+        col0_row = f"{corda:<{col0_width}}"
+        row_line = f"{col0_row}|" + "|".join(row_cells) + "|"
+        print(row_line)
+
+    print(separator_line)
+    print()
+    key("Premi un tasto per tornare al menu...")
+
