@@ -1,6 +1,61 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 9, di domenica 24 maggio 2026.
+L'ultima revisione di questo documento e' la numero 10, di domenica 31 maggio 2026.
 A cura di Gabriele Battaglia.
+
+Indice Dettagliato degli Argomenti:
+1. Come installare Chitabry.
+2. Il sistema dei menu (Regole Standard).
+3. Il menu' principale.
+4. Costruttore Accordi.
+   - 4.1. Scelta della Tonica.
+   - 4.2. Scelta del Tipo di accordo.
+   - 4.3. Ascolto e interazione delle Forme/Diteggiature.
+5. Flauto (Diteggiature per il Flauto Traverso).
+6. Metronomo (Manuale Completo).
+   - 6.1. Caratteristiche Principali.
+   - 6.2. Utilizzo.
+   - 6.3. Riferimento Comandi:
+     * Controlli di Base.
+     * Ritmo.
+     * Parametri Suono.
+     * Gestione Preset.
+     * Programmazione.
+     * Allenamento (Ghost Bars).
+   - 6.4. Sviluppatori.
+
+7. MidiStudy (Analisi e Studio File MIDI/ABC).
+   - 7.1. Funzionamento generale.
+   - 7.2. Scegli Tracce (Multi-selezione).
+   - 7.3. Azioni sulle Tracce isolate/unite.
+   - 7.4. Visualizzatore Interattivo (per Display Braille).
+   - 7.5. Notazione e Durate.
+8. Accordatore (Accordatore Cromatico in Tempo Reale).
+   - 8.1. Il processo di accordatura.
+9. Scale (Studio e Pathfinder delle Scale).
+   - 9.1. Scelta della Tonica.
+   - 9.2. Scelta del Tipo di Scala.
+   - 9.3. Ricerca Diteggiature (CAGED e 3 Note per Corda).
+   - 9.4. Menu Esercizio Scala.
+10. Tastiera (Player Generico).
+    - 10.1. Tastiera PC (Layout QWERTY Italiano).
+    - 10.2. Tastiera MIDI Esterna (Collegamento fisico e Bluetooth).
+    - 10.3. Controlli Comuni.
+    - 10.4. Ottimizzazione per Display Braille.
+11. Gioca col suono (Ear Training).
+    - 11.1. Scelta del Gioco (Note / Frequenze).
+    - 11.2. Svolgimento del Gioco.
+    - 11.3. Calcolo del Punteggio.
+    - 11.4. Classifica (Hall of Fame).
+12. Impostazioni.
+    - 12.1. Gestione Strumenti (Corde/Tasti personalizzati).
+    - 12.2. Cambia nomenclatura (Latina / Anglosassone).
+    - 12.3. Configurazione Parametri Suoni (Sintesi e MIDI).
+13. Nota sul manico (Ricerca posizioni note).
+14. Trova Posizione (Corda.Tasto).
+15. Guida.
+16. Esci.
+17. Ringraziamenti.
+
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 3.5 Flash, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
@@ -102,18 +157,6 @@ Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controll
 
 
 
- Installazione
-
-metronomo richiede Python 3 e due librerie esterne.
-
-1.  Assicurati di avere Python installato.
-2.  Installa le dipendenze necessarie tramite pip:
-    ```bash
-    pip install numpy sounddevice
-    ```
-
-
-
  Utilizzo
 
 Per avviare il programma, avvia Chitabry e scegli Metronomo dal menu principale, questi dovrà avere i permessi di scrittura per salvare il proprio file di impostazioni, quindi assicurati che il sistema operativo gli conceda i permessi di scrittura sulla cartella in cui lo hai salvato.
@@ -184,11 +227,7 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
     Gabriele Battaglia (IZ4APU) - Concept e sviluppo principale.
     Partner di Programmazione (Gemini) - Code review, debugging e implementazione di nuove feature.
 
-  Idee per Sviluppi Futuri (Roadmap)
 
-    Pattern Ritmici: Introdurre comandi per definire pattern complessi, specificando quali beat e suddivisioni devono suonare (es. ritmi di clave, terzine, ecc.).
-    Tap Tempo: Implementare un comando `tap` che permetta di impostare i BPM premendo ripetutamente Invio a tempo.
-    Supporto Suoni `.wav`: Permettere agli utenti di associare file audio personalizzati (es. suoni di batteria) all'accento, al beat e alle suddivisioni.
 
  MidiStudy
 
@@ -278,19 +317,22 @@ Menu Esercizio Scala:
 
 
 
- Tastiera
+ Tastiera (Player Generico)
 
-Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 voci.
+Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 voci e supporta la riproduzione tramite tastiere MIDI esterne (fisiche o Bluetooth).
 
-- Layout: Mappato sulla tastiera QWERTY Italiana.
+- Tastiera PC (Layout QWERTY Italiano):
   - Riga inferiore (`Z`, `X`, `C`...): Ottava base (Naturali e relativi Diesis sui tasti `S`, `D`, `G`...).
   - Riga superiore (`Q`, `W`, `E`...): Ottava successiva.
   - SHIFT: Se premuto insieme ai tasti, sposta l'esecuzione di un'ulteriore ottava (sotto per la riga Z, sopra per la riga Q).
-- Controlli:
-  - F1 - F8: Impostano istantaneamente l'ottava base (da 1 a 8).
-  - SPAZIO: Cambia il tipo di suono (Chitarra / Sintetico).
+- Tastiera MIDI Esterna:
+  - Se hai connesso e abilitato un dispositivo MIDI di input (tastiera fisica o bluetooth) tramite la voce "Connetti Tastiera MIDI" nel menu "Impostazioni", potrai utilizzarla direttamente.
+  - Una volta all'interno di questa funzione, suonando i tasti fisici della tua tastiera MIDI esterna potrai suonare liberamente in tempo reale con piena polifonia nativa, e lo schermo stamperà in tempo reale la nota suonata e la sua frequenza (es. `[Tastiera MIDI] Nota: DO4 (261.6 Hz)`).
+- Controlli Comuni:
+  - F1 - F8: Impostano istantaneamente l'ottava base (da 1 a 8) per la tastiera del PC.
+  - SPAZIO: Cambia il tipo di suono del sintetizzatore alternando tra: Sintesi Karplus-Strong (Chitarra) -> Sintesi Onda Semplice (Sintetico) -> MIDI (Strumento del banco attivo).
   - ESC: Torna al menu principale.
-- Display Braille: Il prompt viene sovrascritto in tempo reale mostrando la nota suonata, la frequenza in Hz e l'ottava base attuale, restando sempre entro i 40 caratteri.
+- Display Braille: Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
 
 
 
@@ -326,6 +368,8 @@ Qui potete configurare alcuni parametri di Chitabry:
    Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
    Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
    Modifica suono 2 (Sintetico): Permette di configurare i parametri del sintetizzatore ad onda semplice.
+   Seleziona Strumento MIDI: Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome.
+   Connetti Tastiera MIDI: Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
 
 
 

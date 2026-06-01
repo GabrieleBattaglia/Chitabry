@@ -72,6 +72,7 @@ def get_impostazioni_default():
         "default_bpm": 60,
         "tipo_suono": "suono_1",
         "midi_strumento": 0,
+        "midi_in_dispositivo": "",
         "suono_1": {
             "descrizione": "Suono per accordi (Karplus-Strong Pluck)",
             "pluck_hardness": 0.2,    # Range 0.1 (morbido) - 0.9 (aggressivo)
@@ -142,6 +143,11 @@ def carica_impostazioni():
         if 'midi_strumento' not in impostazioni:
             print("Aggiornamento impostazioni: aggiunta chiave 'midi_strumento'.")
             impostazioni['midi_strumento'] = 0
+            migrazione_necessaria = True
+        
+        if 'midi_in_dispositivo' not in impostazioni:
+            print("Aggiornamento impostazioni: aggiunta chiave 'midi_in_dispositivo'.")
+            impostazioni['midi_in_dispositivo'] = ""
             migrazione_necessaria = True
         
         if migrazione_necessaria:

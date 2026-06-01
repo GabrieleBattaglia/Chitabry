@@ -9,7 +9,7 @@ import scale_catalog
 import views
 
 # --- Costanti ---
-VERSIONE = "7.7.0 del 31 maggio 2026."
+VERSIONE = "7.8.0 del 31 maggio 2026."
 
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
@@ -54,6 +54,18 @@ def main():
 
     config.carica_impostazioni()
     config.aggiorna_manico()
+
+    import GBAudio
+    try:
+        dispositivo_salvato = config.impostazioni.get("midi_in_dispositivo", "")
+        if dispositivo_salvato:
+            dispositivi = GBAudio.get_midi_in_devices()
+            if dispositivo_salvato in dispositivi:
+                idx = dispositivi.index(dispositivo_salvato)
+                GBAudio.open_global_midi_in(idx)
+                print(f"Tastiera MIDI connessa all'avvio: {dispositivo_salvato}")
+    except Exception as e:
+        print(f"Impossibile collegare la tastiera MIDI all'avvio: {e}")
 
     import midistudy
     midistudy.check_midi_folder_cleanup()

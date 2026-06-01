@@ -540,3 +540,181 @@ def play_midi_note_temp(note_num, duration, velocity=127):
         threading.Thread(target=off, daemon=True).start()
     except Exception as e:
         print(f"\n[MIDI] Errore riproduzione nota {note_num}: {e}")
+
+
+# --- Supporto MIDI IN Nativo ---
+
+class MIDIINCAPSW(ctypes.Structure):
+    _fields_ = [
+        ("wMid", ctypes.c_ushort),
+        ("wPid", ctypes.c_ushort),
+        ("vDriverVersion", ctypes.c_uint),
+        ("szPname", ctypes.c_wchar * 32),
+        ("dwSupport", ctypes.c_uint)
+    ]
+
+class MIDIINCAPSA(ctypes.Structure):
+    _fields_ = [
+        ("wMid", ctypes.c_ushort),
+        ("wPid", ctypes.c_ushort),
+        ("vDriverVersion", ctypes.c_uint),
+        ("szPname", ctypes.c_char * 32),
+        ("dwSupport", ctypes.c_uint)
+    ]
+
+MidiInCallbackType = ctypes.WINFUNCTYPE(
+    None,
+    ctypes.c_void_p,
+    ctypes.c_uint,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p
+)
+
+def get_midi_in_devices():
+    """Elenca i nomi dei dispositivi MIDI di input disponibili nel sistema."""
+    try:
+        winmm = ctypes.windll.winmm
+        num_devs = winmm.midiInGetNumDevs()
+        devices = []
+        for i in range(num_devs):
+            caps = MIDIINCAPSW()
+            res = winmm.midiInGetDevCapsW(i, ctypes.byref(caps), ctypes.sizeof(caps))
+            if res == 0:
+                devices.append(caps.szPname)
+            else:
+                # fallback ANSI
+                caps_a = MIDIINCAPSA()
+                res_a = winmm.midiInGetDevCapsA(i, ctypes.byref(caps_a), ctypes.sizeof(caps_a))
+                if res_a == 0:
+                    devices.append(caps_a.szPname.decode('ansi', errors='ignore'))
+        return devices
+    except Exception:
+        return []
+
+class WindowsMidiIn:
+    """Gestore dell'input MIDI nativo di Windows tramite winmm.dll."""
+    def __init__(self, device_idx, on_note_on_cb=None, on_note_off_cb=None):
+        self.h_midi = None
+        self.winmm = None
+        self.device_idx = device_idx
+        self.on_note_on = on_note_on_cb
+        self.on_note_off = on_note_off_cb
+        # Memorizza il callback per evitare che venga rimosso dal Garbage Collector
+        self.callback_ref = MidiInCallbackType(self._midi_callback)
+        self.open_port()
+
+    def open_port(self):
+        try:
+            self.winmm = ctypes.windll.winmm
+            HMIDIIN = ctypes.c_void_p
+            self.h_midi = HMIDIIN()
+            
+            # midiInOpen(LPHMIDIIN lphmi, UINT uDeviceID, DWORD_PTR dwCallback, DWORD_PTR dwCallbackInstance, DWORD fdwOpen)
+            CALLBACK_FUNCTION = 0x30000
+            res = self.winmm.midiInOpen(
+                ctypes.byref(self.h_midi),
+                self.device_idx,
+                self.callback_ref,
+                None,
+                CALLBACK_FUNCTION
+            )
+            if res != 0:
+                self.h_midi = None
+                print(f"\n[MIDI-IN] Errore apertura dispositivo {self.device_idx} (Codice: {res})")
+                return
+            
+            res_start = self.winmm.midiInStart(self.h_midi)
+            if res_start != 0:
+                print(f"\n[MIDI-IN] Errore avvio acquisizione (Codice: {res_start})")
+                self.close_port()
+        except Exception as e:
+            self.h_midi = None
+            print(f"\n[MIDI-IN] Inizializzazione fallita: {e}")
+
+    def _midi_callback(self, hmi, wMsg, dwInstance, dwParam1, dwParam2):
+        # MM_MIM_DATA = 0x3C3
+        if wMsg == 0x3C3:
+            status = dwParam1 & 0xFF
+            note_num = (dwParam1 >> 8) & 0xFF
+            velocity = (dwParam1 >> 16) & 0xFF
+            
+            # Note On: status 0x90-0x9F (per qualsiasi canale, ma tipicamente 0x90 è canale 0)
+            if (status & 0xF0) == 0x90:
+                if velocity > 0:
+                    if self.on_note_on:
+                        self.on_note_on(note_num, velocity)
+                else:
+                    if self.on_note_off:
+                        self.on_note_off(note_num)
+            # Note Off: status 0x80-0x8F
+            elif (status & 0xF0) == 0x80:
+                if self.on_note_off:
+                    self.on_note_off(note_num)
+
+    def close_port(self):
+        if self.h_midi is not None:
+            try:
+                self.winmm.midiInStop(self.h_midi)
+                self.winmm.midiInReset(self.h_midi)
+                self.winmm.midiInClose(self.h_midi)
+            except Exception:
+                pass
+            self.h_midi = None
+
+_midi_in = None
+
+def get_midi_in():
+    """Restituisce l'istanza di input MIDI attiva."""
+    global _midi_in
+    return _midi_in
+
+def on_midi_in_note_on(note_num, velocity):
+    """Callback di default per Note On da tastiera MIDI."""
+    try:
+        import config
+        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
+        if tipo_suono == 'midi':
+            get_midi_out().note_on(note_num, velocity)
+        else:
+            freq = 440.0 * (2.0 ** ((note_num - 69) / 12.0))
+            suono = config.impostazioni[tipo_suono]
+            dur = suono.get('dur_accordi', 2.0)
+            vol = suono.get('volume', 0.35)
+            renderer = NoteRenderer(fs=FS)
+            if 'pluck_hardness' in suono:
+                renderer.set_params(freq, dur, vol, 0.0, 
+                                    pluck_hardness=suono.get('pluck_hardness', 0.6), 
+                                    damping_factor=suono.get('damping_factor', 0.997))
+            else:
+                renderer.set_params(freq, dur, vol, 0.0, kind=suono.get('kind', 1), adsr_list=suono.get('adsr', [0,0,0,0]))
+            note_audio = renderer.render()
+            if note_audio.size > 0:
+                sd.play(note_audio, samplerate=FS, blocking=False)
+    except Exception:
+        pass
+
+def on_midi_in_note_off(note_num):
+    """Callback di default per Note Off da tastiera MIDI."""
+    try:
+        import config
+        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
+        if tipo_suono == 'midi':
+            get_midi_out().note_off(note_num)
+    except Exception:
+        pass
+
+def open_global_midi_in(device_idx):
+    """Apre la connessione globale al dispositivo MIDI In indicato."""
+    global _midi_in
+    close_global_midi_in()
+    if device_idx >= 0:
+        _midi_in = WindowsMidiIn(device_idx, on_midi_in_note_on, on_midi_in_note_off)
+
+@atexit.register
+def close_global_midi_in():
+    """Chiude in modo sicuro la connessione globale del MIDI In."""
+    global _midi_in
+    if _midi_in is not None:
+        _midi_in.close_port()
+        _midi_in = None

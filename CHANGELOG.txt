@@ -1,6 +1,13 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.8.0 (31 maggio 2026)
+--------------------------------
+*   **Integrazione Supporto MIDI Completo (Nuova Funzionalità):**
+    *   **MIDI Out (General MIDI):** Aggiunta l'opzione nelle impostazioni per selezionare uno dei 128 strumenti del banco General MIDI (indicizzati per nome) e riprodurlo tramite la porta di sistema `winmm.dll`. Il tipo suono è integrato in tutti i moduli (tastiera virtuale, pennata tablature, accordi e scale) tramite tasto `SPAZIO`.
+    *   **MIDI In (Tastiera MIDI Esterna):** Aggiunta l'opzione nelle impostazioni per connettere e configurare una tastiera MIDI fisica (anche Bluetooth). Il player virtuale cattura l'input per mostrare le note a schermo e riprodurle in polifonia.
+    *   **Ottimizzazione della Latenza:** Velocizzate le chiamate ctypes e rimossi i lookup ridondanti per abbattere la latenza.
+
 Versione 7.6.0 (31 maggio 2026)
 --------------------------------
 *   **Visualizzazione Manico Strumento (Nuova Funzionalità):**

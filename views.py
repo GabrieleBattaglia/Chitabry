@@ -1763,13 +1763,17 @@ def GestoreImpostazioni():
             inst_idx = config.impostazioni.get('midi_strumento', 0)
             descr_suono = f"MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})"
 
+        midi_in_attivo = config.impostazioni.get('midi_in_dispositivo', '')
+        midi_in_desc = midi_in_attivo if midi_in_attivo else "Nessuno"
+        
         menu_impostazioni = {
             's': f"Gestisci Strumenti (Attivo: {config.impostazioni.get('strumento_attivo')})",
             'n': f"Cambia nomenclatura (attuale: {config.impostazioni['nomenclatura']})",
             't': f"Cambia Tipo Suono Attivo (attuale: {descr_suono})",
             '1': f"Modifica {config.impostazioni['suono_1']['descrizione']}",
             '2': f"Modifica {config.impostazioni['suono_2']['descrizione']}",
-            '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})"
+            '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})",
+            '4': f"Connetti Tastiera MIDI (Attivo: {midi_in_desc})"
         }
         
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
@@ -1830,6 +1834,34 @@ def GestoreImpostazioni():
                 except Exception:
                     pass
             key("Premi un tasto...")
+            
+        elif scelta == '4':
+            dispositivi = GBAudio.get_midi_in_devices()
+            if not dispositivi:
+                print("\nNessun dispositivo MIDI di input rilevato nel sistema.")
+                key("Premi un tasto...")
+            else:
+                midi_in_menu = {"0": "Disconnetti / Nessuno"}
+                for idx, name in enumerate(dispositivi):
+                    midi_in_menu[str(idx + 1)] = name
+                
+                print("\nSeleziona una tastiera MIDI da connettere:")
+                scelta_kbd = menu(d=midi_in_menu, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
+                if scelta_kbd is not None:
+                    if scelta_kbd == "0":
+                        config.impostazioni['midi_in_dispositivo'] = ""
+                        config.archivio_modificato = True
+                        GBAudio.close_global_midi_in()
+                        print("Tastiera MIDI disconnessa.")
+                    else:
+                        idx_sel = int(scelta_kbd) - 1
+                        nome_sel = dispositivi[idx_sel]
+                        config.impostazioni['midi_in_dispositivo'] = nome_sel
+                        config.archivio_modificato = True
+                        GBAudio.open_global_midi_in(idx_sel)
+                        print(f"Tastiera MIDI connessa ed attivata: {nome_sel}")
+                    config.salva_impostazioni()
+                key("Premi un tasto...")
             
         elif scelta == 'i' or scelta is None:
             print("Ritorno al menu principale.")
@@ -2195,7 +2227,47 @@ def PlayerGenerico():
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(num_voices)]
     voice_idx = 0
 
+    midi_in = GBAudio.get_midi_in()
+    old_on_note_on = None
+    old_on_note_off = None
+
     poly_player.start()
+    
+    if midi_in is not None:
+        old_on_note_on = midi_in.on_note_on
+        old_on_note_off = midi_in.on_note_off
+        
+        def player_note_on(note_num, velocity):
+            nonlocal voice_idx
+            if suono_attivo_key == 'midi':
+                GBAudio.get_midi_out().note_on(note_num, velocity)
+            else:
+                freq = 440.0 * (2.0 ** ((note_num - 69) / 12.0))
+                v = voice_idx % num_voices
+                voice_idx += 1
+                suono = config.impostazioni[suono_attivo_key]
+                if 'pluck_hardness' in suono:
+                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, 
+                                            pluck_hardness=p['hardness'], damping_factor=p['damping'],
+                                            pick_position=p['pick_pos'], brightness=p['bright'])
+                else:
+                    renderers[v].set_params(freq, p['dur'], p['vol'], 0.0, kind=p['kind'], adsr_list=p['adsr'])
+                note_audio = renderers[v].render()
+                if note_audio.size > 0:
+                    mono_audio = note_audio[:, 0] / renderers[v].pan_l if renderers[v].pan_l != 0 else note_audio[:, 0]
+                    poly_player.pluck(string_idx=v, audio_mono=mono_audio)
+            
+            nota_obj = pitch.Pitch(midi=note_num)
+            nota_nome = get_nota(nota_obj.nameWithOctave.replace('-', 'b'))
+            freq_calc = 440.0 * (2.0 ** ((note_num - 69) / 12.0))
+            print(f"\r[Tastiera MIDI] Nota: {nota_nome} ({freq_calc:.1f} Hz){' '*15}\r", end="", flush=True)
+
+        def player_note_off(note_num):
+            if suono_attivo_key == 'midi':
+                GBAudio.get_midi_out().note_off(note_num)
+                
+        midi_in.on_note_on = player_note_on
+        midi_in.on_note_off = player_note_off
     
     def get_synth_params(s_key):
         s = config.impostazioni[s_key]
@@ -2286,6 +2358,9 @@ def PlayerGenerico():
                 print(f"\rUltima nota: {nota_nome} ({freq:.1f} Hz) [Ottava base: {base_octave}]{' '*15}\r", end="", flush=True)
 
     finally:
+        if midi_in is not None:
+            midi_in.on_note_on = old_on_note_on
+            midi_in.on_note_off = old_on_note_off
         poly_player.stop()
         print("\nUscita dal Player Generico.")
 
