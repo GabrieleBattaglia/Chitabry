@@ -3401,5 +3401,8 @@
             "data": "2026-05-15 13:32:18"
         }
     ],
-    "ultimo_controllo_pulizia_midi": "2026-05-23"
+    "ultimo_controllo_pulizia_midi": "2026-05-23",
+    "tipo_suono": "midi",
+    "midi_strumento": 0,
+    "midi_in_dispositivo": ""
 }
