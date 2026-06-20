@@ -15,7 +15,7 @@ from fractions import Fraction
 import GBAudio
 
 # Costanti
-MIDISTUDY_VERSION = "0.4.8 (Alpha) del 21 maggio 2026"
+from Chitabry import VERSIONE
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_MIDI_DIR = os.path.join(BASE_DIR, "midi")
 SETTINGS_FILE = os.path.join(BASE_DIR, "chitabry-settings.json")
@@ -23,7 +23,7 @@ TEMP_PREVIEW_FILE = os.path.join(DEFAULT_MIDI_DIR, "preview_temp.mid")
 
 def _header():
     print("\n" + "="*40)
-    print(f"MidiStudy - Analisi Musicale v{MIDISTUDY_VERSION}")
+    print(f"MidiStudy - Analisi Musicale v{VERSIONE}")
     print("="*40 + "\n")
 
 def cleanup_temp_files():
@@ -565,7 +565,8 @@ def esegui_trasposizione(part):
                     if p.accidental and p.accidental.alter != 0:
                         accidentals += 1
 
-        if accidentals < min_accidentals:
+        # A parità di accidenti, preferisce la trasposizione più vicina all'originale
+        if accidentals < min_accidentals or (accidentals == min_accidentals and abs(i) < abs(best_interval)):
             min_accidentals = accidentals
             best_interval = i
             total_notes_in_track = total_notes
