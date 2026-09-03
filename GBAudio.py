@@ -1,7 +1,14 @@
 # GBAudio.py
-# Motore Audio Condiviso per i progetti di Gabriele Battaglia
+# Motore audio di Chitabry: sintesi dello strumento e dialogo con il MIDI.
 # Contiene la sintesi sonora, il rendering e le utility per la gestione delle frequenze.
 # Data creazione: 6 gennaio 2026
+# 03/09/2026: corretta l'intestazione, che lo diceva condiviso fra i progetti di
+#   Gabriele mentre lo usa soltanto Chitabry, in quattro suoi file. Non e' un
+#   doppione di Acusticator e non va unificato con quello: Acusticator riproduce
+#   effetti brevi da uno score, questo suona uno strumento con note tenute e
+#   polifoniche e parla con le porte MIDI. L'unica cosa davvero duplicata fra i
+#   due e' note_to_freq, la conversione da nome di nota a frequenza, da
+#   affrontare quando toccheranno a Chitabry le sue fasi di revisione.
 
 import atexit
 import ctypes
