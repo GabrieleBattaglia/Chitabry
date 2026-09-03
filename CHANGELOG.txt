@@ -1,6 +1,14 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.8.2 (3 settembre 2026)
+---------------------------------
+*   **Documentazione:**
+    *   Corretta l'intestazione di `GBAudio.py`, che si dichiarava "Motore Audio Condiviso per i progetti di Gabriele Battaglia" mentre lo usa soltanto Chitabry, in quattro suoi file. Chi cercava un motore condiviso poteva credere di doverlo usare, e chi faceva pulizia poteva credere fosse un doppione di Acusticator.
+    *   GBAudio non e' un doppione e non va unificato con Acusticator: quello riproduce effetti brevi da uno score, questo suona uno strumento con note tenute e polifonia e parla con le porte MIDI. L'unica cosa davvero duplicata fra i due e' `note_to_freq`, tracciata nella issue #49.
+    *   Nessuna riga di codice modificata.
+
+
 Versione 7.8.0 (31 maggio 2026)
 --------------------------------
 *   **Integrazione Supporto MIDI Completo (Nuova Funzionalità):**
