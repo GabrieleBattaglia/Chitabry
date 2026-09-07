@@ -1,6 +1,14 @@
 Chitabry - ChangeLog
 ====================
 
+Versione 7.8.3 (7 settembre 2026)
+*   **Guida:**
+    *   La guida si apre anche lanciando Chitabry da una cartella diversa dalla sua. Il nome del file veniva cercato nella cartella da cui si era partiti, quindi bastava avviare il programma dal desktop perche' la guida risultasse mancante.
+    *   Quando la guida davvero non c'e', il messaggio lo scrive Chitabry e non piu' la libreria: manuale, dalla sua V2.0.0, riferisce il guaio a chi la chiama invece di stamparlo per conto proprio, cosi' ogni programma puo' dire la cosa giusta.
+    *   La guida si legge in utf-8. Prima veniva letta con la codifica di sistema, e in un manuale scritto in utf-8 ogni lettera accentata si sdoppiava in due caratteri che la sintesi vocale prova a pronunciare.
+    *   La fermata di fine pagina si adatta all'altezza della console invece di essere fissa a quindici righe, e la domanda e' piu' corta.
+    *   Serve GBUtils V124 o successiva.
+
 Versione 7.8.2 (3 settembre 2026)
 ---------------------------------
 *   **Documentazione:**

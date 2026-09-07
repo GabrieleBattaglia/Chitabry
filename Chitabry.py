@@ -9,7 +9,7 @@ import scale_catalog
 import views
 
 # --- Costanti ---
-VERSIONE = "7.8.2 del 3 settembre 2026."
+VERSIONE = "7.8.3 del 7 settembre 2026."
 
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
@@ -139,7 +139,14 @@ def main():
             views.VisualizzaManico()
         elif scelta == "Guida":
             from GBUtils import manuale
-            manuale("ChitabryMan.txt")
+            # Dalla V2.0.0 manuale solleva invece di stampare da sola, e cerca
+            # il nome relativo nella cartella di chi la chiama e non in quella
+            # da cui si e' lanciato il programma. Il messaggio lo scriviamo qui
+            # perche' e' Chitabry a sapere cos'e' quel file e a chi chiederlo.
+            try:
+                manuale("ChitabryMan.txt", nome="Guida di Chitabry")
+            except OSError:
+                print("La guida non e' insieme al programma. Richiedila all'autore.")
         elif scelta == "Esci" or scelta is None:
             break
             
