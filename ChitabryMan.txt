@@ -1,6 +1,6 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 10, di domenica 31 maggio 2026.
-A cura di Gabriele Battaglia.
+L'ultima revisione di questo documento e' la numero 11, di mercoledi' 9 settembre 2026, per la versione 8.0.0.
+A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 
 Indice Dettagliato degli Argomenti:
 1. Come installare Chitabry.
@@ -69,10 +69,11 @@ Gabriele Battaglia.
 Chitabry puo' essere compilato sia per Windows che per MacOS, dovrebbe girare anche sotto Linux ma non ho la possibilita' di testarlo di persona.
 
 Come installare Chitabry.
-L'installazione e' un processo molto semplice. Salvate Chitabry.exe (o l'eseguibile per il vostro sistema) e ChitabryMan.txt in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni.
+L'installazione e' un processo molto semplice. Scompattate l'archivio della release in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni: troverete Chitabry.exe e la cartella _internal, che contiene le librerie e questa guida.
 Poi lanciate l'eseguibile, oppure aprite una finestra terminale nella cartella dove avete incollato l'eseguibile, digitate `chitabry` (o il nome dell'eseguibile) e premete invio.
 
-Nota: Al primo avvio, Chitabry creerà automaticamente un file chiamato `chitabry-settings.json` nella stessa cartella. Questo file memorizza le vostre impostazioni, i suoni personalizzati e, soprattutto, il vostro database di accordi. Non cancellatelo\!
+Nota: Al primo avvio, Chitabry creerà automaticamente un file chiamato `chitabry-settings.json` accanto all'eseguibile, qualunque sia la cartella da cui lo avete lanciato. Questo file memorizza le vostre impostazioni, i suoni personalizzati e, soprattutto, il vostro database di accordi. Non cancellatelo\!
+Ogni modifica alle impostazioni viene scritta subito su disco, e la versione precedente del file resta come copia di sicurezza `chitabry-settings.json.bak`: se il file principale dovesse risultare illeggibile, Chitabry lo dice e si ferma senza toccarlo, e vi basta rinominare la copia per ripartire. Lo stesso vale per i preset del metronomo, in `clitronomo_presets.json`.
 
 Alla conclusione del programma (selezionando "Esci"), la finestra si chiude automaticamente; se avevate aperto un terminale o prompt dei comandi, dovete chiuderlo digitando exit e battendo invio.
 Prima di lanciare il software, vi consiglio di leggere questo manuale.
@@ -121,9 +122,9 @@ Durante l'ascolto di una forma:
 
 
   Flauto
- 
+
 Questa funzione permette di consultare in modo rapido e interattivo le diteggiature per il Flauto Traverso.
- 
+
 Il processo:
 1. All'avvio della funzione viene mostrata una legenda dettagliata delle chiavi per la mano sinistra (MS) e per la mano destra (MD).
 2. Viene richiesto l'inserimento dell'ottava e della nota desiderata (es. '2 FA#', '1 SIb', '3 DO') oppure semplicemente l'invio vuoto per uscire e tornare al menu principale.
@@ -151,7 +152,7 @@ Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controll
 
    Interfaccia a Riga di Comando: Nessuna GUI. Tutte le operazioni avvengono tramite comandi testuali, garantendo minime risorse di sistema e massima velocità.
    Programmazione Avanzata: Crea sequenze complesse dove il metronomo cambia BPM o si silenzia automaticamente a battute predefinite. Perfetto per esercizi con cambi di tempo o per studiare la propria stabilità ritmica.
-   Gestione di Preset: Salva, carica, elenca e cancella facilmente le tue configurazioni preferite. I preset sono salvati in un file `metronomo_presets.json` leggibile e facilmente modificabile.
+   Gestione di Preset: Salva, carica, elenca e cancella facilmente le tue configurazioni preferite. I preset sono salvati accanto al programma nel file `clitronomo_presets.json`, leggibile e facilmente modificabile; a ogni salvataggio la versione precedente resta come copia `.bak`, e un file che non si riesce piu' a leggere viene messo da parte con un altro nome invece di essere sovrascritto.
    Accessibilità: Il programma è stato sviluppato pensando all'accessibilità. Essendo un'applicazione testuale, è pienamente compatibile con screen reader (come NVDA, JAWS, VoiceOver) e display Braille, garantendo un'esperienza utente completa a persone non vedenti e ipovedenti.
    Configurazione Audio Dettagliata: Personalizza la frequenza, il volume, la durata, l'attack e il decay per ogni suono (accento, beat e suddivisione).
 
@@ -224,8 +225,9 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
 
   Sviluppatori
 
-    Gabriele Battaglia (IZ4APU) - Concept e sviluppo principale.
-    Partner di Programmazione (Gemini) - Code review, debugging e implementazione di nuove feature.
+    Gabriele Battaglia (IZ4APU): concept e sviluppo principale.
+    Gemini: code review, debugging e implementazione di nuove feature fino alla versione 7.
+    ClaudIA (Claude Fable 5.1, UltraCode): revisione generale del codice dalla versione 8.
 
 
 
@@ -234,7 +236,7 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
 Il potente modulo per l'analisi, lo studio e la conversione testuale/grafica di file MIDI e ABC. Permette di esplorare brani musicali, isolare singole tracce o selezionarne molteplici (multi-traccia) per studiarle in un formato accessibile.
 
 Funzionamento:
-1.  Chitabry cerca i file `.mid`, `.midi` o `.abc` nella cartella `Mine\Chitabry\midi`. All'avvio del programma, vi verrà notificato se ci sono file vecchi da ripulire (scadenza a 1 anno).
+1.  Chitabry cerca i file `.mid`, `.midi` o `.abc` nella cartella `midi` accanto all'eseguibile, e la crea se non c'e': copiate li' i brani da studiare. All'avvio del programma, vi verrà notificato se ci sono file vecchi da ripulire (scadenza a 1 anno).
 2.  Selezionate un file dal menu. Verranno estratti e visualizzati immediatamente i metadati (BPM, Tempo, Tonalità).
 3.  Nel menu principale del brano potete:
     - Ascoltare l'intero brano tramite il preciso player nativo MCI di Windows (interrompibile con ESC o Q).
@@ -329,7 +331,7 @@ Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 vo
   - Se hai connesso e abilitato un dispositivo MIDI di input (tastiera fisica o bluetooth) tramite la voce "Connetti Tastiera MIDI" nel menu "Impostazioni", potrai utilizzarla direttamente.
   - Una volta all'interno di questa funzione, suonando i tasti fisici della tua tastiera MIDI esterna potrai suonare liberamente in tempo reale con piena polifonia nativa, e lo schermo stamperà in tempo reale la nota suonata e la sua frequenza (es. `[Tastiera MIDI] Nota: DO4 (261.6 Hz)`).
 - Controlli Comuni:
-  - F1 - F8: Impostano istantaneamente l'ottava base (da 1 a 8) per la tastiera del PC.
+  - F1 - F8: Impostano istantaneamente l'ottava base per la tastiera del PC, da 2 (F1) a 9 (F8); all'ingresso l'ottava base e' la 3.
   - SPAZIO: Cambia il tipo di suono del sintetizzatore alternando tra: Sintesi Karplus-Strong (Chitarra) -> Sintesi Onda Semplice (Sintetico) -> MIDI (Strumento del banco attivo).
   - ESC: Torna al menu principale.
 - Display Braille: Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
@@ -341,16 +343,16 @@ Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 vo
 Una nuova e divertente modalità per l'ear training (allenamento dell'orecchio musicale).
 Selezionando questa voce potrete mettere alla prova la vostra capacità di riconoscere le note o le frequenze pure "a orecchio".
 
-1. Scelta del Gioco: 
+1. Scelta del Gioco:
    - Note: Il programma genera una nota MIDI casuale tra C2 (Do grave) e C7 (Do acutissimo). Vi verrà chiesto se volete includere i diesis/bemolli o giocare solo con le note naturali.
    - Frequenze: Il programma genera una frequenza pura casuale (in Hz) all'interno dello stesso range udibile (da 65 a 2093 Hz).
 
-2. Svolgimento: 
+2. Svolgimento:
    Una partita è composta da 30 round. Ad ogni round ascolterete il suono bersaglio. Il prompt, estremamente compatto e ottimizzato per i display Braille, vi mostrerà il risultato del round precedente e i comandi disponibili.
    - Premete un tasto qualsiasi per riascoltare il suono quante volte volete.
    - Premete la Barra Spaziatrice per passare al volo dal suono del Sintetizzatore a quello della Chitarra per aiutarvi nel riconoscimento.
    - Premete Invio quando vi sentite pronti a digitare la vostra risposta.
-   
+
 3. Calcolo del Punteggio:
    - Nel gioco delle Note: Una risposta esatta vale il 100%. L'errore viene calcolato in semitoni. Ogni semitono di distanza dalla nota corretta vi farà perdere circa il 4.16% del punteggio del round (fino ad azzerarsi se vi sbagliate di oltre 2 ottave).
    - Nel gioco delle Frequenze: Riconoscere la frequenza esatta a orecchio è difficilissimo! Se vi avvicinate entro uno scarto di 10 Hz, prenderete comunque il 100%. Da lì in poi il punteggio scende proporzionalmente fino a zero per errori superiori a 100 Hz.
@@ -382,10 +384,10 @@ Chitabry vi risponderà docilmente con un elenco di tutte le posizioni:
 
 ```
 Nota SOL trovata nelle seguenti posizioni (tasti 5-12):
-Corda 6, tasti: 
-Corda 5, tasti: 10 
-Corda 4, tasti: 5 
-Corda 3, tasti: 12 
+Corda 6, tasti:
+Corda 5, tasti: 10
+Corda 4, tasti: 5
+Corda 3, tasti: 12
 ...etc...
 ```
 
@@ -411,11 +413,11 @@ Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry s
 
  Guida
 
-Mostra questo manuale (il file Chitabryman.txt) direttamente nell'applicazione.
+Mostra questo manuale (il file ChitabryMan.txt, che viaggia dentro il pacchetto) direttamente nell'applicazione, una pagina alla volta.
 
  Esci
 
-Salva eventuali modifiche alle impostazioni o al database accordi e chiude l'applicazione.
+Chiude l'applicazione. Le impostazioni e il database accordi sono gia' salvati, perche' ogni modifica viene scritta nel momento in cui la fate.
 
 
 

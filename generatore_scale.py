@@ -1,5 +1,7 @@
+# Chitabry, generatore scale: il pathfinder delle diteggiature di una scala dentro un box del manico.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 
-# MIDI notes per accordatura standard (0 = E2 grave, 5 = E4 cantino)
+# Note MIDI dell'accordatura standard, dalla corda grave alla acuta
 DEFAULT_TUNING_MIDI = [40, 45, 50, 55, 59, 64]
 
 class ScalePathfinder:
@@ -24,15 +26,15 @@ class ScalePathfinder:
                 # Se è premuta, deve essere nel range
                 if f > 0 and not (min_fret <= f <= max_fret):
                     continue
-                
+
                 midi_note = self.model.tuning_midi[s] + f
                 pc = midi_note % 12
-                
+
                 if pc in self.target_pc_set:
                     positions.append({
-                        'string': s, 
-                        'fret': f, 
-                        'midi': midi_note, 
+                        'string': s,
+                        'fret': f,
+                        'midi': midi_note,
                         'pc': pc
                     })
         return positions
@@ -49,19 +51,19 @@ class ScalePathfinder:
             if m not in pos_by_midi:
                 pos_by_midi[m] = []
             pos_by_midi[m].append(p)
-            
-        unique_midis = sorted(list(pos_by_midi.keys()))
-        
+
+        unique_midis = sorted(pos_by_midi)
+
         paths = []
-        
+
         def dfs(midi_idx, current_path):
             if midi_idx == len(unique_midis):
                 paths.append(list(current_path))
                 return
-                
+
             next_midi = unique_midis[midi_idx]
             candidates = pos_by_midi[next_midi]
-            
+
             for cand in candidates:
                 if not current_path:
                     current_path.append(cand)
@@ -75,49 +77,49 @@ class ScalePathfinder:
                     current_path.pop()
 
         dfs(0, [])
-        
+
         scored_paths = []
         for path in paths:
             score, meta = self._score_and_finger_path(path, min_fret, max_fret, priorita_caged)
             scored_paths.append({'path': path, 'score': score, 'meta': meta})
-            
+
         scored_paths.sort(key=lambda x: x['score'], reverse=True)
         return scored_paths
 
     def _score_and_finger_path(self, path, min_fret, max_fret, priorita_caged):
         score = 1000
-        
+
         # Valutazione fluidità passaggi di corda consecutivi
         for i in range(len(path) - 1):
             p1 = path[i]
             p2 = path[i+1]
             diff_string = p2['string'] - p1['string']
-            
+
             # Se si torna su una corda più grave (arretramento)
             if diff_string < 0:
                 score += diff_string * 150  # diff_string è negativo, quindi sottrae
-                
+
             # Se si saltano corde (differenza assoluta > 1)
             dist_string = abs(diff_string)
             if dist_string > 1:
                 score -= (dist_string - 1) * 100
-        
-        notes_per_string = {s: 0 for s in range(self.model.num_strings)}
+
+        notes_per_string = dict.fromkeys(range(self.model.num_strings), 0)
         open_strings = 0
-        
+
         # Calcolo note per corda
         for p in path:
             notes_per_string[p['string']] += 1
             if p['fret'] == 0:
                 open_strings += 1
-                
+
         # Bonus corde a vuoto
         if min_fret == 0:
             score += open_strings * 50
-            
+
         # Penalità o bonus per note per corda
         nps_counts = [count for count in notes_per_string.values() if count > 0]
-        
+
         if priorita_caged:
             # Forma CAGED: idealmente 2 o 3 note per corda.
             for count in nps_counts:
@@ -127,7 +129,7 @@ class ScalePathfinder:
             # Stile moderno / legato: preferisce strettamente 3 note per corda o pattern costanti
             threes = sum(1 for count in nps_counts if count == 3)
             score += threes * 20
-            
+
             # Penalizza pattern misti se vogliamo strict 3NPS, ma spesso ai bordi ci sono 2 note.
             for count in nps_counts:
                 if count > 4:
@@ -140,10 +142,10 @@ class ScalePathfinder:
             actual_min_fret = min(frets_pressed)
             actual_max_fret = max(frets_pressed)
             stretch = actual_max_fret - actual_min_fret
-            
+
             if stretch > 4:
                 score -= (stretch - 4) * 150 # Forte penalità per stretch eccessivi
-                
+
             # Assegnazione dita semplice
             fingering = []
             for p in path:
@@ -152,17 +154,17 @@ class ScalePathfinder:
                 else:
                     # Dito base = tasto - tasto_minimo + 1
                     finger = p['fret'] - actual_min_fret + 1
-                    # Se lo stretch è > 3 (4 tasti totali, dita 1 2 3 4), il dito potrebbe essere > 4
-                    if finger > 4: finger = 4 # Comprime sul mignolo
+                    # Con piu' di quattro tasti di estensione il dito si comprime sul mignolo
+                    finger = min(finger, 4)
                     fingering.append(finger)
         else:
             stretch = 0
             fingering = [0] * len(path)
-            
+
         # Calcolo difficoltà in percentuale
         # Diciamo che uno score di 1200+ è "0% difficoltà", e <= 0 è "100% difficoltà"
         difficolta_score_perc = max(0, min(100, int(100 - (score / 1200.0 * 100))))
-        
+
         # Stretch percentuale: 4 tasti = 100% stretch accettabile (normale per 4 dita). > 4 è over-stretch.
         difficolta_stretch_perc = min(100, int((stretch / 4.0) * 100)) if stretch > 0 else 0
         if stretch > 4:
@@ -175,5 +177,5 @@ class ScalePathfinder:
             'difficolta_score_perc': difficolta_score_perc,
             'difficolta_stretch_perc': difficolta_stretch_perc
         }
-        
+
         return score, meta

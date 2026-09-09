@@ -1,0 +1,47 @@
+Collaudo di Chitabry 8.0.0, prove che richiedono l'ascolto.
+Per ogni prova: cosa fare, cosa osservare, e la riga Esito da compilare. Le prove superate si cancellano.
+
+Prova 1, il metronomo con un programma a rampa.
+Cosa fare: dal Metronomo, con il comando pa crea un segmento a rampa di otto battute, per esempio pa 8 160 partendo da 100 BPM, poi g. Lascialo andare fino alla fine della rampa e oltre.
+Cosa osservare: a ogni cambio di battuta, e in particolare al primo annuncio del programma e alla fine del segmento, non deve sentirsi nessun salto, buco o schiocco. Gli annunci "Programma: battute da..." e "fine segmento" devono comparire quando la battuta comincia, non prima.
+Esito:
+
+Prova 2, le battute fantasma.
+Cosa fare: gb c 2 1, poi g.
+Cosa osservare: due battute suonano e una tace, sempre nello stesso ordine; l'annuncio [GHOST MUTO] arriva insieme alla battuta muta e [GHOST SUONO] insieme a quella che riprende. Poi gb r 30 e ascolta se le battute mute arrivano a caso.
+Esito:
+
+Prova 3, cambiare parametri mentre il metronomo gira.
+Cosa fare: con il metronomo avviato, dai b 140, poi 1, poi f2 700, poi t 3/4.
+Cosa osservare: ogni cambio entra dalla battuta successiva, senza schiocchi, e il tempo non zoppica.
+Esito:
+
+Prova 4, il mixer polifonico sotto pressione.
+Cosa fare: dalla Tastiera, suona veloce ripetendo piu' volte lo stesso tasto e poi accordi di quattro o cinque note tenute.
+Cosa osservare: ogni nota parte dall'inizio, nessuna resta muta, nessuna parte a meta' con uno schiocco.
+Esito:
+
+Prova 5, il player delle diteggiature.
+Cosa fare: dal Costruttore Accordi scegli un accordo, ascolta le corde una per una con i tasti da 1 a 6, poi le pennate con Q e A, poi cambia suono con SPAZIO e ripeti.
+Cosa osservare: le corde gravi a sinistra e le acute a destra, tutte le corde suonano, la pennata scorre. Se hai uno strumento con un numero di corde diverso da sei, ripeti la prova con quello attivo: fino alla 7.8.3 le corde restavano mute.
+Esito:
+
+Prova 6, l'esercizio delle scale.
+Cosa fare: dalle Scale scegli una tonica e un tipo, indica un box di manico come 5-8, poi nell'esercizio prova a, d, l per il loop, m per il metronomo, b per i BPM, SPAZIO per il suono, i numeri per le note singole, ESC.
+Cosa osservare: tutto come prima; in loop con il metronomo attivo la battuta si completa con i battiti muti; con ESC durante un ascolto singolo si torna al menu dell'esercizio, con ESC durante il loop si esce.
+Esito:
+
+Prova 7, le impostazioni si salvano subito.
+Cosa fare: dalle Impostazioni cambia la nomenclatura, poi chiudi la finestra della console senza uscire dal menu. Riavvia Chitabry.
+Cosa osservare: la nomenclatura e' quella nuova. Accanto al programma ci sono chitabry-settings.json e la copia chitabry-settings.json.bak.
+Esito:
+
+Prova 8, il pacchetto compilato.
+Cosa fare: compila con pyinstaller --noconfirm Chitabry.spec, avvia dist\Chitabry\Chitabry.exe da una cartella diversa da quella dell'eseguibile, per esempio da un collegamento sul desktop, poi apri la Guida e MidiStudy.
+Cosa osservare: le impostazioni sono quelle tue, non azzerate; la guida si apre; MidiStudy crea la cartella midi accanto all'eseguibile e lo dice.
+Esito:
+
+Prova 9, l'accordatore.
+Cosa fare: avvia l'Accordatore con e senza il rilevamento automatico, suona qualche nota, esci con ESC.
+Cosa osservare: la riga si aggiorna ogni secondo, prima del primo suono dice N:nessuna, e all'uscita compare il riepilogo di note, frequenze e volumi.
+Esito:

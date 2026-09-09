@@ -1,85 +1,89 @@
+# Chitabry, impostazioni: l'archivio dell'utente, le costanti delle note e il manico attivo.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Revisione 1 del 2026-09-09: i percorsi si ricavano dalla cartella del
+# programma e non piu' dalla directory di lavoro; il salvataggio scrive su un
+# file temporaneo e conserva la versione precedente come copia .bak; ogni
+# modifica si salva subito; il formato dell'archivio porta un numero di
+# versione e le chiavi mancanti si completano dai valori predefiniti.
+
 import json
+import os
 import sys
+
 import strumento
 
-def setup_note_constants():
-    """Crea le costanti per le note e i dizionari di conversione."""
-    NOTE_STD = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-    NOTE_LATINE = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#', 'LA', 'LA#', 'SI']
-    NOTE_ANGLO = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
-    STD_TO_LATINO = dict(zip(NOTE_STD, NOTE_LATINE))
-    STD_TO_ANGLO = dict(zip(NOTE_STD, NOTE_ANGLO))
-    STD_TO_LATINO.update({
-        'Db': 'REb', 'Eb': 'MIb', 'Gb': 'SOLb', 'Ab': 'LAb', 'Bb': 'SIb'
-    })
-    STD_TO_ANGLO.update({
-        'Db': 'Db', 'Eb': 'Eb', 'Gb': 'Gb', 'Ab': 'Ab', 'Bb': 'Bb'
-    })
-    
-    return NOTE_STD, NOTE_LATINE, NOTE_ANGLO, STD_TO_LATINO, STD_TO_ANGLO
+def cartella_dati():
+    """Cartella dei file dell'utente: accanto all'eseguibile se il programma e'
+    compilato, accanto ai sorgenti altrimenti. Mai la directory di lavoro:
+    avviando Chitabry da un collegamento con una cartella di partenza diversa
+    le impostazioni risultavano azzerate."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
-NOTE_STD, NOTE_LATINE, NOTE_ANGLO, STD_TO_LATINO, STD_TO_ANGLO = setup_note_constants()
+
+def percorso_risorsa(nome):
+    """Dove sta una risorsa in sola lettura, come la guida: da compilato dentro
+    il pacchetto, dove PyInstaller mette i dati, altrimenti accanto ai sorgenti."""
+    if getattr(sys, "frozen", False):
+        base = getattr(sys, "_MEIPASS", None)
+        if base and os.path.isfile(os.path.join(base, nome)):
+            return os.path.join(base, nome)
+    return os.path.join(cartella_dati(), nome)
+
+
+BASE_DIR = cartella_dati()
+FILE_IMPOSTAZIONI = os.path.join(BASE_DIR, "chitabry-settings.json")
+CARTELLA_MIDI = os.path.join(BASE_DIR, "midi")
+# Numero di versione del formato dell'archivio. Si alza quando una chiave
+# cambia nome o significato; l'aggiunta di una chiave nuova non lo richiede,
+# perche' le chiavi mancanti si completano da sole dai valori predefiniti.
+VERSIONE_FORMATO = 1
+
+NOTE_STD = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+NOTE_LATINE = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#', 'LA', 'LA#', 'SI']
+# La nomenclatura anglosassone coincide con quella standard di music21, quindi
+# la sua tabella e' un'identita'. Esiste solo perche' il codice che traduce le
+# note scelga una mappa in base alla nomenclatura senza fare un caso a parte.
+NOTE_ANGLO = NOTE_STD
+STD_TO_LATINO = dict(zip(NOTE_STD, NOTE_LATINE, strict=True))
+STD_TO_LATINO.update({'Db': 'REb', 'Eb': 'MIb', 'Gb': 'SOLb', 'Ab': 'LAb', 'Bb': 'SIb'})
+STD_TO_ANGLO = {nota: nota for nota in NOTE_STD}
+
+STRUMENTO_PREDEFINITO = "Chitarra Standard"
+ACCORDATURA_CHITARRA = ["E2", "A2", "D3", "G3", "B3", "E4"]
+TASTI_PREDEFINITI = 21
+
 SCALACROMATICA_STD, CAPOTASTI, CORDE = {}, {}, {}
 NUM_CORDE, NUM_TASTI = 0, 0
-FILE_IMPOSTAZIONI = "chitabry-settings.json"
 archivio_modificato = False
 impostazioni = {}
-
-def aggiorna_manico():
-    global SCALACROMATICA_STD, CAPOTASTI, CORDE, NUM_CORDE, NUM_TASTI, archivio_modificato
-    strum_attivo = impostazioni.get('strumento_attivo')
-    strumenti = impostazioni.get('strumenti', {})
-    
-    if not strum_attivo or strum_attivo not in strumenti:
-        if 'strumento' in impostazioni:
-            # Migrazione
-            strum = impostazioni['strumento']
-            nome = strum.get('nome', 'Chitarra Standard')
-            strumenti[nome] = {
-                "accordatura": strum.get('accordatura', ["E2", "A2", "D3", "G3", "B3", "E4"]),
-                "tasti": strum.get('tasti', 21)
-            }
-            impostazioni['strumenti'] = strumenti
-            impostazioni['strumento_attivo'] = nome
-            strum_attivo = nome
-            del impostazioni['strumento']
-            archivio_modificato = True
-        else:
-            strum_attivo = "Chitarra Standard"
-            strumenti[strum_attivo] = {
-                "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"],
-                "tasti": 21
-            }
-            impostazioni['strumenti'] = strumenti
-            impostazioni['strumento_attivo'] = strum_attivo
-            archivio_modificato = True
-
-    strum_conf = strumenti[strum_attivo]
-    accordatura = strum_conf.get('accordatura', ["E2", "A2", "D3", "G3", "B3", "E4"])
-    num_tasti = strum_conf.get('tasti', 21)
-    
-    NUM_CORDE = len(accordatura)
-    NUM_TASTI = num_tasti
-    
-    SCALACROMATICA_STD, CAPOTASTI, CORDE = strumento.build_fretboard_data(NOTE_STD, accordatura, num_tasti)
 
 
 def get_impostazioni_default():
     """Restituisce la struttura dati di default per un nuovo file JSON."""
     return {
+        "versione_formato": VERSIONE_FORMATO,
         "nomenclatura": "latino",
         "default_bpm": 60,
         "tipo_suono": "suono_1",
         "midi_strumento": 0,
         "midi_in_dispositivo": "",
+        "strumento_attivo": STRUMENTO_PREDEFINITO,
+        "strumenti": {
+            STRUMENTO_PREDEFINITO: {
+                "accordatura": list(ACCORDATURA_CHITARRA),
+                "tasti": TASTI_PREDEFINITI,
+            }
+        },
         "suono_1": {
             "descrizione": "Suono per accordi (Karplus-Strong Pluck)",
-            "pluck_hardness": 0.2,    # Range 0.1 (morbido) - 0.9 (aggressivo)
-            "damping_factor": 0.998,  # Range 0.990 (corto) - 0.999 (lungo)
-            "pick_position": 0.15,    # Range 0.01 (ponte) - 0.5 (manico)
-            "brightness": 0.4,        # Range 0.0 (scuro) - 1.0 (brillante)
-            "dur_accordi": 9.0,   
+            "pluck_hardness": 0.2,    # da 0.1 (morbido) a 0.9 (aggressivo)
+            "damping_factor": 0.998,  # da 0.990 (corto) a 0.999 (lungo)
+            "pick_position": 0.15,    # da 0.01 (ponte) a 0.5 (manico)
+            "brightness": 0.4,        # da 0.0 (scuro) a 1.0 (brillante)
+            "dur_accordi": 9.0,
             "volume": 0.45
         },
         "suono_2": {
@@ -90,96 +94,139 @@ def get_impostazioni_default():
         },
         "chordpedia": {},
     }
+
+
+def _migra(dati):
+    """Porta un archivio letto da disco al formato corrente.
+    Restituisce l'elenco dei cambiamenti fatti, vuoto se non ce n'erano.
+    Prima si applicano le trasformazioni legate alla versione del formato,
+    poi si completano le chiavi mancanti dai valori predefiniti: cosi' una
+    chiave nuova non richiede un controllo in piu' a ogni versione."""
+    cambiamenti = []
+    formato = dati.get("versione_formato", 0)
+    if not isinstance(formato, int):
+        formato = 0
+    if formato < 1:
+        if dati.get("suono_2", {}).get("descrizione") == "Suono per scale (simil-flauto)":
+            dati["suono_2"]["descrizione"] = "Suono sintetico (onda semplice)"
+            cambiamenti.append("Descrizione del suono 2 aggiornata.")
+        if "strumento" in dati:
+            # Fino alla 7.3 c'era un solo strumento, sotto la chiave strumento.
+            vecchio = dati.pop("strumento")
+            nome = vecchio.get("nome", STRUMENTO_PREDEFINITO)
+            strumenti = dati.setdefault("strumenti", {})
+            strumenti[nome] = {
+                "accordatura": vecchio.get("accordatura", list(ACCORDATURA_CHITARRA)),
+                "tasti": vecchio.get("tasti", TASTI_PREDEFINITI),
+            }
+            dati["strumento_attivo"] = nome
+            cambiamenti.append(f"Strumento {nome} portato nell'elenco degli strumenti.")
+    predefiniti = get_impostazioni_default()
+    for chiave, valore in predefiniti.items():
+        if chiave == "versione_formato":
+            continue
+        if chiave not in dati:
+            dati[chiave] = valore
+            cambiamenti.append(f"Aggiunta l'impostazione {chiave}.")
+    for suono in ("suono_1", "suono_2"):
+        if not isinstance(dati.get(suono), dict):
+            dati[suono] = predefiniti[suono]
+            cambiamenti.append(f"Parametri di {suono} ripristinati ai valori predefiniti.")
+            continue
+        for chiave, valore in predefiniti[suono].items():
+            if chiave not in dati[suono]:
+                dati[suono][chiave] = valore
+                cambiamenti.append(f"Aggiunto il parametro {chiave} a {suono}.")
+    if dati.get("versione_formato") != VERSIONE_FORMATO:
+        dati["versione_formato"] = VERSIONE_FORMATO
+        cambiamenti.append(f"Formato dell'archivio portato alla versione {VERSIONE_FORMATO}.")
+    return cambiamenti
+
+
 def carica_impostazioni():
     """Carica le impostazioni da FILE_IMPOSTAZIONI.
-    Se il file non esiste, lo crea con i valori di default.
-    Gestisce anche l'aggiornamento di file vecchi.
-    """
+    Se il file non esiste lo crea con i valori di default; se e' illeggibile
+    si ferma ed esce, perche' sovrascriverlo cancellerebbe la chordpedia e gli
+    strumenti dell'utente: la copia precedente, se c'e', e' nel file .bak."""
     global impostazioni, archivio_modificato
     try:
-        with open(FILE_IMPOSTAZIONI, 'r', encoding='utf-8') as f:
-            impostazioni = json.load(f)
-        
-        # --- Controllo di migrazione (FIX per KeyError: 'volume' E 'bpm') ---
-        migrazione_necessaria = False
-        
-        if 'volume' not in impostazioni.get('suono_1', {}):
-            print("Aggiornamento 'suono_1': aggiunta chiave 'volume' di default.")
-            if 'suono_1' not in impostazioni:
-                impostazioni['suono_1'] = {} # Sicurezza
-            impostazioni['suono_1']['volume'] = 0.45
-            migrazione_necessaria = True
-
-        if 'pick_position' not in impostazioni.get('suono_1', {}):
-            print("Aggiornamento 'suono_1': aggiunta parametri acustici Karplus-Strong.")
-            if 'suono_1' not in impostazioni:
-                impostazioni['suono_1'] = {}
-            impostazioni['suono_1']['pick_position'] = 0.15
-            impostazioni['suono_1']['brightness'] = 0.4
-            migrazione_necessaria = True            
-            
-        if 'volume' not in impostazioni.get('suono_2', {}):
-            print("Aggiornamento 'suono_2': aggiunta chiave 'volume' di default.")
-            if 'suono_2' not in impostazioni: 
-                impostazioni['suono_2'] = {} # Sicurezza
-            impostazioni['suono_2']['volume'] = 0.35
-            migrazione_necessaria = True
-            
-        if impostazioni.get('suono_2', {}).get('descrizione') == "Suono per scale (simil-flauto)":
-            impostazioni['suono_2']['descrizione'] = "Suono sintetico (onda semplice)"
-            migrazione_necessaria = True
-
-        # --- Aggiunta controllo 'default_bpm' ---
-        if 'default_bpm' not in impostazioni:
-            print("Aggiornamento impostazioni: aggiunta chiave 'default_bpm'.")
-            impostazioni['default_bpm'] = 60
-            migrazione_necessaria = True
-
-        if 'tipo_suono' not in impostazioni:
-            print("Aggiornamento impostazioni: aggiunta chiave 'tipo_suono'.")
-            impostazioni['tipo_suono'] = 'suono_1'
-            migrazione_necessaria = True
-
-        if 'midi_strumento' not in impostazioni:
-            print("Aggiornamento impostazioni: aggiunta chiave 'midi_strumento'.")
-            impostazioni['midi_strumento'] = 0
-            migrazione_necessaria = True
-        
-        if 'midi_in_dispositivo' not in impostazioni:
-            print("Aggiornamento impostazioni: aggiunta chiave 'midi_in_dispositivo'.")
-            impostazioni['midi_in_dispositivo'] = ""
-            migrazione_necessaria = True
-        
-        if migrazione_necessaria:
-            archivio_modificato = True
-            print("Impostazioni aggiornate alla nuova versione.")
-        # --- Fine controllo di migrazione ---
-        
+        with open(FILE_IMPOSTAZIONI, encoding='utf-8') as f:
+            dati = json.load(f)
+        if not isinstance(dati, dict):
+            raise ValueError("il contenuto non e' un dizionario di impostazioni")
     except FileNotFoundError:
-        print(f"File '{FILE_IMPOSTAZIONI}' non trovato. Ne creo uno nuovo con i valori di default.")
+        print(f"File {FILE_IMPOSTAZIONI} non trovato. Ne creo uno nuovo con i valori predefiniti.")
         impostazioni = get_impostazioni_default()
-        archivio_modificato = True 
-        salva_impostazioni() # Salviamo subito il file creato
-    except json.JSONDecodeError:
-        print(f"Errore: Il file '{FILE_IMPOSTAZIONI}' è corrotto o malformato.")
-        print("Uscita dall'applicazione.")
+        salva_modifiche()
+        return
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, OSError) as e:
+        print(f"Il file delle impostazioni {FILE_IMPOSTAZIONI} non si legge: {e}")
+        copia = FILE_IMPOSTAZIONI + ".bak"
+        if os.path.exists(copia):
+            print(f"La versione precedente e' in {copia}: rinominala per ripartire da quella.")
+        print("Chitabry si chiude senza toccare il file.")
         sys.exit(1)
-    except Exception as e:
-        print(f"Errore imprevisto during il caricamento delle impostazioni: {e}")
-        sys.exit(1)
+    impostazioni = dati
+    cambiamenti = _migra(impostazioni)
+    if cambiamenti:
+        for riga in cambiamenti:
+            print(riga)
+        print("Impostazioni aggiornate alla versione corrente.")
+        salva_modifiche()
+
+
+def aggiorna_manico():
+    """Ricostruisce le tabelle del manico per lo strumento attivo.
+    Se lo strumento attivo non esiste piu' nell'elenco, ripiega sul primo
+    disponibile o sulla chitarra standard, e lo scrive nell'archivio."""
+    global SCALACROMATICA_STD, CAPOTASTI, CORDE, NUM_CORDE, NUM_TASTI
+    strumenti = impostazioni.setdefault('strumenti', {})
+    strum_attivo = impostazioni.get('strumento_attivo')
+    if not strum_attivo or strum_attivo not in strumenti:
+        if not strumenti:
+            strumenti[STRUMENTO_PREDEFINITO] = {
+                "accordatura": list(ACCORDATURA_CHITARRA),
+                "tasti": TASTI_PREDEFINITI,
+            }
+        strum_attivo = next(iter(strumenti))
+        impostazioni['strumento_attivo'] = strum_attivo
+        salva_modifiche()
+    strum_conf = strumenti[strum_attivo]
+    accordatura = strum_conf.get('accordatura', ACCORDATURA_CHITARRA)
+    num_tasti = strum_conf.get('tasti', TASTI_PREDEFINITI)
+    NUM_CORDE = len(accordatura)
+    NUM_TASTI = num_tasti
+    SCALACROMATICA_STD, CAPOTASTI, CORDE = strumento.build_fretboard_data(NOTE_STD, accordatura, num_tasti)
+
+
 def salva_impostazioni():
-    """Salva il dizionario 'impostazioni' nel file JSON."""
+    """Scrive l'archivio su disco se e' stato modificato.
+    Scrive su un file temporaneo nella stessa cartella e lo sostituisce al
+    precedente con os.replace, conservando la versione prima come copia .bak:
+    un'interruzione durante la scrittura non lascia mai un file troncato.
+    Restituisce True se non c'era niente da scrivere o se ha scritto."""
     global archivio_modificato
     if not archivio_modificato:
-        return
-        
+        return True
+    temporaneo = FILE_IMPOSTAZIONI + ".tmp"
     try:
-        with open(FILE_IMPOSTAZIONI, 'w', encoding='utf-8') as f:
+        with open(temporaneo, 'w', encoding='utf-8') as f:
             json.dump(impostazioni, f, indent=4, ensure_ascii=False)
-        print(f"\nImpostazioni salvate con successo in '{FILE_IMPOSTAZIONI}'.")
-        archivio_modificato = False
-    except IOError as e:
-        print(f"\nErrore: Impossibile salvare il file di impostazioni: {e}")
-    except Exception as e:
-        print(f"\nErrore imprevisto durante il salvataggio: {e}")
+        if os.path.exists(FILE_IMPOSTAZIONI):
+            os.replace(FILE_IMPOSTAZIONI, FILE_IMPOSTAZIONI + ".bak")
+        os.replace(temporaneo, FILE_IMPOSTAZIONI)
+    except OSError as e:
+        print(f"Impossibile salvare le impostazioni in {FILE_IMPOSTAZIONI}: {e}")
+        return False
+    archivio_modificato = False
+    return True
 
+
+def salva_modifiche():
+    """Segna l'archivio come modificato e lo scrive subito.
+    E' la via da usare dopo ogni cambiamento: fino alla 7.8 si scriveva solo
+    all'uscita ordinata dal menu, e un Ctrl+C o una finestra chiusa perdevano
+    tutto il lavoro di configurazione della sessione."""
+    global archivio_modificato
+    archivio_modificato = True
+    return salva_impostazioni()

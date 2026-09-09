@@ -1,5 +1,42 @@
-Chitabry - ChangeLog
-====================
+Chitabry, cronologia delle versioni.
+Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
+
+Versione 8.0.0 (9 settembre 2026)
+Revisione generale del codice, la prima secondo il metodo del refactoring di tutto il parco software. Nessun comando cambia; cambiano la solidita' e cio' che si ascolta.
+*   Salvataggi:
+    *   Le impostazioni, la chordpedia e gli strumenti si salvano nel momento in cui li modificate, non piu' solo all'uscita dal menu: un Ctrl+C o una finestra chiusa non perdono piu' il lavoro della sessione.
+    *   Il file delle impostazioni e quello dei preset del metronomo vivono accanto al programma, qualunque sia la cartella da cui lo avete avviato. Prima, un collegamento con una cartella di partenza diversa mostrava un Chitabry azzerato.
+    *   Ogni scrittura passa da un file temporaneo e conserva la versione precedente come copia .bak: un'interruzione durante il salvataggio non lascia mai un file troncato.
+    *   Un file dei preset del metronomo che non si legge viene messo da parte con un altro nome e non piu' sovrascritto da uno vuoto: i metronomi salvati non spariscono piu'.
+    *   Il file delle impostazioni porta un numero di versione del formato, e le impostazioni nuove si completano da sole dai valori predefiniti.
+    *   I file dei preset si scrivono in utf-8: i nomi con le lettere accentate restano leggibili anche su un'altra macchina.
+*   Audio in tempo reale:
+    *   Nel metronomo la callback del driver audio si limita a copiare i campioni. Il programma, le rampe, le battute fantasma, la sintesi della battuta e gli annunci a schermo passano a un thread di servizio: al cambio di segmento e a ogni passo di rampa non c'e' piu' il rischio di un salto o di uno schiocco.
+    *   Il mixer polifonico protegge buffer e indici con un lucchetto: pizzicando velocemente la stessa corda, una nota non parte piu' a meta' e non resta piu' muta.
+    *   Il mixer chiude il dispositivo audio quando la funzione che lo usa finisce, e all'uscita del programma chiude quelli rimasti aperti.
+    *   La lunghezza del battito del metronomo si arrotonda al campione piu' vicino invece di troncarla: il tempo reale coincide con i BPM chiesti.
+*   Correzioni:
+    *   Il player delle diteggiature e il costruttore di accordi contano le corde dello strumento attivo: con un ukulele o un basso le corde suonavano mute o venivano numerate come su una chitarra.
+    *   MidiStudy legge le impostazioni dalla memoria invece di rileggere il file da disco a ogni nota, e crea la cartella midi se manca: chi scarica il pacchetto compilato puo' usarlo subito.
+    *   La data dell'ultimo controllo della cartella midi si salva davvero: prima il controllo tornava a ogni avvio.
+    *   Il player MCI di MidiStudy dice se non riesce ad aprire il file invece di aspettare in silenzio tutta la durata del brano.
+    *   Trova Nota accetta anche i bemolli, e Trova Posizione suona la nota con il suono attivo invece che sempre con il suono 1.
+*   Aggiornamento automatico:
+    *   Prima di chiedere se aggiornare, Chitabry mostra le novita' della versione nuova, una pagina alla volta (issue 51). La conversazione e' quella di gestisci_aggiornamento di GBUtils, comune a tutte le applicazioni.
+*   Guida:
+    *   La guida viaggia dentro il pacchetto compilato: chi scarica la release la trova (issue 50).
+*   Accessibilita':
+    *   Spariti tutti i separatori grafici a schermo, cioe' le righe di trattini e di uguali, le frecce e le tabelle a colonne (issue 52). Lo stato del metronomo, l'elenco dei comandi, il programma delle battute e la classifica del gioco si leggono in modo lineare. Lo schema del manico resta una griglia, ma senza le righe di trattini sopra e sotto.
+    *   Anche questo file e' senza righe di uguali e di trattini sotto i titoli.
+*   Codice:
+    *   views.py, che teneva insieme in 2762 righe quasi tutta l'interfaccia, e' diviso in moduli per funzione: manico, flauto, player, costruttore accordi, esercizio scale, gestore impostazioni, accordatore, con nomenclatura, ricerca e suoni condivisi. L'esercizio delle scale e' diviso nelle sue fasi, e l'ascolto a tempo e' scritto una volta sola.
+    *   Un solo interprete dei nomi di nota in GBAudio, da cui derivano frequenza e numero MIDI: prima erano tre funzioni con tre tabelle.
+    *   La versione e la data stanno in versione.py, in un posto solo.
+    *   Le eccezioni catturate sono quelle che si sanno nominare; dove music21 puo' sollevare di tutto lo si dichiara.
+    *   Rimossi il player dell'accordo teorico, che nessuno chiamava piu', e migratore.py, sostituito dalla migrazione automatica delle impostazioni. I file che MidiStudy produce dai MIDI non sono piu' versionati.
+    *   Il codice passa ruff senza rilievi, con la configurazione in ruff.toml, e ha una prima suite di prove in tests: conversione delle note, archivio delle impostazioni, preset e programma del metronomo, diteggiature.
+    *   Serve GBUtils V130 o successiva, per gestisci_aggiornamento V1.1.0.
 
 Versione 7.8.3 (7 settembre 2026)
 *   **Guida:**
@@ -10,7 +47,6 @@ Versione 7.8.3 (7 settembre 2026)
     *   Serve GBUtils V124 o successiva.
 
 Versione 7.8.2 (3 settembre 2026)
----------------------------------
 *   **Documentazione:**
     *   Corretta l'intestazione di `GBAudio.py`, che si dichiarava "Motore Audio Condiviso per i progetti di Gabriele Battaglia" mentre lo usa soltanto Chitabry, in quattro suoi file. Chi cercava un motore condiviso poteva credere di doverlo usare, e chi faceva pulizia poteva credere fosse un doppione di Acusticator.
     *   GBAudio non e' un doppione e non va unificato con Acusticator: quello riproduce effetti brevi da uno score, questo suona uno strumento con note tenute e polifonia e parla con le porte MIDI. L'unica cosa davvero duplicata fra i due e' `note_to_freq`, tracciata nella issue #49.
@@ -18,28 +54,24 @@ Versione 7.8.2 (3 settembre 2026)
 
 
 Versione 7.8.0 (31 maggio 2026)
---------------------------------
 *   **Integrazione Supporto MIDI Completo (Nuova Funzionalità):**
     *   **MIDI Out (General MIDI):** Aggiunta l'opzione nelle impostazioni per selezionare uno dei 128 strumenti del banco General MIDI (indicizzati per nome) e riprodurlo tramite la porta di sistema `winmm.dll`. Il tipo suono è integrato in tutti i moduli (tastiera virtuale, pennata tablature, accordi e scale) tramite tasto `SPAZIO`.
     *   **MIDI In (Tastiera MIDI Esterna):** Aggiunta l'opzione nelle impostazioni per connettere e configurare una tastiera MIDI fisica (anche Bluetooth). Il player virtuale cattura l'input per mostrare le note a schermo e riprodurle in polifonia.
     *   **Ottimizzazione della Latenza:** Velocizzate le chiamate ctypes e rimossi i lookup ridondanti per abbattere la latenza.
 
 Versione 7.6.0 (31 maggio 2026)
---------------------------------
 *   **Visualizzazione Manico Strumento (Nuova Funzionalità):**
     *   Aggiunta l'opzione "Manico dello strumento <nomestrumento>" nel menu principale per visualizzare graficamente la disposizione delle note sulla tastiera.
     *   Lo schema è allineato verticalmente e ottimizzato per lettori di Barra Braille tramite spaziatura fissa e righe vuote di separazione per migliorare la leggibilità.
     *   La visualizzazione si adatta automaticamente all'accordatura, alla nomenclatura scelta (latina o anglosassone) e al numero di tasti dello strumento attivo.
 
 Versione 7.5.1 (29 maggio 2026)
---------------------------------
 *   **Accordatore Acustico Cromatico (Ottimizzazione Algoritmo):**
     *   Sostituito il rilevamento del picco FFT con un algoritmo basato su autocorrelazione normalizzata (McLeod Pitch Method semplificato) per una corretta individuazione della fondamentale ed eliminazione degli errori di ottava.
     *   Implementata una lookup table interna per la conversione da MIDI a nota, rimuovendo la dipendenza da `music21` all'interno del loop di callback per ridurre la latenza.
     *   Aggiunto il filtro EMA (media mobile esponenziale, alpha=0.4) sulla frequenza letta per un display più fluido e stabile.
 
 Versione 7.5.0 (28 maggio 2026)
---------------------------------
 *   **Accordatore (Rilevamento Automatico Periferica):**
     *   Aggiunta la possibilità di richiedere il rilevamento automatico della periferica di input attiva all'apertura dell'accordatore tramite la funzione `enter_escape`.
     *   Se abilitato, esegue un ascolto in parallelo di 5 secondi su tutte le periferiche di input monitorando il livello di picco RMS.
@@ -47,7 +79,6 @@ Versione 7.5.0 (28 maggio 2026)
     *   Vengono proposte in elenco solo le periferiche con segnale utile (RMS >= 0.002) indicandone il livello rilevato. In caso di assenza totale di rumore, vengono proposte tutte le periferiche come fallback di sicurezza.
 
 Versione 7.4.5 (24 maggio 2026)
---------------------------------
 *   **Scale e Diteggiature (Fix & Miglioramenti):**
     *   Risolto il problema per cui le note bemolli (es. Bb, Eb) non venivano visualizzate correttamente sul manico della chitarra.
     *   Fornito supporto alle frequenze microtonali con suffissi speciali (~, ~~, `, ``) nella conversione frequenza-nota e nell'audio.
@@ -60,7 +91,6 @@ Versione 7.4.5 (24 maggio 2026)
     *   Aggiornati i comandi, lo stato dei preset, il salvataggio e il manuale d'uso.
 
 Versione 7.3.2 (24 maggio 2026)
---------------------------------
 *   **Accordatore Acustico Cromatico (Nuova Funzionalità):**
     *   Sviluppato un accordatore acustico integrato che acquisisce audio in tempo reale da microfono via `sounddevice` e rileva il pitch fondamentale con algoritmo FFT (numpy) + interpolazione parabolica per precisione sub-Hz.
     *   Ottimizzato il display per lettori Braille e sintesi vocale: stringa ultra-compatta ≤ 40 caratteri nel formato `N:{nota} ({dev}%) Hz:{freq} {db_formatted}`.
@@ -72,25 +102,21 @@ Versione 7.3.2 (24 maggio 2026)
     *   Aggiunto invito a premere `?` per visualizzare l'elenco delle opzioni disponibili.
 
 Versione 6.8.12 (21 maggio 2026)
---------------------------------
 *   **Player Scale (Ottimizzazione Display Braille):**
     *   Riprogettati i prompt dell'esercizio scale per posizionare le note all'inizio (primi 40 caratteri a sinistra).
     *   Introdotte indicazioni di stato ultra-compatte a destra: `S1`/`S2` per il tipo di suono, `L` per il loop, `asc`/`dis` per la direzione.
 
 Versione 6.8.11 (21 maggio 2026)
---------------------------------
 *   **Player Scale & Player Generico (Feedback Visivo):**
     *   Migliorato il feedback visivo del cambio suono in tempo reale durante l'esercizio delle scale e nella tastiera virtuale (player generico).
     *   Incluso il tipo di suono corrente direttamente nei prompt persistenti delle scale e nei messaggi del player generico, prevenendo scompensi visivi per display Braille.
 
 Versione 6.8.10 (21 maggio 2026)
---------------------------------
 *   **Player Scale (Fix Bug Commutazione Suono):**
     *   Risolto il bug che impediva alla barra spaziatrice di commutare il suono tra sintetico e chitarra durante l'esercitazione interattiva (tasti 1-8).
     *   Modificata la funzione `aggiorna_renderers` per accettare esplicitamente la chiave del suono come parametro, eliminando problemi di closure dello scope.
 
 Versione 6.8.9 (21 maggio 2026)
---------------------------------
 *   **Player Scale (Fix Issue #42):**
     *   Integrato il player delle scale con `GBAudio.PolyphonicPlayer` per una riproduzione polifonica in tempo reale.
     *   Ordinato l'audio, il panning (da -0.8 a +0.8) ed i tasti numerici 1-8 in senso ascendente (dal grave all'acuto).
@@ -98,7 +124,6 @@ Versione 6.8.9 (21 maggio 2026)
     *   Ottimizzato l'output video per display Braille rimuovendo le cancellazioni distruttive di riga.
 
 Versione 6.8.8 (21 maggio 2026)
---------------------------------
 *   **Audio Engine (GBAudio - Fix Issue #32):**
     *   Resa lock-free la callback audio di `PolyphonicPlayer` eliminando `threading.Lock`. Questo previene dropouts audio (underflow) dovuti a priority inversion durante l'esecuzione concorrente di `pluck` o `mute`.
 *   **Audio Panning (Fix Issue #41):**
@@ -107,46 +132,38 @@ Versione 6.8.8 (21 maggio 2026)
     *   Implementato il caching dei campioni di beep (accento, beat e suddivisione). La generazione del buffer della battuta avviene ora tramite slicing di array numpy pre-calcolati, riducendo drasticamente il consumo di CPU (specie per rampe e cambi di BPM).
 
 Versione 6.8.7 (21 maggio 2026)
---------------------------------
 *   **Costruttore Accordi:**
     *   Rilevamento intelligente del Barrè: la diteggiatura ora distingue correttamente tra Barrè completi e Piccoli Barrè (mini barrè), eliminando combinazioni biomeccanicamente impossibili (es. Piccolo Barrè al tasto 3 sulle corde 5 e 4 in Fa maggiore).
     *   Se le note rimanenti oltre al barrè sono tre o meno, vengono assegnate individualmente a dita singole per garantire diteggiature naturali ed ergonomiche.
     *   Ottimizzato il motore del solutore limitando a priori i domini dei tasti per ciascuna corda solo a quelli appartenenti alle note dell'accordo cercato. Questa ottimizzazione riduce i tempi di calcolo di oltre 1000 volte (da ~23 secondi a meno di 20 millisecondi per accordo).
 
 Versione 6.8.6 (21 maggio 2026)
---------------------------------
 *   **Player Accordi (UX):**
     *   Allineato il comportamento dei tasti numerici del player interattivo delle corde (1-X) all'ordine visivo delle note sul display. Ora il tasto `1` (a sinistra sulla tastiera) riproduce la prima nota a sinistra a schermo (corda 6, grave), mentre i tasti successivi si sviluppano verso destra fino alla corda più acuta.
 
 Versione 6.8.5 (21 maggio 2026)
---------------------------------
 *   **Costruttore Accordi:**
     *   Ottimizzato il calcolo delle diteggiature barrè all'interno della Top 10.
     *   Introdotta una penalizzazione specifica per le corde stoppate nel calcolo del punteggio di difficoltà.
 
 Versione 6.8.4 (21 maggio 2026)
---------------------------------
 *   **Diteggiature Accordi (Fix Issue #31):**
     *   Migliorata la generazione dei percorsi per rendere le forme degli accordi più ergonomiche e realistiche sulle corde.
 
 Versione 6.8.3 (21 maggio 2026)
---------------------------------
 *   **Scale Pathfinder:**
     *   Introdotta maggiore flessibilità ed elasticità nella generazione delle diteggiature per le scale musicali.
 
 Versione 6.8.2 (21 maggio 2026)
---------------------------------
 *   **Ear Training & MIDI:**
     *   Aggiunto il supporto per la visualizzazione corretta dei bemolli nei moduli di Ear Training.
     *   Implementata la manutenzione non distruttiva dei file musicali MIDI.
 
 Versione 6.8.1 (20 maggio 2026)
---------------------------------
 *   **Costruttore Accordi:**
     *   Risolto il problema di ordinamento alfabetico fallito all'interno della Top 10 diteggiature per l'interazione con `menu()`. Le chiavi di selezione sono state semplificate in numeri semplici da 0 (migliore) a 9 (peggiore).
 
 Versione 6.8.0 (17 maggio 2026)
---------------------------------
 *   **MidiStudy (Major Update):**
     *   Integrazione completa con la suite esterna `abcMIDI`. Inserendo il percorso agli eseguibili (es. midi2abc, abc2midi, mftext), è possibile convertire, formattare ed estrarre dump testuali dai brani in formato `.mid` e `.abc`.
     *   Riorganizzato il menu principale: ora le modifiche come Trasposizione e cambio BPM si applicano globalmente al brano intero.
@@ -157,7 +174,6 @@ Versione 6.8.0 (17 maggio 2026)
     *   Il player MCI ora ha frequenza di polling abbassata per ridurre i carichi sulla CPU, e si stoppa in modo pulito con ESC o Q senza arrestare lo script principale.
 
 Versione 6.7.1 (16 maggio 2026)
---------------------------------
 *   **Nuova Funzionalità (Minor): Gioca col Suono (Ear Training)**
     *   Nuova modalità di gioco per allenare l'orecchio a riconoscere note musicali o frequenze pure.
     *   30 round per partita con calcolo intelligente della precisione in base all'errore in semitoni o Hz.
@@ -165,16 +181,13 @@ Versione 6.7.1 (16 maggio 2026)
     *   Classifica (Hall of Fame) integrata che salva la precisione e il tempo impiegato nel file delle impostazioni.
 
 Versione 6.5.2 (15 maggio 2026)
---------------------------------
 *   **UX Tastiera:** Il prompt della tastiera virtuale è stato ulteriormente accorciato (es. "C4 (261.6 Hz) (3)") per restare entro i 40 caratteri ed evitare problemi di lettura con display Braille.
 *   **Impostazioni:** Rinominata la descrizione di default del `suono_2` da "simil-flauto" a "Suono sintetico (onda semplice)", con migrazione automatica per i file di impostazione esistenti.
 
 Versione 6.5.1 (15 maggio 2026)
---------------------------------
 *   **UX Tastiera:** Il prompt della tastiera virtuale ora mostra in tempo reale l'ultima nota suonata e la sua frequenza (Hz). Il cursore rimane sempre ancorato all'inizio della riga sovrascrivendo l'output per massimizzare la leggibilità con i display Braille.
 
 Versione 6.5.0 (15 maggio 2026)
---------------------------------
 *   **Nuova Funzionalità (Minor): Tastiera (Fix Issue #18)**
     *   Aggiunta una nuova voce al menu principale per accedere a una tastiera musicale virtuale suonabile con la tastiera del PC (layout Italiano QWERTY).
     *   Sfrutta il nuovo motore polifonico (`PolyphonicPlayer`) offrendo 16 voci simultanee per suonare liberamente armonie complesse in real-time.
@@ -183,7 +196,6 @@ Versione 6.5.0 (15 maggio 2026)
     *   Possibilità di ciclare tra i suoni con la barra spaziatrice.
 
 Versione 6.2.1 (14 maggio 2026)
---------------------------------
 *   **Motore Audio (Major): Nuovo Motore Polifonico (Fix Issue #9)**
     *   Completamente riscritto il motore di riproduzione audio interattivo per accordi e scale.
     *   **Polifonia Reale:** Passaggio da `sd.play()` bloccante a uno stream continuo (`sd.OutputStream`) con callback in tempo reale.
@@ -194,7 +206,6 @@ Versione 6.2.1 (14 maggio 2026)
     *   Nuovi parametri fisici esposti per l'utente: Posizione del plettro (da 1 a 10) e Brillantezza/Tono (da 1 a 10).
 
 Versione 6.1.0 (14 maggio 2026)
---------------------------------
 *   **UX Metronomo (Minor):** Completamente riscritta l'interfaccia di programmazione del metronomo (comando `pa`).
     *   **Programmazione Relativa (Issue #14):** Ora viene richiesta la durata del segmento in battute anziché la battuta di fine assoluta.
     *   **Inserimento Sequenziale (Issue #15):** La programmazione si "aggancia" automaticamente alla fine del segmento precedente (aggiunta in coda).
@@ -202,12 +213,10 @@ Versione 6.1.0 (14 maggio 2026)
     *   **One-Liner Input (Issue #17):** Aggiunto il supporto per comandi rapidi su una singola riga (es. `pa 8 130` per 8 battute a 130 BPM, `pa 4 m` per 4 battute di pausa).
 
 Versione 6.0.1 (13 maggio 2026)
---------------------------------
 *   **Hotfix UX:** Risolto il bug del "loop infinito" che si verificava quando il nuovo motore delle scale e quello degli accordi trovavano una singola diteggiatura valida.
 *   **Hotfix UX:** Rimossa la stampa di righe vuote inutili nella tablatura delle scale, migliorando l'esperienza per gli utenti con display Braille.
 
 Versione 6.0.0 (13 maggio 2026)
---------------------------------
 *   **Nuova Funzione (Major): Motore Diteggiature Scale (Scale Pathfinder)**
     *   Creato il nuovo modulo `generatore_scale.py` che sfrutta un algoritmo di ricerca (Depth-First Search) per trovare i percorsi migliori per suonare una scala all'interno di un'area del manico.
     *   L'algoritmo calcola dinamicamente le posizioni rispettando i limiti fisici della mano (stretch massimo di 4 o 5 tasti).
@@ -221,24 +230,20 @@ Versione 6.0.0 (13 maggio 2026)
     *   Alla chiusura del sottomenu diteggiature, l'app passa fluidamente al player audio per esercitarsi sulla scala.
 
 Versione 5.0.4 (11 maggio 2026)
---------------------------------
 *   **Fix:** Issue #3 - Implementata la gestione interattiva delle sovrapposizioni durante la programmazione del metronomo. Ora l'utente può scegliere se sovrascrivere (accorciando i segmenti esistenti) o inserire spostando in avanti il programma successivo.
 
 Versione 5.0.3 Alpha (11 maggio 2026)
---------------------------------
 *   **Hotfix:** Risolto un crash (`KeyError: 'kind'`) nel player delle scale (opzioni 'a' e 'd') che si verificava quando si cambiava strumento (premendo spazio) verso il suono_1 (Karplus-Strong).
 
 Versione 5.0.2 Alpha (11 maggio 2026)
---------------------------------
 *   **Fix:** Issue #11 - Risolto mancato supporto allo Spazio come ciclatore di suoni nel player delle scale.
 *   **Fix:** Issue #12 - Invertito l'ordine di stampa delle note nel player accordi per coerenza con il layout manico/corde.
 *   **Fix:** Issue #13 - Rimossi print ridondanti usando carriage return (\r) durante i player e la riproduzione per migliorare l'accessibilità con lo screen reader.
 
 Versione 4.8.8 (23 marzo 2026)
---------------------------------
 *   **Rebranding Metronomo:** Rinominati i riferimenti a "Clitronomo" in "Metronomo" nelle stampe a video e nei menu.
 *   **Versione Unificata:** Rimossa la versione specifica del metronomo a favore di quella globale di Chitabry.
-*   **Qualità del Codice:** 
+*   **Qualità del Codice:**
     *   Refactoring e fix linting con Ruff.
     *   Risolto shadowing della variabile `key`.
     *   Sostituiti `bare except` con eccezioni specifiche.
@@ -246,7 +251,6 @@ Versione 4.8.8 (23 marzo 2026)
 *   **Distribuzione:** Configurato PyInstaller per build in formato cartella (`onedir`).
 
 Versione 4.7.0 (4 gennaio 2026)
---------------------------------
 *   **Merge Funzionalità:** Unificato il codice di sviluppo (chitabrydev6) con il ramo principale. Ora Chitabry include sia le funzioni MIDI che il nuovo motore audio.
 *   **Nuovo Motore Audio (Karplus-Strong):**
     *   Sostituita la sintesi additiva per il suono della chitarra con l'algoritmo a modelli fisici Karplus-Strong.
@@ -258,5 +262,4 @@ Versione 4.7.0 (4 gennaio 2026)
 *   **Cleanup:** Rimossi file obsoleti di sviluppo.
 
 Versione 4.6.0 (30 dicembre 2025)
---------------------------------
 *   Versione precedente con integrazione iniziale modulo MIDI e music21.

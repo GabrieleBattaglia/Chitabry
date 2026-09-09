@@ -1,0 +1,34 @@
+# Configurazione ruff di Chitabry.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+line-length = 200
+
+[lint]
+select = ["E", "F", "W", "B", "SIM", "UP", "I", "C4", "RET", "BLE", "S", "RUF", "DTZ"]
+ignore = [
+    # Righe lunghe: i messaggi all'utente e i prompt stanno su una riga sola,
+    # e spezzarli renderebbe piu' difficile ritrovarli nel codice.
+    "E501",
+    # Lo stile di Gabriele ammette l'istruzione breve sulla stessa riga.
+    "E701",
+    "E702",
+    "E741",
+    # Date e orari sono di proposito quelli locali, senza fuso: la data di un
+    # record nella classifica e quella dell'ultima pulizia della cartella midi
+    # sono i giorni del calendario di chi usa il programma.
+    "DTZ005",
+    "DTZ006",
+    "DTZ007",
+    # random senza garanzie crittografiche e' cio' che serve: qui si estraggono
+    # le note del gioco e le battute fantasma del metronomo, non un segreto.
+    "S311",
+    # L'operatore ternario al posto di un if else: un if esplicito si legge in
+    # modo lineare, che e' cio' che serve a chi ascolta il codice.
+    "SIM108",
+]
+
+[lint.per-file-ignores]
+# Nei test l'asserzione e' il punto: sono loro a dire cosa deve essere vero.
+"tests/*.py" = ["S101"]
+# MidiStudy lancia gli eseguibili di abcMIDI dalla cartella che l'utente ha
+# indicato, sul file che l'utente ha scelto: e' la funzione, non un rischio.
+"midistudy.py" = ["S603"]

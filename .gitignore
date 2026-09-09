@@ -5,3 +5,17 @@ dist/
 *.py[cod]
 *$py.class
 *.zip
+# Copie di sicurezza e file temporanei degli archivi dell'utente
+*.bak
+*.tmp
+*.illeggibile-*
+# Cio' che MidiStudy produce dai file MIDI: si rigenera, non si versiona
+midi/preview_temp.mid
+midi/*.txt
+midi/*.abc
+midi/*.pdf
+midi/*.ps
+midi/*_converted*.mid
+# Cache di ruff e pytest
+.ruff_cache/
+.pytest_cache/

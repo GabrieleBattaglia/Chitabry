@@ -1,16 +1,22 @@
-from music21 import pitch, scale, harmony
+# Chitabry, catalogo delle scale e degli accordi: introspezione di music21.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Revisione 1 del 2026-09-09: le eccezioni catturate sono quelle che music21
+# e il file system sollevano davvero, e ogni errore rilanciato conserva la causa.
+
 import inspect
 import re
-from typing import Dict
 from pathlib import Path
 
-SCALE_CATALOG: list[Dict] = []
-SCALE_TYPES_DICT: Dict[str, str] = {}
-USER_CHORD_DICT: Dict[str, str] = {}
+from music21 import harmony, pitch, scale
+from music21.exceptions21 import Music21Exception
+
+SCALE_CATALOG: list[dict] = []
+SCALE_TYPES_DICT: dict[str, str] = {}
+USER_CHORD_DICT: dict[str, str] = {}
+
 
 class ScaleException(Exception):
     """Classe base per errori relativi alle scale in questo modulo."""
-    pass
 
 class InvalidUSIFormatError(ScaleException):
     """Sollevata quando una stringa USI non è nel formato atteso."""
@@ -54,15 +60,14 @@ def _format_friendly_name(programmatic_id, paradigm):
     """Helper per creare nomi leggibili."""
     name = programmatic_id
     if paradigm == 'concrete':
-        if name.endswith('Scale'):
-            name = name[:-5]
+        name = name.removesuffix('Scale')
         # Modifica suggerita per inserire spazi: usa regex
         name = re.sub(r'(?<!^)(?=[A-Z])', ' ', name).title()
     elif paradigm == 'scala':
         name = ' '.join(a.capitalize() for a in name.split('_'))
     return name.strip()
 
-def get_user_chord_dictionary() -> Dict[str, str]:
+def get_user_chord_dictionary() -> dict[str, str]:
     """
     Esegue l'introspezione di music21.harmony per costruire un
     dizionario pulito di tipi di accordi per l'interfaccia utente.
@@ -121,7 +126,7 @@ def get_user_chord_dictionary() -> Dict[str, str]:
     # --- FINE MODIFICA CHIAVE ---
 
     return sorted_dict
-def build_scale_catalog() -> list[Dict]:
+def build_scale_catalog() -> list[dict]:
     """
     Esegue l'introspezione di music21 per costruire un dizionario
     unificato di tutte le scale disponibili (Concrete e Scala).
@@ -140,7 +145,7 @@ def build_scale_catalog() -> list[Dict]:
         # _find_scale_subclasses filtrerà per ConcreteScale e non astratte.
         concrete_classes = _find_scale_subclasses(scale.Scale)
 
-        for cls in sorted(list(concrete_classes), key=lambda x: x.__name__):
+        for cls in sorted(concrete_classes, key=lambda x: x.__name__):
             prog_id = cls.__name__
             if prog_id not in processed_ids:
                 catalog.append({
@@ -150,7 +155,7 @@ def build_scale_catalog() -> list[Dict]:
                     # 'class': cls # Rimosso per semplicità
                 })
                 processed_ids.add(prog_id)
-    except Exception as e:
+    except (TypeError, AttributeError) as e:
          print(f"Attenzione: Errore durante introspezione classi ConcreteScale: {e}")
 
     # --- Paradigma 2: Archivio ScalaScale ---
@@ -160,8 +165,10 @@ def build_scale_catalog() -> list[Dict]:
 
         # Ordina in modo robusto
         def get_sort_key(p):
-            try: return Path(p).stem.lower()
-            except Exception: return str(p).lower()
+            try:
+                return Path(p).stem.lower()
+            except (TypeError, ValueError):
+                return str(p).lower()
         sorted_scala_paths = sorted(scala_paths, key=get_sort_key)
 
         for scl_path_obj in sorted_scala_paths:
@@ -174,9 +181,10 @@ def build_scale_catalog() -> list[Dict]:
                     friendly_name_raw = _format_friendly_name(prog_id, 'scala')
                     description = friendly_name_raw
                     try:
-                         scale_info_data = scale.scala.getScaleInfo(filename_scl)
-                         description = scale_info_data.get('description', friendly_name_raw)
-                    except Exception: pass # Ignora errori lettura descrizione
+                        scale_info_data = scale.scala.getScaleInfo(filename_scl)
+                        description = scale_info_data.get('description', friendly_name_raw)
+                    except (Music21Exception, OSError, KeyError, ValueError, AttributeError):
+                        description = friendly_name_raw  # La descrizione e' un di piu': senza, resta il nome
 
                     catalog.append({
                         'programmatic_id': prog_id,
@@ -185,12 +193,12 @@ def build_scale_catalog() -> list[Dict]:
                         # 'class': scale.scala.ScalaScale # Rimosso per semplicità
                     })
                     processed_ids.add(prog_id)
-            except Exception as path_error:
+            except (OSError, ValueError, TypeError, Music21Exception) as path_error:
                  print(f"Attenzione: Errore nell'elaborare il percorso Scala '{scl_path_obj}': {path_error}")
 
     except ImportError: print("Attenzione: Modulo 'scala.scala' non trovato.")
     except AttributeError: print("Attenzione: Funzione 'getPaths' non trovata in scala.scala.")
-    except Exception as e: print(f"Attenzione: Impossibile caricare l'archivio Scala. {e}")
+    except (Music21Exception, OSError) as e: print(f"Attenzione: Impossibile caricare l'archivio Scala. {e}")
 
     # Ordina catalogo finale
     catalog.sort(key=lambda x: x.get('friendly_name', '').lower())
@@ -206,15 +214,15 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
     """
     try:
         parts = usi_string.split(':', 2)
-        if len(parts) != 3: raise ValueError("Formato non valido")
+        if len(parts) != 3:
+            raise ValueError("Formato non valido")
         paradigm, tonic_str, scale_id = parts
-    except ValueError:
-        raise InvalidUSIFormatError(usi_string)
-
+    except ValueError as e:
+        raise InvalidUSIFormatError(usi_string) from e
     try:
         tonic_pitch = pitch.Pitch(tonic_str)
-    except Exception as e:
-        raise ScaleException(f"Tonica non valida '{tonic_str}': {e}")
+    except (Music21Exception, ValueError) as e:
+        raise ScaleException(f"Tonica non valida '{tonic_str}': {e}") from e
 
     # --- Routing del Paradigma ---
     if paradigm == 'concrete':
@@ -222,22 +230,22 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
             scale_class = getattr(scale, scale_id) # Recupera classe da music21.scale
             # Istanzia passando solo la tonica
             return scale_class(tonic_pitch)
-        except AttributeError:
-            raise UnknownScaleError(paradigm, scale_id)
-        except Exception as e:
-            raise ScaleException(f"Errore istanziazione {scale_id}({tonic_str}): {e}")
+        except AttributeError as e:
+            raise UnknownScaleError(paradigm, scale_id) from e
+        except (Music21Exception, TypeError, ValueError) as e:
+            raise ScaleException(f"Errore istanziazione {scale_id}({tonic_str}): {e}") from e
 
     elif paradigm == 'scala':
         scl_filename = scale_id + ".scl"
         try:
             # Istanzia ScalaScale (accedendo da scale, come corretto prima)
             return scale.ScalaScale(tonic_pitch, scl_filename)
-        except FileNotFoundError:
-             raise UnknownScaleError(paradigm, f"File {scl_filename} non trovato.")
-        except AttributeError: # Se scale.ScalaScale non esiste
-             raise ScaleException("Classe ScalaScale non trovata.")
-        except Exception as e:
-            raise ScaleException(f"Errore istanziazione ScalaScale('{tonic_str}', '{scl_filename}'): {e}")
+        except FileNotFoundError as e:
+            raise UnknownScaleError(paradigm, f"File {scl_filename} non trovato.") from e
+        except AttributeError as e:  # Se scale.ScalaScale non esiste
+            raise ScaleException("Classe ScalaScale non trovata.") from e
+        except (Music21Exception, OSError, TypeError, ValueError) as e:
+            raise ScaleException(f"Errore istanziazione ScalaScale('{tonic_str}', '{scl_filename}'): {e}") from e
 
     elif paradigm == 'custom':
         try:
@@ -246,8 +254,8 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
             if not pitch_list: raise ValueError("Lista pitch vuota")
             # Istanzia ConcreteScale con pitches e tonic
             return scale.ConcreteScale(pitches=pitch_list, tonic=tonic_pitch)
-        except Exception as e:
-            raise ScaleException(f"Errore parsing/creazione scala 'custom' da '{scale_id}': {e}")
+        except (Music21Exception, TypeError, ValueError) as e:
+            raise ScaleException(f"Errore parsing/creazione scala 'custom' da '{scale_id}': {e}") from e
 
     else:
         raise ScaleException(f"Paradigma USI sconosciuto: '{paradigm}'")

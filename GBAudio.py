@@ -1,20 +1,24 @@
-# GBAudio.py
-# Motore audio di Chitabry: sintesi dello strumento e dialogo con il MIDI.
-# Contiene la sintesi sonora, il rendering e le utility per la gestione delle frequenze.
-# Data creazione: 6 gennaio 2026
-# 03/09/2026: corretta l'intestazione, che lo diceva condiviso fra i progetti di
-#   Gabriele mentre lo usa soltanto Chitabry, in quattro suoi file. Non e' un
-#   doppione di Acusticator e non va unificato con quello: Acusticator riproduce
-#   effetti brevi da uno score, questo suona uno strumento con note tenute e
-#   polifoniche e parla con le porte MIDI. L'unica cosa davvero duplicata fra i
-#   due e' note_to_freq, la conversione da nome di nota a frequenza, da
-#   affrontare quando toccheranno a Chitabry le sue fasi di revisione.
+# GBAudio, motore audio di Chitabry: sintesi dello strumento e dialogo con il MIDI.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Data creazione: 6 gennaio 2026.
+# Non e' un doppione di Acusticator e non va unificato con quello: Acusticator
+# riproduce effetti brevi da uno score, questo suona uno strumento con note
+# tenute e polifoniche e parla con le porte MIDI di Windows. L'unica cosa
+# duplicata fra i due e' la conversione da nome di nota a frequenza, tracciata
+# nella issue 49.
+# Revisione 1 del 2026-09-09: un solo interprete dei nomi di nota da cui
+# derivano note_to_freq e note_to_midi; il mixer polifonico protegge buffer e
+# indici con un lucchetto e chiude il flusso audio quando si ferma; le
+# eccezioni catturate sono quelle che si sanno nominare.
 
 import atexit
 import ctypes
+import math
 import re
 import threading
 import time
+import weakref
+
 import numpy as np
 import sounddevice as sd
 from scipy import signal
@@ -24,54 +28,60 @@ FS = 44100  # Aumentata frequenza di campionamento per KS
 BLOCK_SIZE = 256
 HARMONICS = [1, 0.5, 0.33, 0.25, 0.2, 0.17, 0.14, 0.125, 0.11, 0.1, 0.09, 0.08, 0.07]
 
+_SEMITONI = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
+# Simboli microtonali in coda al nome, dal piu' lungo al piu' corto per non
+# confondere la doppia tilde con quella singola. Valgono in semitoni.
+_MICROTONI = (("~~", 1.5), ("``", -1.5), ("~", 0.5), ("`", -0.5))
+_RE_OTTAVA = re.compile(r"\d+$")
+_RE_NOTA = re.compile(r"^([a-g])([#b]?)$")
+
+
+def scomponi_nota(nome):
+    """Legge un nome di nota come C4, F#3, Eb2, F~5 o B``4 e restituisce la
+    coppia (numero MIDI intero, scostamento microtonale in semitoni), oppure
+    None se il testo non e' una nota o e' la pausa p.
+    E' l'unico punto in cui si interpreta il nome di una nota: note_to_freq e
+    note_to_midi derivano da qui. Fino alla 7.8.3 ognuna aveva la propria
+    tabella e le proprie regole, e una nota scritta in un modo poteva valere
+    per una e non per l'altra."""
+    if not isinstance(nome, str):
+        return None
+    testo = nome.strip().lower().replace('-', 'b')
+    if testo == 'p':
+        return None
+    ottava = _RE_OTTAVA.search(testo)
+    if not ottava:
+        return None
+    base = testo[:ottava.start()]
+    micro = 0.0
+    for simbolo, scostamento in _MICROTONI:
+        if base.endswith(simbolo):
+            micro = scostamento
+            base = base[:-len(simbolo)]
+            break
+    lettera = _RE_NOTA.match(base)
+    if not lettera:
+        return None
+    nota, alterazione = lettera.groups()
+    semitono = _SEMITONI[nota] + {'#': 1, 'b': -1}.get(alterazione, 0)
+    return 12 + semitono + 12 * int(ottava.group()), micro
+
+
+def midi_to_freq(midi_num):
+    """Frequenza in Hz di un numero MIDI, anche frazionario, con il La a 440."""
+    return 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
+
+
 def note_to_freq(note):
-    """Converte la notazione (es. "C4", "F~5", "B`5") in frequenza (Hz)."""
-    if isinstance(note, (int, float)): return float(note)
-    if isinstance(note, str):
-        note_lower = note.lower()
-        if note_lower == 'p': return 0.0 # Pausa
-        note_lower = note_lower.replace('-', 'b')
-        
-        # Estrai l'ottava (cifre finali)
-        match_octave = re.search(r"\d+$", note_lower)
-        if not match_octave:
-            return 0.0
-        octave_str = match_octave.group()
-        try:
-            octave = int(octave_str)
-        except ValueError:
-            return 0.0
-            
-        # Rimuovi l'ottava per ottenere la nota e le alterazioni
-        note_base = note_lower[:-len(octave_str)]
-        
-        # Estrai i simboli microtonali alla fine di note_base
-        micro_offset = 0.0
-        # Ordina dal più lungo al più corto per evitare match parziali
-        possible_micros = [("~~", 1.5), ("``", -1.5), ("~", 0.5), ("`", -0.5)]
-        for micro, offset in possible_micros:
-            if note_base.endswith(micro):
-                micro_offset = offset
-                note_base = note_base[:-len(micro)]
-                break
-                
-        # Ora note_base contiene solo la nota e le alterazioni standard (es. "c", "c#", "eb")
-        match_std = re.match(r"^([a-g])([#b]?)$", note_base)
-        if not match_std:
-            return 0.0
-        note_letter, accidental = match_std.groups()
-        
-        note_base_semitones = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
-        semitone = note_base_semitones[note_letter]
-        if accidental == '#':
-            semitone += 1
-        elif accidental == 'b':
-            semitone -= 1
-            
-        midi_num = 12 + semitone + 12 * octave + micro_offset
-        freq = 440.0 * (2.0 ** ((midi_num - 69) / 12.0))
-        return freq
-    return 0.0
+    """Converte la notazione (es. C4, F~5, B`5) in frequenza in Hz.
+    Un numero lo considera gia' una frequenza; 0.0 per la pausa o un nome non valido."""
+    if isinstance(note, (int, float)) and not isinstance(note, bool):
+        return float(note)
+    scomposta = scomponi_nota(note)
+    if scomposta is None:
+        return 0.0
+    midi_num, micro = scomposta
+    return midi_to_freq(midi_num + micro)
 
 class FastGuitarSynth:
     """
@@ -84,35 +94,35 @@ class FastGuitarSynth:
 
     def render_string(self, freq, dur, vol, pluck_hardness=0.6, damping_factor=0.996, pick_position=0.15, brightness=0.4):
         if freq <= 0: return np.zeros(0, dtype=np.float32)
-        
+
         N_samples = int(self.fs * dur)
         L = int(self.fs / freq)
         if L <= 1: return np.zeros(N_samples, dtype=np.float32)
-        
+
         # 1. Generazione dell'eccitazione (Rumore + Armoniche)
         noise = np.random.uniform(-1, 1, L).astype(np.float32)
-        
+
         t = np.linspace(0., 1., L, endpoint=False)
         harmonics = np.zeros(L, dtype=np.float32)
         base_amps = [1.0, 0.5, 0.25, 0.12, 0.06, 0.03]
         for i, amp in enumerate(base_amps):
             harmonics += amp * np.sin(2 * np.pi * (i + 1) * t)
-            
+
         excitation = (noise * (1.0 - pluck_hardness)) + (harmonics * pluck_hardness)
-        
+
         # Effetto Comb Filter per la posizione del plettro
         pick_delay = int(pick_position * L)
         if pick_delay > 0:
             excitation = excitation - np.roll(excitation, pick_delay)
-            
+
         max_e = np.max(np.abs(excitation))
         if max_e > 0: excitation /= max_e
-        
+
         # 2. Prepara l'input per il filtro IIR
         x = np.zeros(N_samples, dtype=np.float32)
         actual_L = min(L, N_samples)
         x[:actual_L] = excitation[:actual_L]
-        
+
         # 3. Calcola i coefficienti del filtro Karplus-Strong
         # Eq: y[n] = x[n] + damping * ( (1-S)*y[n-L] + S*y[n-L-1] )
         # S = brightness (0.5 = media standard, <0.5 = più brillante)
@@ -121,47 +131,61 @@ class FastGuitarSynth:
         a[L] = -damping_factor * (1.0 - brightness)
         a[L+1] = -damping_factor * brightness
         b = [1.0]
-        
+
         # 4. Applica il filtro (Istantaneo in C)
         y = signal.lfilter(b, a, x)
-        
+
         max_y = np.max(np.abs(y))
         if max_y > 0: y /= max_y
-        
+
         y *= vol
         return y.astype(np.float32)
 
+_giocatori_aperti = weakref.WeakSet()
+
+
 class PolyphonicPlayer:
     """
-    Motore di stream continuo. Mixa N canali (bus) indipendenti in real-time.
+    Motore di stream continuo. Mixa N canali (bus) indipendenti in tempo reale.
     Se una corda viene ri-suonata, il suo buffer si azzera e riparte,
     mentre le altre corde continuano a suonare.
+    Il flusso audio si apre con start e si chiude con stop: fino alla 7.8.3
+    si apriva nel costruttore e non si chiudeva mai, e il dispositivo restava
+    impegnato finche' il processo non moriva. Buffer e indici di lettura sono
+    condivisi fra il thread principale e quello audio, e un lucchetto li tiene
+    coerenti: senza, la callback poteva trovare il buffer nuovo con l'indice
+    vecchio, e una nota partiva a meta' o non partiva affatto.
     """
     def __init__(self, fs=FS, num_strings=6):
         self.fs = fs
         self.num_strings = num_strings
         self.buses = [np.zeros(0, dtype=np.float32) for _ in range(num_strings)]
-        self.indices = [0 for _ in range(num_strings)]
-        
-        # Panning base (modificabile via set_pan)
+        self.indices = [0] * num_strings
         self.pans = np.zeros(num_strings, dtype=np.float32)
-        
+        self._lock = threading.Lock()
+        self.stream = None
         self.is_running = False
+        _giocatori_aperti.add(self)
 
+    def start(self):
+        if self.is_running:
+            return
         self.stream = sd.OutputStream(
             samplerate=self.fs, channels=2, dtype=np.float32,
             callback=self._audio_callback, latency='low'
         )
-
-    def start(self):
-        if not self.is_running:
-            self.stream.start()
-            self.is_running = True
+        self.stream.start()
+        self.is_running = True
 
     def stop(self):
-        if self.is_running:
-            self.stream.stop()
-            self.is_running = False
+        """Ferma e chiude il flusso, liberando il dispositivo audio."""
+        if not self.is_running:
+            return
+        self.is_running = False
+        self.stream.stop()
+        self.stream.close()
+        self.stream = None
+        self.mute()
 
     def set_pan(self, string_idx, pan_value):
         if 0 <= string_idx < self.num_strings:
@@ -170,43 +194,47 @@ class PolyphonicPlayer:
     def pluck(self, string_idx, audio_mono):
         """Suona una corda. Sostituisce il suo bus interrompendone il suono precedente."""
         if 0 <= string_idx < self.num_strings:
-            self.buses[string_idx] = audio_mono
-            self.indices[string_idx] = 0
+            with self._lock:
+                self.buses[string_idx] = audio_mono
+                self.indices[string_idx] = 0
 
     def mute(self, string_idx=None):
         """Silenzia una corda specifica o tutte."""
-        if string_idx is None:
-            for i in range(self.num_strings):
-                self.buses[i] = np.zeros(0, dtype=np.float32)
-                self.indices[i] = 0
-        elif 0 <= string_idx < self.num_strings:
-            self.buses[string_idx] = np.zeros(0, dtype=np.float32)
-            self.indices[string_idx] = 0
+        with self._lock:
+            if string_idx is None:
+                for i in range(self.num_strings):
+                    self.buses[i] = np.zeros(0, dtype=np.float32)
+                    self.indices[i] = 0
+            elif 0 <= string_idx < self.num_strings:
+                self.buses[string_idx] = np.zeros(0, dtype=np.float32)
+                self.indices[string_idx] = 0
 
     def _audio_callback(self, outdata, frames, time, status):
         mix = np.zeros((frames, 2), dtype=np.float32)
-        for i in range(self.num_strings):
-            buf = self.buses[i]
-            idx = self.indices[i]
-            buf_len = len(buf)
-
-            if idx < buf_len:
-                remaining = buf_len - idx
-                chunk_len = min(frames, remaining)
-
+        with self._lock:
+            for i in range(self.num_strings):
+                buf = self.buses[i]
+                idx = self.indices[i]
+                buf_len = len(buf)
+                if idx >= buf_len:
+                    continue
+                chunk_len = min(frames, buf_len - idx)
                 pan = self.pans[i]
                 pan_l = np.cos((pan + 1.0) * np.pi / 4.0)
                 pan_r = np.sin((pan + 1.0) * np.pi / 4.0)
-
-                mono_chunk = buf[idx : idx + chunk_len]
-
+                mono_chunk = buf[idx:idx + chunk_len]
                 mix[:chunk_len, 0] += mono_chunk * pan_l
                 mix[:chunk_len, 1] += mono_chunk * pan_r
-
                 self.indices[i] += chunk_len
-
-        mix = np.clip(mix, -1.0, 1.0)
+        np.clip(mix, -1.0, 1.0, out=mix)
         outdata[:] = mix
+
+
+@atexit.register
+def chiudi_giocatori():
+    """Chiusura di sicurezza dei flussi audio rimasti aperti all'uscita."""
+    for giocatore in list(_giocatori_aperti):
+        giocatore.stop()
 
 class NoteRenderer:
     """
@@ -235,10 +263,10 @@ class NoteRenderer:
         pan_angle = pan_clipped * (np.pi / 4.0)
         self.pan_l = np.cos(pan_angle + np.pi / 4.0)
         self.pan_r = np.sin(pan_angle + np.pi / 4.0)
-        
+
         self.kind = 1
         self.pluck_hardness = 0.0
-        
+
         if 'kind' in kwargs: # Legacy
             self.adsr_list = kwargs.get('adsr_list', [0,0,0,0])
             self.kind = kwargs.get('kind', 1)
@@ -252,15 +280,15 @@ class NoteRenderer:
         # Utilizza il nuovo synth veloce e realistico
         dur_secs = n_samples / self.fs
         return self.fast_synth.render_string(
-            self.freq, dur_secs, 1.0, 
-            self.pluck_hardness, self.damping_factor, 
+            self.freq, dur_secs, 1.0,
+            self.pluck_hardness, self.damping_factor,
             self.pick_position, self.brightness
         )
 
     def _render_legacy_osc(self, n_samples):
         t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
         phase_vector = 2 * np.pi * self.freq * t
-        
+
         if self.kind == 2: wave = signal.square(phase_vector)
         elif self.kind == 3: wave = signal.sawtooth(phase_vector, 0.5)
         elif self.kind == 4: wave = signal.sawtooth(phase_vector)
@@ -271,12 +299,12 @@ class NoteRenderer:
             max_val = np.max(np.abs(wave))
             if max_val > 0: wave /= max_val
         else: wave = np.sin(phase_vector)
-        
+
         wave = wave.astype(np.float32)
         a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
-        attack_samples = int(round((a_pct/100.0)*n_samples))
-        decay_samples = int(round((d_pct/100.0)*n_samples))
-        release_samples = int(round((r_pct/100.0)*n_samples))
+        attack_samples = round((a_pct / 100.0) * n_samples)
+        decay_samples = round((d_pct / 100.0) * n_samples)
+        release_samples = round((r_pct / 100.0) * n_samples)
         sustain_level = s_level_pct / 100.0
         sustain_samples = n_samples - (attack_samples + decay_samples + release_samples)
         if sustain_samples < 0:
@@ -296,19 +324,19 @@ class NoteRenderer:
             curr += sustain_samples
         if release_samples > 0:
             envelope[curr:curr+release_samples] = np.linspace(sustain_level, 0., release_samples)
-        
+
         return wave * envelope
 
     def render(self):
         if self.freq <= 0.0: return np.array([], dtype=np.float32)
-        total_note_samples = int(round(self.dur * self.fs))
+        total_note_samples = round(self.dur * self.fs)
         if total_note_samples == 0: return np.array([], dtype=np.float32)
-        
+
         if self.pluck_hardness > 0.0:
             wave = self._render_karplus_strong(total_note_samples)
         else:
             wave = self._render_legacy_osc(total_note_samples)
-            
+
         wave *= self.vol
         stereo = np.zeros((total_note_samples, 2), dtype=np.float32)
         stereo[:, 0] = wave * self.pan_l
@@ -318,7 +346,7 @@ class NoteRenderer:
 def render_scale_audio(note_list, suono_params, bpm):
     s_vol = suono_params.get('volume', 0.35)
     s_dur = 60.0 / bpm
-    
+
     renderer = NoteRenderer(fs=FS)
     segmenti = []
 
@@ -337,14 +365,14 @@ def render_scale_audio(note_list, suono_params, bpm):
         if freq <= 0:
             segmenti.append(np.zeros((int(s_dur * FS), 2), dtype=np.float32))
             continue
-            
+
         if is_ks:
-            renderer.set_params(freq, s_dur, s_vol, 0.0, 
+            renderer.set_params(freq, s_dur, s_vol, 0.0,
                                 pluck_hardness=hardness, damping_factor=damping,
                                 pick_position=pick_pos, brightness=bright)
         else:
             renderer.set_params(freq, s_dur, s_vol, 0.0, kind=s_kind, adsr_list=s_adsr)
-            
+
         note_audio = renderer.render()
         if note_audio.size > 0: segmenti.append(note_audio)
         else: segmenti.append(np.zeros((int(s_dur * FS), 2), dtype=np.float32))
@@ -417,18 +445,18 @@ class WindowsMidiOut:
     def open_port(self):
         try:
             self.winmm = ctypes.windll.winmm
-            
+
             # Ottimizzazione dei tipi ctypes per abbattere la latenza delle chiamate
             self.winmm.midiOutShortMsg.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
             self.winmm.midiOutShortMsg.restype = ctypes.c_uint
-            
+
             HMIDIOUT = ctypes.c_void_p
             self.h_midi = HMIDIOUT()
             res = self.winmm.midiOutOpen(ctypes.byref(self.h_midi), -1, None, None, 0)
             if res != 0:
                 self.h_midi = None
                 print(f"\n[MIDI] Errore apertura MIDI Mapper (Codice: {res})")
-        except Exception as e:
+        except (AttributeError, OSError) as e:
             self.h_midi = None
             print(f"\n[MIDI] Inizializzazione fallita: {e}")
 
@@ -469,10 +497,9 @@ def get_midi_out():
         # Seleziona lo strumento impostato inizialmente per evitare overhead successivi
         try:
             import config
-            program = config.impostazioni.get("midi_strumento", 0)
-            _midi_out.select_instrument(program)
-        except Exception:
-            pass
+        except ImportError:
+            return _midi_out
+        _midi_out.select_instrument(config.impostazioni.get("midi_strumento", 0))
     return _midi_out
 
 @atexit.register
@@ -484,69 +511,42 @@ def cleanup_midi():
         _midi_out = None
 
 def note_to_midi(note_str):
-    """Converte un nome di nota standard (es. 'C4', 'F#3') in un numero MIDI (0-127)."""
-    if isinstance(note_str, int): return note_str
-    if isinstance(note_str, float): return int(round(note_str))
-    if isinstance(note_str, str):
-        note_lower = note_str.lower()
-        if note_lower == 'p': return None
-        note_lower = note_lower.replace('-', 'b')
-        
-        match_octave = re.search(r"\d+$", note_lower)
-        if not match_octave:
-            return None
-        octave_str = match_octave.group()
-        try:
-            octave = int(octave_str)
-        except ValueError:
-            return None
-            
-        note_base = note_lower[:-len(octave_str)]
-        
-        micro_offset = 0
-        possible_micros = [("~~", 1), ("``", -1), ("~", 0), ("`", 0)]
-        for micro, offset in possible_micros:
-            if note_base.endswith(micro):
-                micro_offset = offset
-                note_base = note_base[:-len(micro)]
-                break
-                
-        match_std = re.match(r"^([a-g])([#b]?)$", note_base)
-        if not match_std:
-            return None
-        note_letter, accidental = match_std.groups()
-        
-        note_base_semitones = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
-        semitone = note_base_semitones[note_letter]
-        if accidental == '#':
-            semitone += 1
-        elif accidental == 'b':
-            semitone -= 1
-            
-        midi_num = 12 + semitone + 12 * octave + micro_offset
-        return int(round(midi_num))
-    return None
+    """Converte un nome di nota in numero MIDI intero; un numero lo arrotonda;
+    None per la pausa o un nome non valido. Lo scostamento microtonale si
+    tronca verso lo zero, come e' sempre stato: un quarto di tono non cambia
+    il tasto MIDI, tre quarti lo spostano di uno."""
+    if isinstance(note_str, bool):
+        return None
+    if isinstance(note_str, int):
+        return note_str
+    if isinstance(note_str, float):
+        return round(note_str)
+    scomposta = scomponi_nota(note_str)
+    if scomposta is None:
+        return None
+    midi_num, micro = scomposta
+    return midi_num + int(micro)
+
 
 def freq_to_midi(freq):
-    """Converte una frequenza Hz in numero MIDI standard (0-127)."""
-    if freq <= 0.0: return None
-    return int(round(12 * np.log2(freq / 440.0) + 69))
+    """Converte una frequenza in Hz nel numero MIDI intero piu' vicino; None se non positiva."""
+    if freq <= 0.0:
+        return None
+    return round(12 * math.log2(freq / 440.0) + 69)
 
 def play_midi_note_temp(note_num, duration, velocity=127):
     """Riproduce una nota MIDI per una determinata durata in secondi."""
-    if note_num is None: return
-    try:
-        m_out = get_midi_out()
-        m_out.note_on(note_num, velocity)
-        
-        def off():
-            time.sleep(duration)
-            if m_out.h_midi is not None:
-                m_out.note_off(note_num)
-                
-        threading.Thread(target=off, daemon=True).start()
-    except Exception as e:
-        print(f"\n[MIDI] Errore riproduzione nota {note_num}: {e}")
+    if note_num is None:
+        return
+    m_out = get_midi_out()
+    m_out.note_on(note_num, velocity)
+
+    def off():
+        time.sleep(duration)
+        if m_out.h_midi is not None:
+            m_out.note_off(note_num)
+
+    threading.Thread(target=off, daemon=True).start()
 
 
 # --- Supporto MIDI IN Nativo ---
@@ -596,7 +596,7 @@ def get_midi_in_devices():
                 if res_a == 0:
                     devices.append(caps_a.szPname.decode('ansi', errors='ignore'))
         return devices
-    except Exception:
+    except (AttributeError, OSError):
         return []
 
 class WindowsMidiIn:
@@ -616,7 +616,7 @@ class WindowsMidiIn:
             self.winmm = ctypes.windll.winmm
             HMIDIIN = ctypes.c_void_p
             self.h_midi = HMIDIIN()
-            
+
             # midiInOpen(LPHMIDIIN lphmi, UINT uDeviceID, DWORD_PTR dwCallback, DWORD_PTR dwCallbackInstance, DWORD fdwOpen)
             CALLBACK_FUNCTION = 0x30000
             res = self.winmm.midiInOpen(
@@ -630,12 +630,12 @@ class WindowsMidiIn:
                 self.h_midi = None
                 print(f"\n[MIDI-IN] Errore apertura dispositivo {self.device_idx} (Codice: {res})")
                 return
-            
+
             res_start = self.winmm.midiInStart(self.h_midi)
             if res_start != 0:
                 print(f"\n[MIDI-IN] Errore avvio acquisizione (Codice: {res_start})")
                 self.close_port()
-        except Exception as e:
+        except (AttributeError, OSError) as e:
             self.h_midi = None
             print(f"\n[MIDI-IN] Inizializzazione fallita: {e}")
 
@@ -645,19 +645,13 @@ class WindowsMidiIn:
             status = dwParam1 & 0xFF
             note_num = (dwParam1 >> 8) & 0xFF
             velocity = (dwParam1 >> 16) & 0xFF
-            
-            # Note On: status 0x90-0x9F (per qualsiasi canale, ma tipicamente 0x90 è canale 0)
-            if (status & 0xF0) == 0x90:
-                if velocity > 0:
-                    if self.on_note_on:
-                        self.on_note_on(note_num, velocity)
-                else:
-                    if self.on_note_off:
-                        self.on_note_off(note_num)
-            # Note Off: status 0x80-0x8F
-            elif (status & 0xF0) == 0x80:
-                if self.on_note_off:
-                    self.on_note_off(note_num)
+
+            # Note On: status 0x90-0x9F; con velocity zero vale come Note Off
+            if (status & 0xF0) == 0x90 and velocity > 0:
+                if self.on_note_on:
+                    self.on_note_on(note_num, velocity)
+            elif (status & 0xF0) in (0x80, 0x90) and self.on_note_off:
+                self.on_note_off(note_num)
 
     def close_port(self):
         if self.h_midi is not None:
@@ -665,7 +659,8 @@ class WindowsMidiIn:
                 self.winmm.midiInStop(self.h_midi)
                 self.winmm.midiInReset(self.h_midi)
                 self.winmm.midiInClose(self.h_midi)
-            except Exception:
+            except (AttributeError, OSError):
+                # In chiusura non resta niente da fare se il driver non risponde.
                 pass
             self.h_midi = None
 
@@ -673,7 +668,6 @@ _midi_in = None
 
 def get_midi_in():
     """Restituisce l'istanza di input MIDI attiva."""
-    global _midi_in
     return _midi_in
 
 def on_midi_in_note_on(note_num, velocity):
@@ -684,32 +678,32 @@ def on_midi_in_note_on(note_num, velocity):
         if tipo_suono == 'midi':
             get_midi_out().note_on(note_num, velocity)
         else:
-            freq = 440.0 * (2.0 ** ((note_num - 69) / 12.0))
+            freq = midi_to_freq(note_num)
             suono = config.impostazioni[tipo_suono]
             dur = suono.get('dur_accordi', 2.0)
             vol = suono.get('volume', 0.35)
             renderer = NoteRenderer(fs=FS)
             if 'pluck_hardness' in suono:
-                renderer.set_params(freq, dur, vol, 0.0, 
-                                    pluck_hardness=suono.get('pluck_hardness', 0.6), 
+                renderer.set_params(freq, dur, vol, 0.0,
+                                    pluck_hardness=suono.get('pluck_hardness', 0.6),
                                     damping_factor=suono.get('damping_factor', 0.997))
             else:
-                renderer.set_params(freq, dur, vol, 0.0, kind=suono.get('kind', 1), adsr_list=suono.get('adsr', [0,0,0,0]))
+                renderer.set_params(freq, dur, vol, 0.0, kind=suono.get('kind', 1), adsr_list=suono.get('adsr', [0, 0, 0, 0]))
             note_audio = renderer.render()
             if note_audio.size > 0:
                 sd.play(note_audio, samplerate=FS, blocking=False)
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001 - callback di winmm: un errore qui non ha nessuno a cui risalire
+        print(f"Nota MIDI non riprodotta: {e}")
+
 
 def on_midi_in_note_off(note_num):
     """Callback di default per Note Off da tastiera MIDI."""
     try:
         import config
-        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
-        if tipo_suono == 'midi':
+        if config.impostazioni.get('tipo_suono', 'suono_1') == 'midi':
             get_midi_out().note_off(note_num)
-    except Exception:
-        pass
+    except Exception as e:  # noqa: BLE001 - callback di winmm: un errore qui non ha nessuno a cui risalire
+        print(f"Nota MIDI non spenta: {e}")
 
 def open_global_midi_in(device_idx):
     """Apre la connessione globale al dispositivo MIDI In indicato."""

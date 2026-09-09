@@ -1,14 +1,24 @@
-# METRONOMO BY GABRIELE BATTAGLIA
-# Un metronomo da riga di comando.
-# Data di concepimento 9 settembre 2025.
+# Clitronomo, il metronomo da riga di comando di Chitabry.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Data di concepimento: 9 settembre 2025.
+# Revisione 1 del 2026-09-09: la callback audio si limita a copiare campioni,
+# mentre programma, rampe, battute fantasma, sintesi e annunci passano a un
+# thread di servizio; il file dei preset vive accanto al programma, in utf-8,
+# si scrive in modo atomico con copia .bak e, se illeggibile, si mette da
+# parte invece di essere sovrascritto.
+
+import json
+import os
+import random
+import threading
+import time
 
 import numpy as np
 import sounddevice as sd
-import threading
-import time
-import json
 
-SAMPLE_RATE = 44100 
+import config
+
+SAMPLE_RATE = 44100
 COMANDI = {
     'g', 's', 'b', '?', '0', '1', '2', '3',
     'v1', 'v2', 'v3',
@@ -22,40 +32,39 @@ COMANDI = {
     'gb',
 }
 HELP_STRING = """
---- Menu Comandi Metronomo ---
-
->> CONTROLLO
-  g           - Avvia il metronomo
-  s           - Ferma il metronomo
-  i           - Mostra lo stato attuale dei parametri
-  x           - Resetta il metronomo alle impostazioni di default
-  q           - Esci dal programma
-
->> RITMO
-  b <bpm>     - Imposta i BPM (es. b 120 o b 180 in 2m)
-  t <n/d>     - Imposta il tempo (es. t 7/8)
-  0,1,2,3     - Attiva/Disattiva Suddivisioni (0=off, 1=8vi, 2=16vi, 3=32vi)
-  gb          - Impostazioni Ghost Bars (es: gb c 3 1, gb r 25, gb off)
-
->> PARAMETRI SUONO (n = 1:Accento, 2:Beat, 3:Sub)
-  l<n> <ms>   - Durata del beep (es. l1 100)
-  v<n> <vol>  - Volume 0-100 (es. v2 70)
-  f<n> <hz>   - Frequenza (es. f3 600)
-  a<n> <ms>   - Attack in ms (es. a1 5)
-  d<n> <ms>   - Decay in ms (es. d2 50)
-
->> GESTIONE PRESET
-  m           - Mostra i preset salvati
-  ms <nome>   - Salva il preset corrente
-  ml <nome>   - Carica un preset
-  mc <nome>   - Cancella un preset
-
->> PROGRAMMAZIONE
-  p           - Visualizza il programma del preset attivo
-  pa          - Aggiunge uno step al programma (modo interattivo)
-  pc <battuta>- Cancella uno step del programma (es. pc 16)
----------------------------------
+Comandi del metronomo.
+Controllo:
+  g: avvia il metronomo.
+  s: ferma il metronomo.
+  i: mostra lo stato attuale dei parametri.
+  x: riporta il metronomo alle impostazioni di fabbrica.
+  q: esce dal metronomo.
+Ritmo:
+  b <bpm>: imposta i BPM (es. b 120).
+  t <n/d>: imposta il tempo (es. t 7/8).
+  0, 1, 2, 3: attiva o disattiva le suddivisioni (0 off, 1 ottavi, 2 sedicesimi, 3 trentaduesimi).
+  gb: impostazioni delle battute fantasma (es. gb c 3 1, gb r 25, gb off).
+Parametri del suono, dove n vale 1 per l'accento, 2 per il beat, 3 per la suddivisione:
+  l<n> <ms>: durata del beep (es. l1 100).
+  v<n> <vol>: volume da 0 a 100 (es. v2 70).
+  f<n> <hz>: frequenza (es. f3 600).
+  a<n> <ms>: attack in millisecondi (es. a1 5).
+  d<n> <ms>: decay in millisecondi (es. d2 50).
+Gestione dei preset:
+  m: mostra i preset salvati.
+  ms <nome>: salva il preset corrente.
+  ml <nome>: carica un preset.
+  mc <nome>: cancella un preset.
+Programmazione:
+  p: mostra il programma del preset attivo.
+  pa: aggiunge un passo al programma, in modo interattivo oppure con pa <durata> <bpm|m>.
+  pc <battuta>: cancella il passo che inizia a quella battuta (es. pc 16).
 """
+# Valori di fabbrica dei tre suoni: sono l'origine di ogni copia, compresa
+# quella che l'esercizio delle scale usa quando non trova un preset.
+CONFIG_ACCENTO = {"beep_duration_ms": 70, "volume_perc": 50, "attack_ms": 5, "decay_ms": 8, "frequency_hz": 915.0}
+CONFIG_TICK = {"beep_duration_ms": 40, "volume_perc": 35, "attack_ms": 5, "decay_ms": 12, "frequency_hz": 550.0}
+CONFIG_SUBDIVISION = {"beep_duration_ms": 10, "volume_perc": 15, "attack_ms": 2, "decay_ms": 8, "frequency_hz": 1030.0}
 
 def genera_suono_mono_int16(config):
     """
@@ -65,7 +74,7 @@ def genera_suono_mono_int16(config):
     # --- 1. Calcola la lunghezza del beep udibile in campioni ---
     beep_duration_s = config["beep_duration_ms"] / 1000.0
     beep_samples = int(SAMPLE_RATE * beep_duration_s)
-    
+
     if beep_samples <= 0:
         return np.array([], dtype=np.int16)
 
@@ -83,26 +92,23 @@ def genera_suono_mono_int16(config):
         ratio = beep_samples / total_envelope_samples if total_envelope_samples > 0 else 0
         attack_samples = int(attack_samples * ratio)
         decay_samples = int(decay_samples * ratio)
-    
+
     sustain_samples = beep_samples - attack_samples - decay_samples
-    if sustain_samples < 0: sustain_samples = 0
-    
+    sustain_samples = max(sustain_samples, 0)
+
     # --- 3. Genera l'onda e applica l'inviluppo ---
     t = np.linspace(0., beep_duration_s, beep_samples, endpoint=False)
     wave_float = np.sin(2. * np.pi * config["frequency_hz"] * t)
-    
+
     envelope = np.concatenate([
         np.linspace(0, 1, attack_samples) if attack_samples > 0 else np.array([]),
         np.ones(sustain_samples),
         np.linspace(1, 0, decay_samples) if decay_samples > 0 else np.array([])
     ])
-    
+
     final_wave_float = config["volume_perc"]/100.0 * wave_float * envelope
     final_wave_float = np.clip(final_wave_float, -1.0, 1.0)
-    beep_int16 = (final_wave_float * 32767.0).astype(np.int16)
-    
-    # --- 4. Restituisce direttamente il beep generato ---
-    return beep_int16
+    return (final_wave_float * 32767.0).astype(np.int16)
 class Metronome:
     def __init__(self, bpm=120, time_signature="4/4"):
         self.is_dirty = False
@@ -112,36 +118,40 @@ class Metronome:
         self.bpm = bpm
         self.time_signature = time_signature
         self.beats_per_measure, self.note_value = map(int, self.time_signature.split('/'))
-        # Attributi per la gestione dello stream e del timing
         self.stream = None
         self.is_running = threading.Event()
-        # Attributi per la logica della callback
-        self.config_subdivision = {
-            "beep_duration_ms": 10, "volume_perc": 15, "attack_ms": 2,
-            "decay_ms": 8, "frequency_hz": 1030.0
-        }
+        self.config_accento = dict(CONFIG_ACCENTO)
+        self.config_tick = dict(CONFIG_TICK)
+        self.config_subdivision = dict(CONFIG_SUBDIVISION)
         self.subdivision_level = 0
-        self.active_buffer = np.array([], dtype=np.int16) # Il nastro audio in riproduzione
-        self.pending_buffer = None # Il nastro audio che prepariamo quando cambia un parametro
+        # Il nastro in riproduzione, quello in attesa e la puntina di lettura:
+        # sono condivisi con la callback audio e vivono sotto buffer_lock.
+        self.active_buffer = np.array([], dtype=np.int16)
+        self.pending_buffer = None
+        self.playback_index = 0
         self.buffer_lock = threading.RLock()
+        # I tre beep in cache stanno sotto un lucchetto proprio: la sintesi non
+        # deve mai avvenire tenendo buffer_lock, che la callback aspetta.
+        self._cache_lock = threading.Lock()
         self.cached_accent_beep = None
         self.cached_tick_beep = None
         self.cached_sub_beep = None
-        self.playback_index = 0 # La nostra "puntina" sul nastro
-        self.config_accento = {
-            "beep_duration_ms": 70, "volume_perc": 50, "attack_ms": 5,
-            "decay_ms": 8, "frequency_hz": 915.0
-        }
-        self.config_tick = {
-            "beep_duration_ms": 40, "volume_perc": 35, "attack_ms": 5,
-            "decay_ms": 12, "frequency_hz": 550.0
-        }
-        self.program = []                       # Lista dei segmenti del programma
-        self.program_current_segment_index = -1 # Indice del segmento attualmente in esecuzione
-        self.is_muted_by_program = False        # Flag per le sezioni mute
-        self.bpm_ramp_active = False            # Flag per le transizioni di BPM
+        # Il thread di servizio: la callback alza l'evento a ogni cambio di
+        # battuta, il servizio annuncia la battuta cominciata e prepara la
+        # successiva. Lo stato del programma vive sotto _stato_lock.
+        self._battuta_finita = threading.Event()
+        self._servizio = None
+        self._stato_lock = threading.RLock()
+        self._messaggi = []
+        self._stato_flusso = None
+        self._ricostruisci = False
+        self.program = []
+        self.program_current_segment_index = -1
+        self.is_muted_by_program = False
+        self.bpm_ramp_active = False
+        self.bpm_initial = float(bpm)
+        self.bpm_target = bpm
         self.bpm_increment_per_measure = 0.0
-        # Attributi per Ghost Bars
         self.ghost_mode = None
         self.ghost_cyclic_audible = 3
         self.ghost_cyclic_silent = 1
@@ -150,67 +160,64 @@ class Metronome:
         self.ghost_random_duration_max = 2
         self.ghost_silent_bars_left = 0
         self.is_muted_by_ghost = False
+    def descrivi_ghost(self):
+        """Descrive a parole lo stato delle battute fantasma."""
+        if self.ghost_mode == 'cyclic':
+            return f"ciclico, {self.ghost_cyclic_audible} battute a tempo e {self.ghost_cyclic_silent} mute"
+        if self.ghost_mode == 'random':
+            return f"casuale, probabilita' {self.ghost_random_probability}%, durata da {self.ghost_random_duration_min} a {self.ghost_random_duration_max} battute"
+        return "disattivate"
+    def set_ghost(self, mode, audible=None, silent=None, probability=None, dur_min=None, dur_max=None):
+        """Imposta le battute fantasma. Se il metronomo gira, la battuta in
+        attesa si rifa' subito con il nuovo stato, senza aspettare quella dopo."""
+        with self._stato_lock:
+            self.ghost_mode = mode
+            if audible is not None:
+                self.ghost_cyclic_audible = audible
+            if silent is not None:
+                self.ghost_cyclic_silent = silent
+            if probability is not None:
+                self.ghost_random_probability = probability
+            if dur_min is not None:
+                self.ghost_random_duration_min = dur_min
+            if dur_max is not None:
+                self.ghost_random_duration_max = dur_max
+            self.ghost_silent_bars_left = 0
+            self.is_muted_by_ghost = False
+            self.is_dirty = True
+        if self.is_running.is_set():
+            self._request_buffer_rebuild()
     def display_status(self, preset_manager):
-        """Mostra una tabella riassuntiva di tutte le impostazioni correnti."""
-        print("\n--- Stato Attuale Metronomo ---")
-        
-        # Stato del Preset
+        """Riassume a parole tutte le impostazioni correnti."""
+        print("\nStato attuale del metronomo.")
         preset_id_str = str(self.current_preset_id) if self.current_preset_id else "Default"
         preset_name = ""
-        # Ecco le righe corrette!
         if self.current_preset_id and preset_id_str in preset_manager.data['presets']:
             preset_name = f" ({preset_manager.data['presets'][preset_id_str]['name']})"
-        
         modified_status = " (modificato)" if self.is_dirty else ""
-        print(f"Preset Attivo: {preset_id_str}{preset_name}{modified_status}")
-        
-        # Stato del Ritmo
+        print(f"Preset attivo: {preset_id_str}{preset_name}{modified_status}")
         sub_map = {0: "off", 2: "ottavi", 4: "sedicesimi", 8: "trentaduesimi"}
         sub_text = sub_map.get(self.subdivision_level, 'sconosciuto')
-        print(f"Ritmo: {self.bpm} BPM  |  Tempo: {self.beats_per_measure}/{self.note_value}  |  Suddivisioni: {sub_text}")
-        
-        # Tabella Parametri Suono
-        print("---------------------------------------------------------")
-        print(f"{'Parametro':<12} | {'Accento (1)':<12} | {'Beat (2)':<12} | {'Sub (3)':<12}")
-        print("---------------------------------------------------------")
-        
-        param_keys = [
-            ('Durata (l)', 'beep_duration_ms', 'ms'),
-            ('Volume (v)', 'volume_perc', '%'),
-            ('Freq (f)', 'frequency_hz', 'Hz'),
-            ('Attack (a)', 'attack_ms', 'ms'),
-            ('Decay (d)', 'decay_ms', 'ms')
-        ]
-                
-        for label, key, unit in param_keys:
-            v1 = self.config_accento.get(key, 'N/A')
-            v2 = self.config_tick.get(key, 'N/A')
-            v3 = self.config_subdivision.get(key, 'N/A')
-            print(f"{label:<12} | {str(v1):<10} {unit:<2} | {str(v2):<10} {unit:<2} | {str(v3):<10} {unit:<2}")
-        
-        print("---------------------------------------------------------")
-        mode_str = "Disattivato"
-        if getattr(self, 'ghost_mode', None) == 'cyclic':
-            mode_str = f"Ciclico ({self.ghost_cyclic_audible} a tempo, {self.ghost_cyclic_silent} mute)"
-        elif getattr(self, 'ghost_mode', None) == 'random':
-            mode_str = f"Casuale (Probabilità: {self.ghost_random_probability}%, durata: {self.ghost_random_duration_min}-{self.ghost_random_duration_max} battute)"
-        print(f"Ghost Bars: {mode_str}")
-        print("---------------------------------------------------------")
+        print(f"Ritmo: {self.bpm} BPM, tempo {self.beats_per_measure}/{self.note_value}, suddivisioni {sub_text}.")
+        suoni = (("Accento (1)", self.config_accento), ("Beat (2)", self.config_tick), ("Suddivisione (3)", self.config_subdivision))
+        for etichetta, cfg in suoni:
+            print(f"{etichetta}: durata {cfg.get('beep_duration_ms', 'N/A')} ms, volume {cfg.get('volume_perc', 'N/A')}%, "
+                  f"frequenza {cfg.get('frequency_hz', 'N/A')} Hz, attack {cfg.get('attack_ms', 'N/A')} ms, decay {cfg.get('decay_ms', 'N/A')} ms.")
+        print(f"Ghost Bars: {self.descrivi_ghost()}.")
     def display_program(self):
         """Mostra il programma corrente in un formato leggibile."""
-        print("\n--- Programma Corrente ---")
+        print("\nProgramma corrente.")
         if not self.program:
             print("Nessun segmento programmato.")
             return
-        
         for seg in self.program:
-            stato_suono = "Suona" if seg['is_audible'] else "Muto"
-            print(f"  [BATT. {seg['start_bar']} -> {seg['end_bar']}] -> {seg['target_bpm']} BPM ({stato_suono})")
+            stato_suono = "suona" if seg['is_audible'] else "muto"
+            print(f"  Battute da {seg['start_bar']} a {seg['end_bar']}: {seg['target_bpm']} BPM, {stato_suono}.")
     def clear_program_segment(self, start_bar):
         """Cancella un segmento dal programma in base alla sua battuta di inizio."""
         step_count_before = len(self.program)
         self.program = [s for s in self.program if s['start_bar'] != start_bar]
-        
+
         if len(self.program) < step_count_before:
             self.is_dirty = True
             print(f"Segmento che inizia alla battuta {start_bar} cancellato.")
@@ -236,23 +243,14 @@ class Metronome:
         self.is_muted_by_ghost = False
 
         # Ripristina anche i parametri dei suoni
-        self.config_accento = {
-            "beep_duration_ms": 70, "volume_perc": 50, "attack_ms": 5,
-            "decay_ms": 8, "frequency_hz": 915.0
-        }
-        self.config_tick = {
-            "beep_duration_ms": 40, "volume_perc": 35, "attack_ms": 5,
-            "decay_ms": 12, "frequency_hz": 550.0
-        }
-        self.config_subdivision = {
-            "beep_duration_ms": 10, "volume_perc": 15, "attack_ms": 2,
-            "decay_ms": 8, "frequency_hz": 1030.0
-        }
-        
-        self.cached_accent_beep = None
-        self.cached_tick_beep = None
-        self.cached_sub_beep = None
-        print("\n>> Metronomo resettato alle impostazioni di fabbrica.")
+        self.config_accento = dict(CONFIG_ACCENTO)
+        self.config_tick = dict(CONFIG_TICK)
+        self.config_subdivision = dict(CONFIG_SUBDIVISION)
+        with self._cache_lock:
+            self.cached_accent_beep = None
+            self.cached_tick_beep = None
+            self.cached_sub_beep = None
+        print("\nMetronomo riportato alle impostazioni di fabbrica.")
         self._request_buffer_rebuild()
     def set_state(self, state, preset_id):
         """Applica uno stato salvato al metronomo."""
@@ -276,79 +274,58 @@ class Metronome:
             self.ghost_random_duration_max = state.get("ghost_random_duration_max", 2)
             self.ghost_silent_bars_left = 0
             self.is_muted_by_ghost = False
-            self.cached_accent_beep = None
-            self.cached_tick_beep = None
-            self.cached_sub_beep = None
+            with self._cache_lock:
+                self.cached_accent_beep = None
+                self.cached_tick_beep = None
+                self.cached_sub_beep = None
             print(f"Stato del preset ID{preset_id} applicato.")
             self._request_buffer_rebuild()
-            
+
         except KeyError as e:
             print(f"\nERRORE: Dati mancanti o corrotti nel preset. Chiave non trovata: {e}")
     def _generate_measure_buffer(self, is_silent=False):
         """
-        "Renderizza" un'intera battuta in un unico array numpy,
-        mixando accento, beat e suddivisioni, oppure generando silenzio.
+        Renderizza un'intera battuta in un unico array numpy, mixando accento,
+        beat e suddivisioni, oppure generando silenzio della stessa lunghezza.
+        La lunghezza del battito si arrotonda al campione piu' vicino invece di
+        troncarla: a 130 BPM il troncamento dava 130,0054 battiti al minuto.
         """
-        # --- CORREZIONE: Il calcolo della lunghezza ora avviene SEMPRE per primo ---
-        # 1. Calcoliamo la durata di una semiminima (1/4) in base ai BPM
         samples_per_quarter_note = (60.0 / self.bpm) * SAMPLE_RATE
-        # 2. Calcoliamo la durata del nostro beat in base al denominatore
-        samples_per_beat = int(samples_per_quarter_note * (4 / self.note_value))
-        samples_per_measure = int(samples_per_beat * self.beats_per_measure) # Usiamo int() per sicurezza
-        
-        # --- ORA controlliamo se la battuta deve essere silenziosa ---
+        samples_per_beat = round(samples_per_quarter_note * (4 / self.note_value))
+        samples_per_measure = samples_per_beat * self.beats_per_measure
         if is_silent:
-            # Se sì, restituisci un buffer di zeri della lunghezza appena calcolata.
             return np.zeros(samples_per_measure, dtype=np.int16)
-
-        # Se non è silenziosa, procedi con la normale generazione dei suoni...
-        # 2. Crea un "nastro" vuoto (silenzio)
         measure_buffer = np.zeros(samples_per_measure, dtype=np.float32)
-
-        # 3. Genera i singoli "beep" (accento, tick e suddivisione) usando la cache se disponibile
-        with self.buffer_lock:
+        with self._cache_lock:
             if self.cached_accent_beep is None:
                 self.cached_accent_beep = genera_suono_mono_int16(self.config_accento).astype(np.float32) / 32767.0
             if self.cached_tick_beep is None:
                 self.cached_tick_beep = genera_suono_mono_int16(self.config_tick).astype(np.float32) / 32767.0
             if self.cached_sub_beep is None:
                 self.cached_sub_beep = genera_suono_mono_int16(self.config_subdivision).astype(np.float32) / 32767.0
-            
             accent_beep = self.cached_accent_beep
             tick_beep = self.cached_tick_beep
             sub_beep = self.cached_sub_beep
-        
-        # 4. "Disegna" i suoni sul nastro, beat per beat
         for beat_num in range(self.beats_per_measure):
             start_pos = beat_num * samples_per_beat
-            
-            # Scegli e disegna il beat principale (accento o tick)
             main_beep = accent_beep if beat_num == 0 else tick_beep
             end_pos = min(start_pos + len(main_beep), samples_per_measure)
             length_to_add = end_pos - start_pos
             if length_to_add > 0:
                 measure_buffer[start_pos:end_pos] += main_beep[:length_to_add]
-            
-            # Disegna le suddivisioni
             if self.subdivision_level > 1 and len(sub_beep) > 0:
-                samples_per_sub = int(samples_per_beat / self.subdivision_level)
+                samples_per_sub = samples_per_beat // self.subdivision_level
                 for sub_num in range(1, self.subdivision_level):
                     sub_start_pos = start_pos + (sub_num * samples_per_sub)
-                    
                     if sub_start_pos >= samples_per_measure:
                         break
-                    
                     sub_end_pos = min(sub_start_pos + len(sub_beep), samples_per_measure)
                     sub_length_to_add = sub_end_pos - sub_start_pos
-                    
                     if sub_length_to_add > 0:
                         measure_buffer[sub_start_pos:sub_end_pos] += sub_beep[:sub_length_to_add]
-        
-        # 5. Normalizza per evitare clipping e converti in int16
-        peak = np.max(np.abs(measure_buffer))
+        peak = np.max(np.abs(measure_buffer)) if samples_per_measure > 0 else 0.0
         if peak > 1.0:
             measure_buffer /= peak
-            
         return (measure_buffer * 32767.0).astype(np.int16)
     def update_sound_param(self, command, value):
         """Aggiorna un parametro del suono per accento(1), tick(2) o suddivisione(3)."""
@@ -366,17 +343,14 @@ class Metronome:
 
         try:
             val = int(value)
-            
+
             # Logica di validazione
-            if param_key == 'volume_perc' and target_char == '3':
-                if val >= self.config_tick['volume_perc'] or val >= self.config_accento['volume_perc']:
-                    print(f"\nERRORE: Volume suddivisione ({val}) deve essere minore di quello di beat e accento.")
-                    return
-            
-            if param_key == 'beep_duration_ms' and target_char == '3':
-                if val >= self.config_tick['beep_duration_ms'] or val >= self.config_accento['beep_duration_ms']:
-                    print(f"\nERRORE: Durata suddivisione ({val}ms) deve essere minore di quella di beat e accento.")
-                    return
+            if param_key == 'volume_perc' and target_char == '3' and (val >= self.config_tick['volume_perc'] or val >= self.config_accento['volume_perc']):
+                print(f"\nERRORE: Volume suddivisione ({val}) deve essere minore di quello di beat e accento.")
+                return
+            if param_key == 'beep_duration_ms' and target_char == '3' and (val >= self.config_tick['beep_duration_ms'] or val >= self.config_accento['beep_duration_ms']):
+                print(f"\nERRORE: Durata suddivisione ({val}ms) deve essere minore di quella di beat e accento.")
+                return
 
             configs = {'1': self.config_accento, '2': self.config_tick, '3': self.config_subdivision}
             target_dict = configs[target_char]
@@ -388,63 +362,56 @@ class Metronome:
             if attack + decay > duration:
                 print(f"\nERRORE: La somma di Attack ({attack}ms) e Decay ({decay}ms) non può superare la Durata ({duration}ms).")
                 return
-                
+
             target_dict[param_key] = val
             print(f"\n{param_key} per {'accento' if target_char == '1' else 'tick' if target_char == '2' else 'suddivisione'} impostato a {val}.")
-            if target_char == '1':
-                self.cached_accent_beep = None
-            elif target_char == '2':
-                self.cached_tick_beep = None
-            elif target_char == '3':
-                self.cached_sub_beep = None
+            with self._cache_lock:
+                if target_char == '1':
+                    self.cached_accent_beep = None
+                elif target_char == '2':
+                    self.cached_tick_beep = None
+                else:
+                    self.cached_sub_beep = None
             self.is_dirty = True
             self._request_buffer_rebuild()
 
         except (ValueError, IndexError):
             print(f"\nValore non valido: '{value}'. Inserire un numero intero.")
     def _audio_callback(self, outdata, frames, time, status):
-        """Callback corretta che gestisce il loop e lo swap dei buffer."""
+        """Riempie il buffer del driver e basta: copia campioni dal nastro attivo
+        e, a fine battuta, mette in riproduzione il nastro in attesa. Tutto il
+        resto, cioe' programma, rampe, battute fantasma, sintesi e annunci, lo
+        fa il thread di servizio: qui ogni millisecondo di ritardo e' un buco
+        nell'audio, e fino alla 7.8.3 la callback stampava e sintetizzava."""
         if status:
-            print(status, flush=True)
-
-        needed_frames = frames
+            self._stato_flusso = status
         written_frames = 0
-        
         with self.buffer_lock:
-            while written_frames < needed_frames:
+            while written_frames < frames:
                 buffer_len = len(self.active_buffer)
                 if buffer_len == 0:
-                    outdata.fill(0)
+                    outdata[written_frames:] = 0
                     return
-
                 if self.playback_index >= buffer_len:
-                    self._check_program_events()
-                    self._update_ramp()
-                    self._update_ghost_bars()
-                    
                     if self.pending_buffer is not None:
                         self.active_buffer = self.pending_buffer
                         self.pending_buffer = None
-                    
                     self.session_measure_count += 1
                     self.playback_index = 0
+                    self._battuta_finita.set()
                     continue
-
-                remaining_in_buffer = buffer_len - self.playback_index
-                frames_to_write = min(needed_frames - written_frames, remaining_in_buffer)
-                
-                if frames_to_write > 0:
-                    if getattr(self, 'is_muted_by_ghost', False) or self.is_muted_by_program:
-                        outdata[written_frames : written_frames + frames_to_write] = 0
-                    else:
-                        outdata[written_frames : written_frames + frames_to_write] = \
-                            self.active_buffer[self.playback_index : self.playback_index + frames_to_write].reshape(-1, 1)
-
-                    self.playback_index += frames_to_write
-                    written_frames += frames_to_write
+                frames_to_write = min(frames - written_frames, buffer_len - self.playback_index)
+                outdata[written_frames:written_frames + frames_to_write] = \
+                    self.active_buffer[self.playback_index:self.playback_index + frames_to_write].reshape(-1, 1)
+                self.playback_index += frames_to_write
+                written_frames += frames_to_write
     def _request_buffer_rebuild(self):
-        """Chiede di generare un nuovo buffer (silenzioso o normale) e lo mette in attesa."""
-        new_buffer = self._generate_measure_buffer(is_silent=self.is_muted_by_program)
+        """Sintetizza il nastro della battuta successiva secondo lo stato corrente
+        e lo mette in attesa: subentra al prossimo cambio di battuta. Le battute
+        mute, per programma o per fantasma, sono nastri di silenzio."""
+        with self._stato_lock:
+            self._ricostruisci = False
+            new_buffer = self._generate_measure_buffer(is_silent=self.is_muted_by_program or self.is_muted_by_ghost)
         with self.buffer_lock:
             self.pending_buffer = new_buffer
     def set_bpm(self, new_bpm):
@@ -463,7 +430,7 @@ class Metronome:
         """
         # Mappa corretta: codice input -> suddivisioni per BEAT
         level_map = {1: 2, 2: 4, 3: 8}
-        
+
         if level_code == 0:
             new_level = 0
         elif level_code in level_map:
@@ -475,7 +442,7 @@ class Metronome:
             return
 
         self.subdivision_level = new_level
-        
+
         # Mappa per i messaggi all'utente
         status_map = {0: "off", 2: "ottavi (2 per beat)", 4: "sedicesimi (4 per beat)", 8: "trentaduesimi (8 per beat)"}
         print(f"\nSuddivisioni impostate a: {status_map.get(self.subdivision_level, 'off')}")
@@ -487,14 +454,20 @@ class Metronome:
         print("Metronomo avviato.")
         self.session_measure_count = 0
         self.session_start_time = time.perf_counter()
-        
-        # Genera il primo nastro audio prima di partire
+        self.is_muted_by_ghost = False
+        self.ghost_silent_bars_left = 0
+        self._messaggi = []
+        self._stato_flusso = None
+        self._battuta_finita.clear()
+        # La battuta zero suona con lo stato corrente; la battuta uno si
+        # prepara adesso, e da qui in poi ci pensa il thread di servizio.
         self.active_buffer = self._generate_measure_buffer()
-        
-        # NOTA: In questa versione corretta, non c'è nessuna riga "self.is_dirty = True".
-        # L'azione di avvio non modifica il preset.
-        
+        self.pending_buffer = None
+        self.playback_index = 0
+        self._prepara_prossima_battuta()
         self.is_running.set()
+        self._servizio = threading.Thread(target=self._servizio_battute, name="clitronomo-servizio", daemon=True)
+        self._servizio.start()
         self.stream = sd.OutputStream(
             samplerate=SAMPLE_RATE, channels=1, dtype=np.int16,
             callback=self._audio_callback, latency='low'
@@ -503,50 +476,40 @@ class Metronome:
     def stop(self):
         if not self.is_running.is_set():
             return
-        if self.session_start_time is not None:
-            elapsed_seconds = time.perf_counter() - self.session_start_time
-            # Calcoliamo ore, minuti e secondi
-            minutes, seconds = divmod(elapsed_seconds, 60)
-            hours, minutes = divmod(minutes, 60)
-            # Formattiamo il tempo e stampiamo il report
-            # 1. Creiamo una lista vuota per contenere le parti del tempo
-            time_parts = []
-
-            # 2. Aggiungiamo le ore solo se sono maggiori di zero
-            if int(hours) > 0:
-                time_parts.append(f"{int(hours)} {'ora' if int(hours) == 1 else 'ore'}")
-
-            # 3. Aggiungiamo i minuti solo se sono maggiori di zero
-            if int(minutes) > 0:
-                time_parts.append(f"{int(minutes)} {'minuto' if int(minutes) == 1 else 'minuti'}")
-
-            # 4. Aggiungiamo i secondi se sono maggiori di zero, o se è l'unica unità di tempo
-            if int(seconds) > 0 or not time_parts:
-                time_parts.append(f"{int(seconds)} {'secondo' if int(seconds) == 1 else 'secondi'}")
-
-            # 5. Uniamo le parti in una stringa ben formattata
-            if len(time_parts) > 2:
-                # Es: "1 ora, 5 minuti e 10 secondi"
-                formatted_time = ", ".join(time_parts[:-1]) + f" e {time_parts[-1]}"
-            elif len(time_parts) == 2:
-                # Es: "5 minuti e 10 secondi"
-                formatted_time = " e ".join(time_parts)
-            else:
-                # Es: "10 secondi"
-                formatted_time = time_parts[0]
-            print(f"\nSessione terminata: {self.session_measure_count} battute in {formatted_time}.")
-    
-            # Azzeriamo il tempo di partenza
-            self.session_start_time = None        
         self.is_running.clear()
         if self.stream:
             self.stream.stop()
             self.stream.close()
-        self.playback_index = 0
-        self.program_current_segment_index = -1 # Dimentica quale segmento stava eseguendo
-        self.is_muted_by_program = False      # Rimuovi lo stato di "muto" forzato
-        self.bpm_ramp_active = False          # Ferma qualsiasi rampa di BPM attiva
+            self.stream = None
+        if self._servizio is not None:
+            self._servizio.join(timeout=1.0)
+            self._servizio = None
+        if self.session_start_time is not None:
+            print(f"\nSessione terminata: {self.session_measure_count} battute in {self._durata_sessione()}.")
+            self.session_start_time = None
+        with self.buffer_lock:
+            self.playback_index = 0
+            self.pending_buffer = None
+        self.program_current_segment_index = -1
+        self.is_muted_by_program = False
+        self.is_muted_by_ghost = False
+        self.bpm_ramp_active = False
         print("\nMetronomo fermato.")
+    def _durata_sessione(self):
+        """La durata della sessione a parole, per esempio 1 ora, 5 minuti e 10 secondi."""
+        elapsed_seconds = time.perf_counter() - self.session_start_time
+        minutes, seconds = divmod(elapsed_seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        time_parts = []
+        if int(hours) > 0:
+            time_parts.append(f"{int(hours)} {'ora' if int(hours) == 1 else 'ore'}")
+        if int(minutes) > 0:
+            time_parts.append(f"{int(minutes)} {'minuto' if int(minutes) == 1 else 'minuti'}")
+        if int(seconds) > 0 or not time_parts:
+            time_parts.append(f"{int(seconds)} {'secondo' if int(seconds) == 1 else 'secondi'}")
+        if len(time_parts) > 2:
+            return ", ".join(time_parts[:-1]) + f" e {time_parts[-1]}"
+        return " e ".join(time_parts)
     def set_time_signature(self, numerator, denominator):
         """Imposta un nuovo tempo e richiede l'aggiornamento del buffer audio."""
         # Aggiungiamo un controllo di validità
@@ -556,7 +519,7 @@ class Metronome:
 
         self.beats_per_measure = numerator
         self.note_value = denominator
-        
+
         print(f"\nTempo impostato a {self.beats_per_measure}/{self.note_value}. La modifica sarà attiva dalla prossima battuta.")
         self.is_dirty = True
         self._request_buffer_rebuild()
@@ -585,7 +548,7 @@ class Metronome:
                 last_end = max(s['end_bar'] for s in self.program)
             else:
                 last_end = 1
-                
+
             # --- ONE-LINER MODE (Power User) ---
             if one_liner_args:
                 parts = one_liner_args.split()
@@ -595,20 +558,20 @@ class Metronome:
                         target = parts[1].lower()
                         start_bar = last_end
                         end_bar = start_bar + durata
-                        
+
                         if target == 'm':
                             target_bpm = self.program[-1]['target_bpm'] if self.program else self.bpm
                             is_audible = False
                             # Per mantenere il tempo fisso muto:
-                            # Aggiungiamo un segmento jump fittizio se serve? 
+                            # Aggiungiamo un segmento jump fittizio se serve?
                             # Se non era lo stesso BPM, potremmo volerlo, ma per pausa va bene mantenere il target precedente.
                         else:
                             target_bpm = int(target)
                             is_audible = True
-                            
+
                         # Se è un tempo fisso (target == ultimo target, o target nuovo ma one-liner si aspetta fisso?)
                         # Come specificato nell'issue: pa 8 130 "aggiunge in coda un blocco di 8 battute che RAGGIUNGE i 130 BPM" -> Quindi è una rampa per default se diverso!
-                        
+
                         self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
                         return
                     except ValueError:
@@ -619,17 +582,17 @@ class Metronome:
                     return
 
             # --- WIZARD INTERATTIVO ---
-            print("\n--- Aggiunta Nuovo Segmento Programma ---")
-            
+            print("\nAggiunta di un nuovo segmento al programma.")
+
             # 1. Inizio (Aggiunta in Coda di default)
             if self.program:
                 print(f"L'ultimo segmento programmato termina alla BATTUTA {last_end}.")
                 start_bar_str = input(f"  Battuta di INIZIO [{last_end}]: ").strip()
             else:
                 start_bar_str = input("  Battuta di INIZIO [1]: ").strip()
-                
+
             start_bar = int(start_bar_str) if start_bar_str else last_end
-            
+
             if start_bar <= 0:
                 print("ERRORE: La battuta di inizio deve essere maggiore di 0.")
                 return
@@ -639,12 +602,12 @@ class Metronome:
             print("  1. Tempo fisso (Salto istantaneo di BPM e mantenimento)")
             print("  2. Rampa (Accelerando / Ritardando graduale)")
             print("  3. Pausa (Metronomo muto)")
-            
+
             scelta_tipo = input("Scelta (1/2/3): ").strip()
             if scelta_tipo not in ('1', '2', '3'):
                 print("ERRORE: Scelta non valida.")
                 return
-                
+
             # 3. Parametri in base al tipo
             if scelta_tipo == '1': # Tempo Fisso
                 durata = int(input("  Durata in battute: "))
@@ -657,7 +620,7 @@ class Metronome:
                     return
                 end_bar = start_bar + durata
                 is_audible = True
-                
+
                 # Per avere un salto istantaneo, inseriamo prima un segmento di durata 0
                 # che cambia i BPM esattamente in `start_bar`
                 self._add_segment_data(start_bar, start_bar, target_bpm, True)
@@ -676,7 +639,7 @@ class Metronome:
                 end_bar = start_bar + durata
                 is_audible = True
                 self._add_segment_data(start_bar, end_bar, target_bpm, is_audible)
-                
+
             elif scelta_tipo == '3': # Pausa
                 durata = int(input("  Durata in battute: "))
                 if durata <= 0:
@@ -701,22 +664,22 @@ class Metronome:
         if overlapping:
             print("\nATTENZIONE: Il nuovo segmento si sovrappone con i seguenti segmenti:")
             for s in overlapping:
-                print(f"  - BATT. {s['start_bar']} -> {s['end_bar']} (Target BPM: {s['target_bpm']})")
-            
+                print(f"  Battute da {s['start_bar']} a {s['end_bar']}, target {s['target_bpm']} BPM.")
+
             print("\nScegli come gestire la sovrapposizione:")
             print("  1. Sovrascrivi (accorcia i segmenti esistenti)")
             print("  2. Inserisci e Sposta (sposta in avanti la parte successiva)")
             print("  3. Annulla l'inserimento")
-            
+
             while True:
                 scelta = input("Scelta (1/2/3): ").strip()
                 if scelta in ('1', '2', '3'): break
                 print("Scelta non valida.")
-                
+
             if scelta == '3':
                 print("Inserimento annullato.")
                 return
-                
+
             if scelta == '1': # Sovrascrivi
                 new_program = []
                 for s in self.program:
@@ -766,127 +729,171 @@ class Metronome:
 
         self.program.sort(key=lambda s: s['start_bar']) # Mantiene la lista ordinata
         self.is_dirty = True
-        print(f"Segmento [BATT. {start_bar} -> {end_bar}] aggiunto/modificato.")
+        print(f"Segmento dalla battuta {start_bar} alla {end_bar} aggiunto o modificato.")
         self.display_program()
     def _check_program_events(self):
-        """Controlla se la battuta corrente attiva un nuovo segmento del programma."""
+        """Controlla se la battuta che si sta preparando attiva un nuovo segmento del programma."""
         current_bar = self.session_measure_count + 1
-
-        # Cerca il prossimo segmento da attivare
         next_segment_index = -1
         for i, seg in enumerate(self.program):
             if current_bar >= seg['start_bar']:
                 next_segment_index = i
             else:
-                break # La lista è ordinata, non ce ne saranno altri
-
-        # Se il segmento attivo è cambiato, attivalo
+                break  # La lista e' ordinata, non ce ne saranno altri
         if next_segment_index != self.program_current_segment_index:
             self.program_current_segment_index = next_segment_index
             if next_segment_index != -1:
                 self._activate_segment(self.program[next_segment_index])
     def _activate_segment(self, segment):
-        """Attiva un segmento: imposta il ramp di BPM e lo stato di mute."""
-        stato_suono = "Suono Attivo" if segment['is_audible'] else "Muto"
-        print(f"\nP: [BATT. {segment['start_bar']} -> {segment['end_bar']}] - Target: {segment['target_bpm']} BPM ({stato_suono})",end="")
-        start_bar = segment['start_bar']
-        end_bar = segment['end_bar']
-        duration_in_bars = end_bar - start_bar
-        # Imposta lo stato di Mute per questo segmento
+        """Attiva un segmento: imposta la rampa di BPM e lo stato di muto."""
+        stato_suono = "suono attivo" if segment['is_audible'] else "muto"
+        self._messaggi.append(f"\nProgramma: battute da {segment['start_bar']} a {segment['end_bar']}, target {segment['target_bpm']} BPM, {stato_suono}.")
+        duration_in_bars = segment['end_bar'] - segment['start_bar']
         self.is_muted_by_program = not segment['is_audible']
         if duration_in_bars > 0:
             self.bpm_ramp_active = True
             self.bpm_initial = float(self.bpm)
             self.bpm_target = segment['target_bpm']
             self.bpm_increment_per_measure = (self.bpm_target - self.bpm_initial) / float(duration_in_bars)
-        else: # Transizione istantanea se start_bar == end_bar
+        else:  # Transizione istantanea se start_bar == end_bar
             self.bpm_ramp_active = False
             self.bpm = segment['target_bpm']
-        self._request_buffer_rebuild()
+        self._ricostruisci = True
     def _update_ramp(self):
-        """Se un ramp è attivo, aggiorna i BPM per la battuta corrente."""
-        if not self.bpm_ramp_active: return
-
+        """Se una rampa e' attiva, aggiorna i BPM per la battuta che si sta preparando."""
+        if not self.bpm_ramp_active:
+            return
         segment = self.program[self.program_current_segment_index]
         current_bar = self.session_measure_count + 1
-        
         if current_bar <= segment['end_bar']:
             measures_into_ramp = current_bar - segment['start_bar']
-            new_bpm = self.bpm_initial + (self.bpm_increment_per_measure * measures_into_ramp)
-            self.bpm = round(new_bpm)
-            self._request_buffer_rebuild()
-            
+            self.bpm = round(self.bpm_initial + (self.bpm_increment_per_measure * measures_into_ramp))
         else:
-            # Il ramp è terminato, imposta i valori finali
             self.bpm = segment['target_bpm']
             self.bpm_ramp_active = False
-            
-            if self.is_muted_by_program:
-                self.is_muted_by_program = False 
-            
-            self._request_buffer_rebuild()
-            print("\n P: Fine segmento.",end="")
+            self.is_muted_by_program = False
+            self._messaggi.append("\nProgramma: fine segmento.")
+        self._ricostruisci = True
     def _update_ghost_bars(self):
-        if not getattr(self, 'ghost_mode', None):
+        """Decide se la battuta che si sta preparando e' una battuta fantasma.
+        Restituisce True se lo stato di muto e' cambiato rispetto alla battuta prima."""
+        if not self.ghost_mode:
+            cambiato = self.is_muted_by_ghost
             self.is_muted_by_ghost = False
-            return
-
+            return cambiato
         next_bar_idx = self.session_measure_count + 1
-        was_muted = getattr(self, 'is_muted_by_ghost', False)
+        was_muted = self.is_muted_by_ghost
         is_silent = False
-
         if self.ghost_mode == 'cyclic':
             cycle_len = self.ghost_cyclic_audible + self.ghost_cyclic_silent
             pos = next_bar_idx % cycle_len
             if pos == 0 or pos > self.ghost_cyclic_audible:
                 is_silent = True
-            self.is_muted_by_ghost = is_silent
-
         elif self.ghost_mode == 'random':
             if self.ghost_silent_bars_left > 0:
                 is_silent = True
                 self.ghost_silent_bars_left -= 1
-            else:
-                import random
-                if random.random() * 100 < self.ghost_random_probability:
-                    self.ghost_silent_bars_left = random.randint(self.ghost_random_duration_min, self.ghost_random_duration_max)
-                    is_silent = True
-                    self.ghost_silent_bars_left -= 1
-            self.is_muted_by_ghost = is_silent
-
+            elif random.random() * 100 < self.ghost_random_probability:
+                self.ghost_silent_bars_left = random.randint(self.ghost_random_duration_min, self.ghost_random_duration_max)
+                is_silent = True
+                self.ghost_silent_bars_left -= 1
+        self.is_muted_by_ghost = is_silent
         if is_silent and not was_muted:
-            print(" [GHOST MUTO]", end="", flush=True)
+            self._messaggi.append(" [GHOST MUTO]")
         elif not is_silent and was_muted:
-            print(" [GHOST SUONO]", end="", flush=True)
+            self._messaggi.append(" [GHOST SUONO]")
+        return is_silent != was_muted
+    def _prepara_prossima_battuta(self):
+        """Decide cosa suona la battuta successiva a quella in corso, cioe' la
+        numero session_measure_count piu' uno, e se serve ne mette il nastro in
+        attesa. Gli annunci che ne derivano si stampano quando quella battuta
+        comincia, come quando li stampava la callback."""
+        with self._stato_lock:
+            self._check_program_events()
+            self._update_ramp()
+            cambiato = self._update_ghost_bars()
+            if self._ricostruisci or cambiato:
+                self._request_buffer_rebuild()
+    def _annuncia(self):
+        """Stampa gli annunci preparati per la battuta appena cominciata."""
+        with self._stato_lock:
+            messaggi, self._messaggi = self._messaggi, []
+            stato, self._stato_flusso = self._stato_flusso, None
+        if stato:
+            print(f"\nAvviso dal driver audio: {stato}", end="", flush=True)
+        for messaggio in messaggi:
+            print(messaggio, end="", flush=True)
+    def _servizio_battute(self):
+        """Thread di servizio: aspetta il cambio di battuta segnalato dalla
+        callback, annuncia la battuta cominciata e prepara la successiva."""
+        while self.is_running.is_set():
+            if not self._battuta_finita.wait(timeout=0.25):
+                continue
+            self._battuta_finita.clear()
+            self._annuncia()
+            self._prepara_prossima_battuta()
 
 class PresetManager:
-    """Gestisce la lettura, scrittura e manipolazione dei preset da file JSON."""
-    def __init__(self, filename="clitronomo_presets.json"):
-        self.filename = filename
-        # Struttura dati che conterrà i nostri preset in memoria
-        self.data = {
-            "last_preset_id": None,
-            "presets": {}
-        }
+    """Gestisce la lettura, scrittura e manipolazione dei preset da file JSON.
+    Il file vive accanto al programma, in utf-8. Se non si legge viene messo
+    da parte con un altro nome, mai sovrascritto: fino alla 7.8.3 un file
+    danneggiato veniva sostituito da uno vuoto nello stesso istante in cui il
+    guasto veniva scoperto, e tutti i metronomi salvati sparivano.
+    Con silenzioso vero le notizie ordinarie non si stampano: serve a chi
+    vuole solo leggere l'ultimo preset, come l'esercizio delle scale."""
+    def __init__(self, filename=None, silenzioso=False):
+        self.filename = filename or os.path.join(config.BASE_DIR, "clitronomo_presets.json")
+        self.silenzioso = silenzioso
+        self.data = {"last_preset_id": None, "presets": {}}
         self._load_presets()
+    def _dillo(self, testo):
+        if not self.silenzioso:
+            print(testo)
     def _load_presets(self):
-        """Carica i preset dal file JSON. Se non esiste, lo crea."""
+        """Carica i preset dal file JSON. Se non esiste, si aspetta il primo salvataggio."""
         try:
-            with open(self.filename, 'r') as f:
-                self.data = json.load(f)
-            print(f"File preset '{self.filename}' caricato. Trovati {len(self.data['presets'])} metronomi salvati.")
+            with open(self.filename, encoding='utf-8') as f:
+                dati = json.load(f)
+            if not isinstance(dati, dict) or not isinstance(dati.get('presets'), dict):
+                raise ValueError("struttura non riconosciuta")
         except FileNotFoundError:
-            print(f"File preset non trovato. Ne creo uno nuovo: '{self.filename}'")
-            self._save_presets()
-        except (json.JSONDecodeError, KeyError):
-            print(f"ERRORE: Il file preset '{self.filename}' è corrotto o malformato. Verrà creato un nuovo file vuoto.")
-            # Resettiamo alla struttura di default e salviamo
-            self.data = {"last_preset_id": None, "presets": {}}
-            self._save_presets()
+            self._dillo(f"Nessun file dei preset in {self.filename}: verra' creato al primo salvataggio.")
+            return
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
+            self._metti_da_parte(e)
+            return
+        except OSError as e:
+            print(f"Il file dei preset {self.filename} non si legge: {e}")
+            return
+        dati.setdefault('last_preset_id', None)
+        self.data = dati
+        self._dillo(f"File dei preset caricato: {len(dati['presets'])} metronomi salvati.")
+    def _metti_da_parte(self, errore):
+        """Rinomina il file illeggibile invece di sovrascriverlo e riparte da vuoto in memoria."""
+        destinazione = f"{self.filename}.illeggibile-{time.strftime('%Y%m%d-%H%M%S')}"
+        print(f"Il file dei preset non si legge: {errore}")
+        try:
+            os.replace(self.filename, destinazione)
+        except OSError as e:
+            print(f"Non riesco a metterlo da parte: {e}")
+            print("I preset restano vuoti per questa sessione; il primo salvataggio conservera' il file attuale come copia .bak.")
+            return
+        print(f"L'ho messo da parte come {destinazione}, per recuperarlo a mano. Si riparte senza preset.")
     def _save_presets(self):
-        """Salva lo stato attuale di TUTTI i preset nel file JSON."""
-        with open(self.filename, 'w') as f:
-            json.dump(self.data, f, indent=1)
+        """Scrive tutti i preset su un file temporaneo e lo sostituisce al
+        precedente in modo atomico, conservando la versione prima come copia
+        .bak. Restituisce True se ha scritto."""
+        temporaneo = self.filename + ".tmp"
+        try:
+            with open(temporaneo, 'w', encoding='utf-8') as f:
+                json.dump(self.data, f, indent=1, ensure_ascii=False)
+            if os.path.exists(self.filename):
+                os.replace(self.filename, self.filename + ".bak")
+            os.replace(temporaneo, self.filename)
+        except OSError as e:
+            print(f"Impossibile scrivere il file dei preset {self.filename}: {e}")
+            return False
+        return True
     def list_presets(self, active_preset_id=None): # <-- 1. Accetta un nuovo argomento opzionale
         """Mostra una lista paginata dei preset salvati."""
         if not self.data['presets']:
@@ -894,23 +901,23 @@ class PresetManager:
             return
 
         presets_list = sorted([(int(pid), pdata['name']) for pid, pdata in self.data['presets'].items()])
-        
+
         page_size = 10
         total_pages = (len(presets_list) + page_size - 1) // page_size
         current_page = 1
 
         while True:
-            print("\n--- Preset Salvati ---")
+            print("\nPreset salvati:")
             start_index = (current_page - 1) * page_size
             end_index = start_index + page_size
-            
+
             for pid, name in presets_list[start_index:end_index]:
                 # --- 2. Logica per l'indicatore ---
                 indicator = ""
                 # Confrontiamo gli ID dopo averli resi stringhe per sicurezza
                 if active_preset_id is not None and str(pid) == str(active_preset_id):
                     indicator = "* " # L'indicatore che vuoi mostrare
-                
+
                 # Stampiamo con l'indicatore (o uno spazio vuoto per allineare)
                 print(f"  {indicator:<2}{name}")
                 # ---------------------------------
@@ -920,10 +927,10 @@ class PresetManager:
 
             print(f"\nPagina {current_page}/{total_pages}")
             choice = input("Premi Invio per la pagina successiva, 'q' per uscire: ").lower()
-            
+
             if choice == 'q':
                 break
-            
+
             current_page += 1
             if current_page > total_pages:
                 break
@@ -937,7 +944,7 @@ class PresetManager:
         return matches
     def save_preset(self, name, state, preset_id=None):
         """Assegna un ID, lo antepone al nome, salva il preset e aggiorna il file."""
-        
+
         if preset_id:
             # CASO 1: Stiamo sovrascrivendo un preset esistente.
             # L'ID ci è già stato fornito.
@@ -946,7 +953,7 @@ class PresetManager:
             # CASO 2: Stiamo creando un nuovo preset.
             # Dobbiamo trovare il prossimo ID libero.
             next_id = 1
-            existing_ids = {int(k) for k in self.data['presets'].keys()}
+            existing_ids = {int(k) for k in self.data['presets']}
             while next_id in existing_ids:
                 next_id += 1
             preset_id_str = str(next_id)
@@ -955,36 +962,35 @@ class PresetManager:
         # La costruzione del nome finale è la stessa.
         # Ci aspettiamo che `name` sia il nome pulito, senza prefissi.
         final_name = f"ID{preset_id_str} {name}"
-        
+
         # Ora salviamo i dati
         self.data['presets'][preset_id_str] = {
             "name": final_name,
             "state": state
         }
-        
-        print(f"\nPreset salvato con nome '{final_name}'.")
-        
-        # Scriviamo le modifiche sul file
-        self._save_presets()
+
+        if self._save_presets():
+            print(f"\nPreset salvato con nome '{final_name}'.")
+        else:
+            print(f"\nPreset '{final_name}' tenuto in memoria ma non scritto su disco.")
         return preset_id_str
     def find_preset(self, search_term):
         """Usa il motore di ricerca per trovare e caricare un preset."""
         matches = self._find_matches(search_term)
-                
+
         if len(matches) == 0:
             print(f"\nNessun preset trovato contenente '{search_term}'.")
             return None
-        elif len(matches) > 1:
-            print("\nCorrispondenza ambigua. Trovati più preset:")
-            for pid, pdata in matches:
-                print(f"  - {pdata['name']}")
-            print("Per favore, sii più specifico.")
+        if len(matches) > 1:
+            print("\nCorrispondenza ambigua. Trovati piu' preset:")
+            for _pid, pdata in matches:
+                print(f"  {pdata['name']}")
+            print("Per favore, sii piu' specifico.")
             return None
-        else: # Esattamente 1 risultato
-            pid, pdata = matches[0]
-            print(f"\nPreset trovato: '{pdata['name']}'. Caricamento in corso...")
-            return pid, pdata['state']
-    
+        pid, pdata = matches[0]
+        print(f"\nPreset trovato: '{pdata['name']}'. Caricamento in corso...")
+        return pid, pdata['state']
+
     def delete_preset(self, search_term, active_preset_id=None):
         """
         Cerca e cancella un preset.
@@ -999,13 +1005,16 @@ class PresetManager:
         if len(matches) == 0:
             print(f"\nNessun preset trovato contenente '{search_term}'.")
             return None
-        elif len(matches) > 1:
-            # ... (la gestione dei match ambigui non cambia) ...
+        if len(matches) > 1:
+            print("\nCorrispondenza ambigua. Trovati piu' preset:")
+            for _pid, pdata in matches:
+                print(f"  {pdata['name']}")
+            print("Per favore, sii piu' specifico.")
             return None
-        
+
         pid_to_delete, pdata_to_delete = matches[0]
         preset_name = pdata_to_delete['name']
-        
+
         try:
             confirm = input(f"Sei sicuro di voler cancellare il preset '{preset_name}'? (s/n): ").lower()
             if confirm == 's':
@@ -1015,39 +1024,37 @@ class PresetManager:
 
                 # --- NUOVA LOGICA ---
                 if pid_to_delete == active_preset_id:
-                    if not self.data['presets']: # Non ci sono più preset?
-                        return 'DEFAULT' # Istruzione per caricare il default
-                    else:
-                        # Prendi il primo preset rimasto, ordinalo per ID
-                        first_remaining_id = sorted(self.data['presets'].keys(), key=int)[0]
-                        return first_remaining_id # Istruzione per caricare questo ID
+                    if not self.data['presets']:
+                        return 'DEFAULT'  # Istruzione per caricare il default
+                    # Il primo preset rimasto, per ID crescente
+                    return min(self.data['presets'], key=int)
             else:
                 print("Cancellazione annullata.")
         except (KeyboardInterrupt, EOFError):
             print("\nCancellazione annullata.")
-        
+
         return None # Non fare nulla se non è stato cancellato il preset attivo
     def set_last_used(self, preset_id):
         """Imposta l'ID dell'ultimo preset usato e salva."""
         self.data['last_preset_id'] = preset_id
-        self._save_presets()
+        return self._save_presets()
     def get_last_used_preset(self):
         """Restituisce l'ID e lo stato dell'ultimo preset usato, se esiste."""
         last_id = self.data.get('last_preset_id')
         if last_id and str(last_id) in self.data['presets']:
             preset_data = self.data['presets'][str(last_id)]
-            print(f"Caricamento automatico dell'ultimo preset: '{preset_data['name']}'")
+            self._dillo(f"Caricamento automatico dell'ultimo preset: '{preset_data['name']}'")
             return str(last_id), preset_data['state']
         return None, None
 
 def build_prompt_string(clitronomo, preset_manager):
     """Costruisce la stringa del prompt con formattazione e allineamento precisi."""
-    
+
     # --- Modifica 1: Allineamento ---
     # La prima parte viene portata a 39 caratteri e aggiungiamo uno spazio.
     # Il risultato è un blocco di 40 caratteri che posiziona il cursore
     # esattamente sulla 41esima colonna per l'inizio della seconda parte.
-    
+
     if clitronomo.current_preset_id:
         pid = clitronomo.current_preset_id
         preset_data = preset_manager.data['presets'].get(str(pid))
@@ -1058,23 +1065,23 @@ def build_prompt_string(clitronomo, preset_manager):
             info_str = f"ID{pid}: Sconosciuto"
     else:
         info_str = "Default"
-        
+
     part1 = f"{info_str:<39.39} " # 39 caratteri di testo + 1 spazio = 40 totali
 
     # --- Parte 2: Indicatori e Parametri (formato compatto) ---
-    
+
     dirty_indicator = "<X>" if clitronomo.is_dirty else "< >"
     running_indicator = "<X>" if clitronomo.is_running.is_set() else "< >"
-    
+
     time_sig_str = f"T{clitronomo.beats_per_measure}/{clitronomo.note_value}"
     bpm_str = f"B{clitronomo.bpm}"
     bar_str = f"BR{clitronomo.session_measure_count}"
-    
+
     # --- Modifica 2: Prefisso 'S' per le Suddivisioni ---
     sub_map_reverse = {0: 0, 2: 1, 4: 2, 8: 3}
     sub_code = sub_map_reverse.get(clitronomo.subdivision_level, 0)
     sub_str = f"S{sub_code}" # Aggiunto il prefisso 'S'
-    
+
     # --- Modifica 3: Orario Condizionale ---
     elapsed_str = ""
     if clitronomo.is_running.is_set() and clitronomo.session_start_time is not None:
@@ -1083,17 +1090,16 @@ def build_prompt_string(clitronomo, preset_manager):
         if elapsed_seconds >= 1:
             minutes, seconds = divmod(int(elapsed_seconds), 60)
             hours, minutes = divmod(minutes, 60)
-            
+
             # Formatta l'orario omettendo le ore se sono zero per risparmiare spazio
             if hours > 0:
                 elapsed_str = f"-{hours:02d}:{minutes:02d}:{seconds:02d}"
             else:
                 elapsed_str = f"-{minutes:02d}:{seconds:02d}"
-            
+
     part2 = f"{dirty_indicator}{running_indicator}-{time_sig_str}-{bpm_str}-{bar_str}-{sub_str}{elapsed_str}>"
-    
+
     return part1 + part2
-# SOSTITUISCI QUESTA FUNZIONE (quella prima di main)
 def _prompt_save_changes(clitronomo, preset_manager, action_char='E', action_word='uscire'):
     """
     Gestisce la richiesta di salvataggio per modifiche non salvate.
@@ -1102,7 +1108,7 @@ def _prompt_save_changes(clitronomo, preset_manager, action_char='E', action_wor
     while True:
         # Nota: Ho cambiato la dicitura da "sper" a "[R]esetta" o "[E]sci" per chiarezza
         choice = input(f"\nHai modifiche non salvate. Cosa vuoi fare?\n [S]ovrascrivi, [N]uovo nome, [{action_char.upper()}] per {action_word} senza salvare, [A]nnulla: ").lower()
-        
+
         if choice == 's':
             if clitronomo.current_preset_id:
                 print(f"Sovrascrivo il preset ID{clitronomo.current_preset_id}...")
@@ -1111,11 +1117,10 @@ def _prompt_save_changes(clitronomo, preset_manager, action_char='E', action_wor
                 preset_name_clean = " ".join(preset_name_full.split(' ')[1:])
                 preset_manager.save_preset(preset_name_clean, current_state, preset_id=clitronomo.current_preset_id)
                 clitronomo.is_dirty = False
-                return True 
-            else:
-                print("Nessun preset attualmente caricato da sovrascrivere. Salva con un nuovo nome.")
-                continue # Chiede di nuovo
-        elif choice == 'n':
+                return True
+            print("Nessun preset attualmente caricato da sovrascrivere. Salva con un nuovo nome.")
+            continue  # Chiede di nuovo
+        if choice == 'n':
             try:
                 name = input("Nome del nuovo preset: ")
                 if name:
@@ -1124,9 +1129,8 @@ def _prompt_save_changes(clitronomo, preset_manager, action_char='E', action_wor
                     clitronomo.current_preset_id = new_id
                     clitronomo.is_dirty = False
                     return True
-                else:
-                    print("Nome non valido. Salvataggio annullato.")
-                    return False
+                print("Nome non valido. Salvataggio annullato.")
+                return False
             except (KeyboardInterrupt, EOFError):
                 print("\nSalvataggio annullato.")
                 return False
@@ -1147,10 +1151,9 @@ def main():
         clitronomo.set_state(last_state, last_id)
 
     clitronomo.display_status(preset_manager)
-    print("\n--- METRONOMO ---")
-    print("\t by Gabriele Battaglia IZ4APU\n")
-    print("\t\t--- Digita '?' per la lista dei comandi.")
-    
+    print("\nMetronomo, di Gabriele Battaglia IZ4APU.")
+    print("Digita '?' per la lista dei comandi.")
+
     while True:
         prompt = build_prompt_string(clitronomo, preset_manager)
         command_full = input(prompt).strip().lower()
@@ -1238,28 +1241,21 @@ def main():
             preset_id = preset_manager.save_preset(name, current_state) # <-- CORRETTO
             clitronomo.is_dirty = False
             clitronomo.current_preset_id = preset_id
-            
+
         elif command == 'gb':
             if value is None:
                 # Mostra aiuto e stato corrente
-                print("\n--- Impostazioni Ghost Bars (Battute Fantasma) ---")
-                mode_str = "Disattivato"
-                if clitronomo.ghost_mode == 'cyclic':
-                    mode_str = f"Ciclico ({clitronomo.ghost_cyclic_audible} a tempo, {clitronomo.ghost_cyclic_silent} mute)"
-                elif clitronomo.ghost_mode == 'random':
-                    mode_str = f"Casuale (Probabilità: {clitronomo.ghost_random_probability}%, durata: {clitronomo.ghost_random_duration_min}-{clitronomo.ghost_random_duration_max} battute)"
-                print(f"Stato attuale: {mode_str}")
+                print("\nImpostazioni delle battute fantasma (Ghost Bars).")
+                print(f"Stato attuale: {clitronomo.descrivi_ghost()}.")
                 print("\nUso del comando:")
-                print("  gb off              - Disattiva le battute fantasma")
-                print("  gb c <suonano> <mute> - Imposta modalità ciclica (es: gb c 3 1)")
-                print("  gb r <prob> [<min>-<max>] - Imposta modalità casuale (es: gb r 30 o gb r 25 1-2)")
+                print("  gb off: disattiva le battute fantasma.")
+                print("  gb c <suonano> <mute>: modalita' ciclica (es. gb c 3 1).")
+                print("  gb r <prob> [<min>-<max>]: modalita' casuale (es. gb r 30, oppure gb r 25 1-2).")
             else:
                 val_parts = value.split()
                 subcmd = val_parts[0].lower()
                 if subcmd == 'off':
-                    clitronomo.ghost_mode = None
-                    clitronomo.is_muted_by_ghost = False
-                    clitronomo.is_dirty = True
+                    clitronomo.set_ghost(None)
                     print("\nGhost Bars disattivate.")
                 elif subcmd in ('c', 'cyclic'):
                     try:
@@ -1267,11 +1263,7 @@ def main():
                         silent = int(val_parts[2])
                         if audible < 1 or silent < 1:
                             raise ValueError()
-                        clitronomo.ghost_mode = 'cyclic'
-                        clitronomo.ghost_cyclic_audible = audible
-                        clitronomo.ghost_cyclic_silent = silent
-                        clitronomo.is_muted_by_ghost = False
-                        clitronomo.is_dirty = True
+                        clitronomo.set_ghost('cyclic', audible=audible, silent=silent)
                         print(f"\nGhost Bars impostate su Ciclico: {audible} battute a tempo, {silent} mute.")
                     except (IndexError, ValueError):
                         print("\nErrore: per la modalità ciclica usa 'gb c <suonano> <mute>' con numeri >= 1 (es. gb c 3 1).")
@@ -1280,7 +1272,7 @@ def main():
                         prob = int(val_parts[1])
                         if not (1 <= prob <= 100):
                             raise ValueError("La probabilità deve essere tra 1 e 100")
-                        
+
                         dur_min = 1
                         dur_max = 2
                         if len(val_parts) > 2:
@@ -1291,14 +1283,8 @@ def main():
                                     dur_min, dur_max = dmin, dmax
                             else:
                                 dur_min = dur_max = int(dur_str)
-                        
-                        clitronomo.ghost_mode = 'random'
-                        clitronomo.ghost_random_probability = prob
-                        clitronomo.ghost_random_duration_min = dur_min
-                        clitronomo.ghost_random_duration_max = dur_max
-                        clitronomo.ghost_silent_bars_left = 0
-                        clitronomo.is_muted_by_ghost = False
-                        clitronomo.is_dirty = True
+
+                        clitronomo.set_ghost('random', probability=prob, dur_min=dur_min, dur_max=dur_max)
                         print(f"\nGhost Bars impostate su Casuale: probabilità {prob}%, durata {dur_min}-{dur_max} battute.")
                     except (IndexError, ValueError):
                         print("\nErrore: per la modalità casuale usa 'gb r <prob_percentuale>' (es. gb r 25) o 'gb r <prob> <min>-<max>'.")
@@ -1345,7 +1331,7 @@ def main():
             print("Salvataggio stato e chiusura del Metronomo...")
             preset_manager.set_last_used(clitronomo.current_preset_id)
             break
-        
+
         else:
             print(f"Comando '{command_full}' non riconosciuto. Digita '?' per la lista.")
 if __name__ == "__main__":
