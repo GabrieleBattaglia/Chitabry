@@ -218,31 +218,37 @@
   "3": {
    "name": "ID3 Chitarra",
    "state": {
-    "bpm": 60,
+    "bpm": 110,
     "time_signature": "4/4",
-    "subdivision_level": 0,
+    "subdivision_level": 2,
     "config_accento": {
      "beep_duration_ms": 25,
-     "volume_perc": 50,
+     "volume_perc": 30,
      "attack_ms": 2,
      "decay_ms": 13,
-     "frequency_hz": 1340
+     "frequency_hz": 442
     },
     "config_tick": {
      "beep_duration_ms": 25,
      "volume_perc": 25,
      "attack_ms": 2,
      "decay_ms": 13,
-     "frequency_hz": 340
+     "frequency_hz": 154
     },
     "config_subdivision": {
      "beep_duration_ms": 10,
      "volume_perc": 15,
      "attack_ms": 2,
      "decay_ms": 8,
-     "frequency_hz": 1030.0
+     "frequency_hz": 1300
     },
-    "program": []
+    "program": [],
+    "ghost_mode": null,
+    "ghost_cyclic_audible": 3,
+    "ghost_cyclic_silent": 1,
+    "ghost_random_probability": 30,
+    "ghost_random_duration_min": 1,
+    "ghost_random_duration_max": 2
    }
   }
  }

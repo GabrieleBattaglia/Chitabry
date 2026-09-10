@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 11, di mercoledi' 9 settembre 2026, per la versione 8.0.0.
+L'ultima revisione di questo documento e' la numero 12, di giovedi' 10 settembre 2026, per la versione 8.0.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 
 Indice Dettagliato degli Argomenti:
@@ -93,7 +93,7 @@ A differenza delle versioni precedenti, Chitabry ora utilizza un menu interattiv
 Alla richiesta di un input (ad esempio, "Filtra accordo:"), potete iniziare a digitare parte del nome di ciò che cercate. Chitabry restringerà la lista in tempo reale. Se premete Invio su un campo vuoto (o ESC), solitamente l'operazione viene annullata.
 Se dovete selezionare una voce formata da una sola nota, ad esempio C, per la nota DO nella scelta della tonica per un accordo o una scala, dopo aver digitato la C, premete invio. Attenzione che il sistema dei menù distingue fra maiuscole e minuscole.
 
-Questo sistema rende facilissimo trovare un tipo di scala o un accordo anche tra migliaia di opzioni\!
+Questo sistema rende facilissimo trovare un tipo di scala o un accordo anche tra migliaia di opzioni!
 
 Vediamo ora le singole voci del menu.
 
@@ -117,7 +117,7 @@ Durante l'ascolto di una forma:
    - Tasti 1-0: Suonano le singole note (1=grave, 0=acuta).
    - Q: Pennata in giù (Strum "battere", dal grave all'acuto).
    - A: Pennata in su (Strum "levare", dall'acuto al grave).
-   - SPAZIO: Alterna tra il suono della Chitarra e quello Sintetico.
+   - SPAZIO: Alterna i suoni Chitarra, Sintetico e MIDI.
 
 
 
@@ -311,11 +311,14 @@ Chitabry vi mostrerà:
     - Digitate `p` (Prosegui) o premete ESC per passare all'esercizio audio.
 
 Menu Esercizio Scala:
-   - A / D: Ascolta la scala (o qualsiasi altro tasto per riascoltare).
-   - Tasti 1-8: Suonano le singole note della scala appena generata.
-   - L: Attiva/Disattiva il loop.
-   - SPAZIO: Alterna tra suono Chitarra e Sintetico.
+   - A / D: Ascolta la scala a tempo, in salita o in discesa.
+   - Tasti 1-9 e 0: Suonano le singole note della scala appena generata.
+   - L: Attiva il loop; premuto durante il loop lo ferma.
+   - M: Attiva o disattiva il metronomo dell'esercizio. Se le note non riempiono la battuta di 4/4, la completano battiti senza nota.
    - B: Cambia i BPM per l'esercizio.
+   - SPAZIO: Alterna i suoni Chitarra (S1), Sintetico (S2) e MIDI (MID), con la sigla che compare nella riga di stato, anche mentre il loop gira. Con il suono MIDI anche il battito del metronomo e' un wood block MIDI, al centro, piu' alto e piu' forte sull'accento, cosi' nota e battito escono dallo stesso sintetizzatore e arrivano insieme; con gli altri suoni il battito e' il beep del metronomo.
+   - ?: Mostra l'aiuto.
+   - ESC: durante un ascolto singolo lo interrompe e si resta nell'esercizio; dal menu dell'esercizio, o mentre il loop gira, esce dall'esercizio e torna al menu principale.
 
 
 
@@ -391,7 +394,7 @@ Corda 3, tasti: 12
 ...etc...
 ```
 
-A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non "RE\"). Per cercare un diesis, digitate "RE#".
+A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non anche "RE#"). Per cercare un diesis, digitate "RE#".
 
 
 
@@ -407,7 +410,7 @@ Vi verrà chiesto di inserire la posizione nel formato `Corda.Tasto`.
 Ad esempio, scrivendo `6.3` (terzo tasto della sesta corda), Chitabry risponderà:
 `Sulla corda 6, tasto 3, si trova la nota: SOL2`
 
-Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato\!
+Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato!
 
 
 

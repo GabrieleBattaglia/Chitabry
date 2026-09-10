@@ -2,7 +2,7 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
-Versione 8.0.0 (9 settembre 2026)
+Versione 8.0.0 (10 settembre 2026)
 Revisione generale del codice, la prima secondo il metodo del refactoring di tutto il parco software. Nessun comando cambia; cambiano la solidita' e cio' che si ascolta.
 *   Salvataggi:
     *   Le impostazioni, la chordpedia e gli strumenti si salvano nel momento in cui li modificate, non piu' solo all'uscita dal menu: un Ctrl+C o una finestra chiusa non perdono piu' il lavoro della sessione.
@@ -16,6 +16,8 @@ Revisione generale del codice, la prima secondo il metodo del refactoring di tut
     *   Il mixer polifonico protegge buffer e indici con un lucchetto: pizzicando velocemente la stessa corda, una nota non parte piu' a meta' e non resta piu' muta.
     *   Il mixer chiude il dispositivo audio quando la funzione che lo usa finisce, e all'uscita del programma chiude quelli rimasti aperti.
     *   La lunghezza del battito del metronomo si arrotonda al campione piu' vicino invece di troncarla: il tempo reale coincide con i BPM chiesti.
+    *   Nell'esercizio delle scale i battiti cadono su una griglia di scadenze fisse: la sintesi di una nota e la lettura della tastiera non allungano piu' il tempo, che prima si stirava fino a un decimo di secondo per battito sulle note gravi. Ogni nota si sintetizza durante il battito precedente, cosi' parte in tempo.
+    *   Con il suono MIDI, il metronomo dell'esercizio delle scale suona anche lui in MIDI, con un wood block su un canale tutto suo, al centro e senza riverbero, piu' alto e piu' forte sull'accento: nota e battito escono dallo stesso sintetizzatore e arrivano insieme. Se la porta MIDI non si apre, il battito resta il beep del metronomo. Prima la nota usciva dal sintetizzatore GS di Windows e il battito dalla scheda audio, con latenze diverse, e la nota si sentiva in ritardo.
 *   Correzioni:
     *   Il player delle diteggiature e il costruttore di accordi contano le corde dello strumento attivo: con un ukulele o un basso le corde suonavano mute o venivano numerate come su una chitarra.
     *   MidiStudy legge le impostazioni dalla memoria invece di rileggere il file da disco a ogni nota, e crea la cartella midi se manca: chi scarica il pacchetto compilato puo' usarlo subito.

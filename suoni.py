@@ -4,6 +4,7 @@
 # parametri del suono, configurare il renderer e ricavare il mono per il mixer
 # erano ripetute in sei punti di views.py e gioca_suono.py.
 
+import numpy as np
 import sounddevice as sd
 
 import config
@@ -70,12 +71,13 @@ def configura_renderer(renderer, freq, parametri, dur=None):
 
 def mono_da_renderer(renderer):
     """Rende la nota e ne restituisce il canale mono, senza il pan del renderer;
-    None se non c'e' niente da suonare."""
+    None se non c'e' niente da suonare. Resta float32 come il mixer: la
+    divisione per il pan lo promuoverebbe a float64, il doppio della memoria."""
     stereo = renderer.render()
     if stereo.size == 0:
         return None
     if renderer.pan_l != 0:
-        return stereo[:, 0] / renderer.pan_l
+        return (stereo[:, 0] / renderer.pan_l).astype(np.float32, copy=False)
     return stereo[:, 0]
 
 

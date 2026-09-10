@@ -3,9 +3,13 @@
 # Nato con la revisione 1 del 2026-09-09 dallo spezzettamento di views.py:
 # la funzione unica di 665 righe e' divisa nelle sue fasi, e l'ascolto a
 # tempo, che era scritto due volte, una per il loop e una per il comando
-# singolo, sta in un posto solo.
+# singolo, sta in un posto solo. Dal collaudo del 2026-09-10: i battiti su
+# una griglia di scadenze assolute, le note sintetizzate in anticipo durante
+# il battito precedente, e il click in MIDI quando il suono e' MIDI, perche'
+# passando da due sintetizzatori diversi nota e battito arrivavano in tempi
+# diversi.
 
-from time import sleep as aspetta
+from time import monotonic as orologio
 
 import numpy as np
 from GBUtils import dgt, enter_escape, key, menu
@@ -33,6 +37,17 @@ MENU_ESERCIZIO = {
 }
 # Con quanta frequenza si ascolta la tastiera durante un passo, in secondi
 PASSO_ASCOLTO = 0.02
+# Con il suono MIDI il click e' un wood block General MIDI su un canale suo:
+# due altezze vicine ai beep di fabbrica, forte l'accento e piu' piano il battito.
+NOTA_ACCENTO = 81   # La5, 880 Hz, accanto ai 915 Hz dell'accento di fabbrica
+NOTA_TICK = 72      # Do5, 523 Hz, accanto ai 550 Hz del battito di fabbrica
+VELOCITA_ACCENTO = 127
+VELOCITA_TICK = 90
+DURATA_CLICK_MIDI = 0.1   # secondi prima del note off: il wood block e' un colpo secco
+# Il note off di una nota MIDI arriva un po' prima del battito seguente: se
+# due battiti hanno la stessa nota, altrimenti spegnerebbe quella appena partita.
+ANTICIPO_NOTE_OFF = 0.03
+DURATA_MINIMA_NOTA_MIDI = 0.05
 
 
 class Scala:
@@ -217,7 +232,13 @@ def _mostra_manico(s):
 class Esercizio:
     """L'ascolto della scala a tempo, con loop, metronomo e cambio di suono.
     Le note stanno su un mixer polifonico, una voce per nota piu' una per il
-    metronomo, cosi' una nota puo' risuonare mentre parte la successiva."""
+    metronomo, cosi' una nota puo' risuonare mentre parte la successiva.
+    I battiti cadono su una griglia di scadenze assolute: la sintesi di una
+    nota e il polling della tastiera non allungano piu' il tempo. Ogni nota
+    si sintetizza durante l'attesa del battito precedente, fresca a ogni
+    pizzico come una corda vera, e con il suono MIDI anche il click e' un
+    wood block MIDI: nota e battito passano dallo stesso sintetizzatore e
+    arrivano insieme."""
     def __init__(self, s):
         self.s = s
         self.num_notes = len(s.frequenze)
@@ -234,6 +255,8 @@ class Esercizio:
         self.key_map = {str(i + 1): i for i in range(min(self.num_notes, 9))}
         if self.num_notes >= 10:
             self.key_map['0'] = 9
+        self.note_pronte = {}   # indice -> mono sintetizzato in anticipo, consumato al pizzico
+        self.griglia = None     # istante del prossimo battito, quando il loop continua
 
     @staticmethod
     def _beep_metronomo():
@@ -247,12 +270,25 @@ class Esercizio:
         return accent, tick
 
     def _configura_renderer(self):
+        self.note_pronte.clear()
         if self.suono == 'midi':
+            self._prepara_midi()
             return
         parametri = suoni.parametri_suono(self.suono)
         for i in range(self.num_notes):
             self.poly.set_pan(i, suoni.pan_per_voce(i, self.num_notes))
             suoni.configura_renderer(self.renderers[i], self.s.frequenze[i] or 0.0, parametri)
+
+    @staticmethod
+    def _prepara_midi():
+        """Apre la porta MIDI, se non lo era gia', e prepara il canale del click:
+        programma Woodblock, pan al centro, niente riverbero ne' chorus."""
+        porta = GBAudio.get_midi_out()
+        if porta.h_midi is not None:
+            porta.program_change(GBAudio.PROGRAMMA_WOODBLOCK, GBAudio.CANALE_CLICK)
+            porta.control_change(GBAudio.CC_PAN, GBAudio.PAN_CENTRO, GBAudio.CANALE_CLICK)
+            porta.control_change(GBAudio.CC_RIVERBERO, 0, GBAudio.CANALE_CLICK)
+            porta.control_change(GBAudio.CC_CHORUS, 0, GBAudio.CANALE_CLICK)
 
     def _cambia_suono(self):
         self.suono = suoni.prossimo_suono(self.suono)
@@ -268,54 +304,93 @@ class Esercizio:
             metro = " (M)" if self.metronomo else ""
             print(f"\r{note} | {dir_abbrev} {sigla}{metro} (1-9, 0, A, D, L, B, M, SPAZIO, ?, ESC):\r", end="", flush=True)
 
+    def _mono(self, idx):
+        """Il mono della nota idx: quello preparato in anticipo se c'e', altrimenti
+        lo sintetizza adesso. Una volta preso non si riusa: il pizzico dopo ne
+        avra' uno nuovo, con il suo attacco."""
+        if idx not in self.note_pronte:
+            self.note_pronte[idx] = suoni.mono_da_renderer(self.renderers[idx])
+        return self.note_pronte.pop(idx)
+
+    def _prepara(self, idx):
+        """Sintetizza in anticipo la nota idx, se non e' gia' pronta: si chiama
+        durante l'attesa di un battito, cosi' il pizzico che segue non aspetta."""
+        if idx is not None and self.suono != 'midi' and idx not in self.note_pronte:
+            self.note_pronte[idx] = suoni.mono_da_renderer(self.renderers[idx])
+
     def _suona_nota(self, idx, dur):
         """Suona la nota idx. True se occupa una voce del mixer da spegnere dopo."""
         freq = self.s.frequenze[idx]
         if freq is None or freq <= 0:
             return False
         if self.suono == 'midi':
-            GBAudio.play_midi_note_temp(GBAudio.freq_to_midi(freq), dur)
+            GBAudio.play_midi_note_temp(GBAudio.freq_to_midi(freq), max(DURATA_MINIMA_NOTA_MIDI, dur - ANTICIPO_NOTE_OFF))
             return False
-        mono = suoni.mono_da_renderer(self.renderers[idx])
+        mono = self._mono(idx)
         if mono is None:
             return False
         self.poly.pluck(idx, mono)
         return True
 
-    def _attendi(self, dur_step, in_loop):
-        """Aspetta la durata di un passo ascoltando la tastiera.
-        Restituisce None a passo finito, altrimenti esci, fermato o interrotto."""
-        passi = int(dur_step / PASSO_ASCOLTO)
-        for _ in range(passi):
-            tasto = key(attesa=PASSO_ASCOLTO)
-            if not tasto:
-                continue
+    def _click(self, accento):
+        """Il battito del metronomo: con il suono MIDI e' un wood block sul canale
+        del click, con gli altri suoni e' il beep del metronomo sul mixer.
+        Se la porta MIDI non si e' aperta, il beep resta l'unico click."""
+        if self.suono == 'midi' and GBAudio.get_midi_out().h_midi is not None:
+            nota = NOTA_ACCENTO if accento else NOTA_TICK
+            velocita = VELOCITA_ACCENTO if accento else VELOCITA_TICK
+            GBAudio.play_midi_note_temp(nota, DURATA_CLICK_MIDI, velocita, canale=GBAudio.CANALE_CLICK)
+            return
+        click = self.accent_beep if accento else self.tick_beep
+        if click.size > 0:
+            self.poly.pluck(self.num_notes, click)
+
+    def _ferma_voci(self):
+        """Zittisce il mixer e azzera la griglia: il prossimo ascolto riparte da capo."""
+        self.poly.mute()
+        self.ultima_voce = None
+        self.griglia = None
+
+    def _attendi(self, scadenza, in_loop, prossima=None):
+        """Aspetta la scadenza del battito ascoltando la tastiera e, intanto,
+        prepara la nota prossima. La tastiera si guarda almeno una volta per
+        battito, anche se la sintesi ha mangiato tutta l'attesa. Restituisce
+        None a battito finito, altrimenti esci, fermato o interrotto."""
+        self._prepara(prossima)
+        while True:
+            residuo = scadenza - orologio()
+            tasto = key(attesa=max(0.0, min(PASSO_ASCOLTO, residuo)))
             if tasto == ' ':
                 self._cambia_suono()
+                self._prepara(prossima)
                 self._riga_stato(in_loop)
             elif tasto.lower() == 'l' and in_loop:
-                self.poly.mute()
-                self.ultima_voce = None
+                self._ferma_voci()
                 print(f"\rLoop disattivato.{' ' * 40}\r", end="", flush=True)
                 return 'fermato'
             elif tasto == chr(27):
-                self.poly.mute()
-                self.ultima_voce = None
+                self._ferma_voci()
                 return 'esci' if in_loop else 'interrotto'
-        rimanente = dur_step - passi * PASSO_ASCOLTO
-        if rimanente > 0:
-            aspetta(rimanente)
-        return None
+            if residuo <= 0:
+                return None
 
     def _suona_sequenza(self, in_loop):
         """Suona la scala una volta nella direzione corrente, con il metronomo
         se attivo: se le note non riempiono la battuta di 4/4, la completano
-        battiti muti. Restituisce l'esito di _attendi."""
+        battiti muti. I battiti cadono su una griglia di scadenze assolute
+        che in loop continua da un giro all'altro. Restituisce l'esito di _attendi."""
         n = self.num_notes
         seq = list(range(n)) if self.direzione == 'a' else list(range(n - 1, -1, -1))
         extra_beats = (4 - (n % 4)) % 4 if self.metronomo else 0
         dur_step = 60.0 / self.bpm
+        # La prima nota si prepara prima di fissare la griglia, cosi' parte in tempo
+        self._prepara(seq[0])
+        origine = self.griglia if in_loop and self.griglia is not None else orologio()
         for idx_step in range(n + extra_beats):
+            ritardo = orologio() - (origine + idx_step * dur_step)
+            if ritardo > dur_step / 2:
+                # Troppo indietro per recuperare in silenzio: la griglia riparte da qui
+                origine += ritardo
             if self.ultima_voce is not None:
                 self.poly.mute(self.ultima_voce)
                 self.ultima_voce = None
@@ -324,12 +399,12 @@ class Esercizio:
                 if self._suona_nota(idx, dur_step):
                     self.ultima_voce = idx
             if self.metronomo:
-                click = self.accent_beep if idx_step % 4 == 0 else self.tick_beep
-                if click.size > 0:
-                    self.poly.pluck(n, click)
-            esito = self._attendi(dur_step, in_loop)
+                self._click(idx_step % 4 == 0)
+            prossima = seq[idx_step + 1] if idx_step + 1 < n else seq[0]
+            esito = self._attendi(origine + (idx_step + 1) * dur_step, in_loop, prossima)
             if esito:
                 return esito
+        self.griglia = origine + (n + extra_beats) * dur_step if in_loop else None
         return None
 
     def _imposta_bpm(self):
@@ -385,6 +460,7 @@ class Esercizio:
                     loop_attivo = True
                     self.loop_count = 1
                     self.ultima_voce = None
+                    self.griglia = None
                     print(f"\rLoop attivo. Premi L per fermare.{' ' * 20}\r", end="", flush=True)
                 elif scelta == 'b':
                     self._imposta_bpm()

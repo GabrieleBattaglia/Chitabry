@@ -9,7 +9,8 @@
 # Revisione 1 del 2026-09-09: un solo interprete dei nomi di nota da cui
 # derivano note_to_freq e note_to_midi; il mixer polifonico protegge buffer e
 # indici con un lucchetto e chiude il flusso audio quando si ferma; le
-# eccezioni catturate sono quelle che si sanno nominare.
+# eccezioni catturate sono quelle che si sanno nominare. Dal 2026-09-10 i
+# messaggi MIDI accettano il canale, per le percussioni del canale 10.
 
 import atexit
 import ctypes
@@ -434,8 +435,25 @@ MIDI_INSTRUMENTS = [
     "Telephone Ring", "Helicopter", "Applause", "Gunshot"
 ]
 
+# Il click dell'esercizio delle scale, quando il suono e' MIDI, suona su un
+# canale melodico tutto suo con il programma Woodblock del General MIDI. Sul
+# canale delle percussioni il kit GS di Windows tiene i wood block a destra e
+# il pan del canale non li sposta; su un canale melodico il pan comanda.
+CANALE_CLICK = 1
+PROGRAMMA_WOODBLOCK = 115
+# Controlli continui: pan al centro, e riverbero e chorus a zero, perche' il
+# sintetizzatore GS li mette di suo su ogni canale e un click li vuole secchi.
+CC_PAN = 10
+CC_RIVERBERO = 91
+CC_CHORUS = 93
+PAN_CENTRO = 64
+
+
 class WindowsMidiOut:
-    """Gestore dell'output MIDI nativo di Windows tramite winmm.dll."""
+    """Gestore dell'output MIDI nativo di Windows tramite winmm.dll.
+    Note on, note off, program change e controlli vanno di norma sul canale
+    1, che nei messaggi vale 0; con canale si scrive su un altro, per esempio
+    CANALE_CLICK."""
     def __init__(self):
         self.h_midi = None
         self.winmm = None
@@ -461,22 +479,34 @@ class WindowsMidiOut:
             print(f"\n[MIDI] Inizializzazione fallita: {e}")
 
     def select_instrument(self, program):
+        """Lo strumento del canale 1, quello delle note: si manda solo se cambia."""
         if self.h_midi is not None and program != self.active_program:
             self.active_program = program
-            # Program Change: status 0xC0 (channel 0)
-            msg = (program << 8) | 0xC0
+            self.program_change(program)
+
+    def program_change(self, program, canale=0):
+        if self.h_midi is not None:
+            # Program Change: status 0xC0 piu' il canale
+            msg = (program << 8) | (0xC0 | canale)
             self.winmm.midiOutShortMsg(self.h_midi, msg)
 
-    def note_on(self, note_num, velocity=127):
+    def note_on(self, note_num, velocity=127, canale=0):
         if self.h_midi is not None and note_num is not None:
-            # Note On: status 0x90 (channel 0)
-            msg = (velocity << 16) | (note_num << 8) | 0x90
+            # Note On: status 0x90 piu' il canale
+            msg = (velocity << 16) | (note_num << 8) | (0x90 | canale)
             self.winmm.midiOutShortMsg(self.h_midi, msg)
 
-    def note_off(self, note_num):
+    def note_off(self, note_num, canale=0):
         if self.h_midi is not None and note_num is not None:
-            # Note Off: status 0x80 (channel 0)
-            msg = (note_num << 8) | 0x80
+            # Note Off: status 0x80 piu' il canale
+            msg = (note_num << 8) | (0x80 | canale)
+            self.winmm.midiOutShortMsg(self.h_midi, msg)
+
+    def control_change(self, controllo, valore, canale=0):
+        """Manda un controllo continuo, per esempio CC_RIVERBERO a zero."""
+        if self.h_midi is not None:
+            # Control Change: status 0xB0 piu' il canale
+            msg = (valore << 16) | (controllo << 8) | (0xB0 | canale)
             self.winmm.midiOutShortMsg(self.h_midi, msg)
 
     def close_port(self):
@@ -534,17 +564,17 @@ def freq_to_midi(freq):
         return None
     return round(12 * math.log2(freq / 440.0) + 69)
 
-def play_midi_note_temp(note_num, duration, velocity=127):
-    """Riproduce una nota MIDI per una determinata durata in secondi."""
+def play_midi_note_temp(note_num, duration, velocity=127, canale=0):
+    """Riproduce una nota MIDI per una determinata durata in secondi, sul canale indicato."""
     if note_num is None:
         return
     m_out = get_midi_out()
-    m_out.note_on(note_num, velocity)
+    m_out.note_on(note_num, velocity, canale)
 
     def off():
         time.sleep(duration)
         if m_out.h_midi is not None:
-            m_out.note_off(note_num)
+            m_out.note_off(note_num, canale)
 
     threading.Thread(target=off, daemon=True).start()
 
