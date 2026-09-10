@@ -28,6 +28,8 @@ Revisione generale del codice, la prima secondo il metodo del refactoring di tut
     *   Prima di chiedere se aggiornare, Chitabry mostra le novita' della versione nuova, una pagina alla volta (issue 51). La conversazione e' quella di gestisci_aggiornamento di GBUtils, comune a tutte le applicazioni.
 *   Guida:
     *   La guida viaggia dentro il pacchetto compilato: chi scarica la release la trova (issue 50).
+*   Pacchetto compilato:
+    *   L'archivio Scala di music21, con le sue migliaia di scale storiche e microtonali, viaggia anche lui nel pacchetto: nelle release precedenti il catalogo delle Scale aveva 27 voci, da sorgente centinaia, e la differenza non si vedeva.
 *   Accessibilita':
     *   Spariti tutti i separatori grafici a schermo, cioe' le righe di trattini e di uguali, le frecce e le tabelle a colonne (issue 52). Lo stato del metronomo, l'elenco dei comandi, il programma delle battute e la classifica del gioco si leggono in modo lineare. Lo schema del manico resta una griglia, ma senza le righe di trattini sopra e sotto.
     *   Anche questo file e' senza righe di uguali e di trattini sotto i titoli.

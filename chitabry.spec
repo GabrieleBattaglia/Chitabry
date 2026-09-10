@@ -4,12 +4,20 @@
 # La guida viaggia dentro il pacchetto, nella cartella _internal, dove
 # config.percorso_risorsa la cerca: fino alla 7.8.3 datas era vuoto e chi
 # scaricava la release trovava la guida mancante (issue 50).
+# Con la guida viaggia l'archivio Scala di music21, quasi quattromila file
+# .scl che PyInstaller non vede da solo: senza, il catalogo delle scale del
+# pacchetto aveva 27 voci invece di centinaia, e nessuno se n'era accorto
+# perche' da sorgente si trovano comunque. Si compila con l'interprete che
+# ha le librerie: python -m PyInstaller --noconfirm chitabry.spec.
+import os
+
+from PyInstaller.utils.hooks import collect_data_files
 
 a = Analysis(
     ['Chitabry.py'],
     pathex=['e:\\git\\Mine\\GBUtils'],
     binaries=[],
-    datas=[('ChitabryMan.txt', '.')],
+    datas=[('ChitabryMan.txt', '.')] + collect_data_files('music21', subdir=os.path.join('scale', 'scala', 'scl')),
     # requests e compagni servono al controllo aggiornamenti di GBUtils, che
     # li importa dentro la funzione: senza, l'eseguibile parte ma non riesce
     # a contattare GitHub. scipy.signal lo importa GBAudio in testa al file,
