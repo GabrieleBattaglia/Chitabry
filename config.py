@@ -10,6 +10,9 @@ import json
 import os
 import sys
 
+from GBUtils import cartella_applicazione
+from GBUtils import percorso_risorsa as percorso_risorsa_condivisa
+
 import strumento
 
 
@@ -17,20 +20,16 @@ def cartella_dati():
     """Cartella dei file dell'utente: accanto all'eseguibile se il programma e'
     compilato, accanto ai sorgenti altrimenti. Mai la directory di lavoro:
     avviando Chitabry da un collegamento con una cartella di partenza diversa
-    le impostazioni risultavano azzerate."""
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+    le impostazioni risultavano azzerate.
+    La logica sta in GBUtils, come tutte le utilita' condivise: qui resta il
+    nome con cui Chitabry la chiama."""
+    return cartella_applicazione()
 
 
 def percorso_risorsa(nome):
     """Dove sta una risorsa in sola lettura, come la guida: da compilato dentro
     il pacchetto, dove PyInstaller mette i dati, altrimenti accanto ai sorgenti."""
-    if getattr(sys, "frozen", False):
-        base = getattr(sys, "_MEIPASS", None)
-        if base and os.path.isfile(os.path.join(base, nome)):
-            return os.path.join(base, nome)
-    return os.path.join(cartella_dati(), nome)
+    return percorso_risorsa_condivisa(nome)
 
 
 BASE_DIR = cartella_dati()

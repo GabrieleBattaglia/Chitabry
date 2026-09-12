@@ -2,6 +2,9 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 8.0.1 (12 settembre 2026)
+I percorsi dei file passano da GBUtils, che dalla V138 li offre a tutti con cartella_applicazione e percorso_risorsa: la logica che dice dove stanno i dati e le risorse era riscritta in dieci progetti, e adesso e' scritta in un posto solo. Il comportamento non cambia, tranne che una risorsa che nel pacchetto non c'e' viene ora cercata anche accanto all'eseguibile.
+
 Versione 8.0.0 (10 settembre 2026)
 Revisione generale del codice, la prima secondo il metodo del refactoring di tutto il parco software. Nessun comando cambia; cambiano la solidita' e cio' che si ascolta.
 *   Salvataggi:
