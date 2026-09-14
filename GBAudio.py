@@ -454,17 +454,17 @@ class NoteRenderer:
         piu' e' lungo, meno spesso si torna indietro. raccordo e' quanti
         campioni durano le due rampe incrociate della giunzione.
         """
-        mono = self._mono()
-        if mono.size == 0:
-            return mono, None
         if self.pluck_hardness > 0.0:
             # Karplus-Strong: la corda decade, e ripetere un tratto del suo
             # decadimento vorrebbe dire risentire sempre lo stesso pezzo di
             # spegnimento. Tenere non allunga; lasciare, quello si', smorza.
-            return mono, None
+            return self._mono(), None
         livello = self.adsr_list[2] / 100.0
         if livello <= 0.0 or self.freq <= 0.0:
-            return mono, None
+            return self._mono(), None
+        # Da qui in poi la nota si tiene, e il suono lungo quanto dur non
+        # servira' mai: calcolarlo per poi buttarlo via sarebbero secondi di
+        # sintesi fra il dito e il suono.
         n = round(self.dur * self.fs)
         attacco = round((self.adsr_list[0] / 100.0) * n)
         decadimento = round((self.adsr_list[1] / 100.0) * n)
