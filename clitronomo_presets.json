@@ -223,14 +223,14 @@
     "subdivision_level": 2,
     "config_accento": {
      "beep_duration_ms": 25,
-     "volume_perc": 30,
+     "volume_perc": 35,
      "attack_ms": 2,
      "decay_ms": 13,
      "frequency_hz": 442
     },
     "config_tick": {
      "beep_duration_ms": 25,
-     "volume_perc": 25,
+     "volume_perc": 35,
      "attack_ms": 2,
      "decay_ms": 13,
      "frequency_hz": 154

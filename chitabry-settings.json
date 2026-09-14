@@ -14,10 +14,10 @@
         "kind": 1,
         "volume": 0.7,
         "adsr": [
-            2.0,
-            1.0,
-            90.0,
-            2.0
+            10.0,
+            60.0,
+            70.0,
+            120.0
         ]
     },
     "chordpedia": {
@@ -3405,5 +3405,5 @@
     "tipo_suono": "midi",
     "midi_strumento": 71,
     "midi_in_dispositivo": "",
-    "versione_formato": 1
+    "versione_formato": 2
 }

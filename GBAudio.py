@@ -15,58 +15,19 @@
 import atexit
 import ctypes
 import math
-import re
 import threading
 import time
 import weakref
 
 import numpy as np
 import sounddevice as sd
+from GBUtils import frequenza_nota, scomponi_nota
 from scipy import signal
 
 # --- Costanti Globali ---
 FS = 44100  # Aumentata frequenza di campionamento per KS
 BLOCK_SIZE = 256
 HARMONICS = [1, 0.5, 0.33, 0.25, 0.2, 0.17, 0.14, 0.125, 0.11, 0.1, 0.09, 0.08, 0.07]
-
-_SEMITONI = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
-# Simboli microtonali in coda al nome, dal piu' lungo al piu' corto per non
-# confondere la doppia tilde con quella singola. Valgono in semitoni.
-_MICROTONI = (("~~", 1.5), ("``", -1.5), ("~", 0.5), ("`", -0.5))
-_RE_OTTAVA = re.compile(r"\d+$")
-_RE_NOTA = re.compile(r"^([a-g])([#b]?)$")
-
-
-def scomponi_nota(nome):
-    """Legge un nome di nota come C4, F#3, Eb2, F~5 o B``4 e restituisce la
-    coppia (numero MIDI intero, scostamento microtonale in semitoni), oppure
-    None se il testo non e' una nota o e' la pausa p.
-    E' l'unico punto in cui si interpreta il nome di una nota: note_to_freq e
-    note_to_midi derivano da qui. Fino alla 7.8.3 ognuna aveva la propria
-    tabella e le proprie regole, e una nota scritta in un modo poteva valere
-    per una e non per l'altra."""
-    if not isinstance(nome, str):
-        return None
-    testo = nome.strip().lower().replace('-', 'b')
-    if testo == 'p':
-        return None
-    ottava = _RE_OTTAVA.search(testo)
-    if not ottava:
-        return None
-    base = testo[:ottava.start()]
-    micro = 0.0
-    for simbolo, scostamento in _MICROTONI:
-        if base.endswith(simbolo):
-            micro = scostamento
-            base = base[:-len(simbolo)]
-            break
-    lettera = _RE_NOTA.match(base)
-    if not lettera:
-        return None
-    nota, alterazione = lettera.groups()
-    semitono = _SEMITONI[nota] + {'#': 1, 'b': -1}.get(alterazione, 0)
-    return 12 + semitono + 12 * int(ottava.group()), micro
-
 
 def midi_to_freq(midi_num):
     """Frequenza in Hz di un numero MIDI, anche frazionario, con il La a 440."""
@@ -75,14 +36,12 @@ def midi_to_freq(midi_num):
 
 def note_to_freq(note):
     """Converte la notazione (es. C4, F~5, B`5) in frequenza in Hz.
-    Un numero lo considera gia' una frequenza; 0.0 per la pausa o un nome non valido."""
-    if isinstance(note, (int, float)) and not isinstance(note, bool):
-        return float(note)
-    scomposta = scomponi_nota(note)
-    if scomposta is None:
-        return 0.0
-    midi_num, micro = scomposta
-    return midi_to_freq(midi_num + micro)
+    Un numero lo considera gia' una frequenza; 0.0 per la pausa o un nome non valido.
+    Dalla 8.1.0 il nome lo legge GBUtils, che dalla V161 offre la stessa
+    lettura a tutto il parco software: qui ce n'era una copia, e una seconda
+    stava dentro Acusticator. Il nome di questa funzione resta perche' quattro
+    file di Chitabry la chiamano cosi'."""
+    return frequenza_nota(note)
 
 def apri_flusso_uscita(samplerate, channels, dtype, callback, latency='low'):
     """Apre un flusso di uscita sull'interfaccia piu' pronta fra quelle che
