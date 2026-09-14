@@ -431,15 +431,26 @@ class NoteRenderer:
         else: wave = np.sin(phase_vector)
 
         wave = wave.astype(np.float32)
-        a_pct, d_pct, s_level_pct, r_pct = self.adsr_list
-        attack_samples = round((a_pct / 100.0) * n_samples)
-        decay_samples = round((d_pct / 100.0) * n_samples)
-        release_samples = round((r_pct / 100.0) * n_samples)
-        sustain_level = s_level_pct / 100.0
+        # Attacco, decadimento e rilascio sono millesimi di secondo; il
+        # mantenimento e' un livello di volume. Fino al formato 1 erano tutti e
+        # quattro percentuali della durata della nota, e un attacco del due per
+        # cento su una nota di nove secondi durava centottanta millesimi: la
+        # nota si sentiva arrivare in ritardo sul battito.
+        attacco_ms, decadimento_ms, livello_pct, rilascio_ms = self.adsr_list
+        attack_samples = round(attacco_ms / 1000.0 * self.fs)
+        decay_samples = round(decadimento_ms / 1000.0 * self.fs)
+        release_samples = round(rilascio_ms / 1000.0 * self.fs)
+        sustain_level = livello_pct / 100.0
+        totale = attack_samples + decay_samples + release_samples
+        if totale > n_samples and totale > 0:
+            # La nota e' piu' corta del suo inviluppo, il che con le
+            # percentuali non poteva succedere: le tre fasi si stringono in
+            # proporzione invece di sforare o di sparire una per volta.
+            fattore = n_samples / totale
+            attack_samples = int(attack_samples * fattore)
+            decay_samples = int(decay_samples * fattore)
+            release_samples = n_samples - attack_samples - decay_samples
         sustain_samples = n_samples - (attack_samples + decay_samples + release_samples)
-        if sustain_samples < 0:
-            release_samples = max(0, release_samples + sustain_samples)
-            sustain_samples = 0
 
         envelope = np.zeros(n_samples, dtype=np.float32)
         curr = 0
@@ -495,9 +506,10 @@ class NoteRenderer:
         # Da qui in poi la nota si tiene, e il suono lungo quanto dur non
         # servira' mai: calcolarlo per poi buttarlo via sarebbero secondi di
         # sintesi fra il dito e il suono.
-        n = round(self.dur * self.fs)
-        attacco = round((self.adsr_list[0] / 100.0) * n)
-        decadimento = round((self.adsr_list[1] / 100.0) * n)
+        # In millesimi di secondo, quindi una nota tenuta ci mette sempre lo
+        # stesso tempo ad arrivare, qualunque sia la durata di riferimento.
+        attacco = round(self.adsr_list[0] / 1000.0 * self.fs)
+        decadimento = round(self.adsr_list[1] / 1000.0 * self.fs)
         inizio = attacco + decadimento
         periodo = self.fs / self.freq
         giri = max(1, math.ceil(ciclo_minimo / periodo))

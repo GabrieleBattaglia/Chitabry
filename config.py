@@ -38,7 +38,15 @@ CARTELLA_MIDI = os.path.join(BASE_DIR, "midi")
 # Numero di versione del formato dell'archivio. Si alza quando una chiave
 # cambia nome o significato; l'aggiunta di una chiave nuova non lo richiede,
 # perche' le chiavi mancanti si completano da sole dai valori predefiniti.
-VERSIONE_FORMATO = 1
+VERSIONE_FORMATO = 2
+# L'inviluppo del suono sintetico: attacco, decadimento, mantenimento,
+# rilascio. I tre tempi sono millesimi di secondo, il mantenimento e' il
+# livello di volume in percentuale a cui la nota si assesta.
+ADSR_PREDEFINITO = [10.0, 60.0, 70.0, 120.0]
+# Quello di prima del formato 2, in percentuale della durata: chi lo aveva
+# ancora non lo aveva mai toccato, e prende quello nuovo invece della
+# conversione fedele, che gli lascerebbe centottanta millesimi di attacco.
+ADSR_VECCHIO_PREDEFINITO = [2.0, 1.0, 90.0, 2.0]
 
 NOTE_STD = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 NOTE_LATINE = ['DO', 'DO#', 'RE', 'RE#', 'MI', 'FA', 'FA#', 'SOL', 'SOL#', 'LA', 'LA#', 'SI']
@@ -88,7 +96,12 @@ def get_impostazioni_default():
         "suono_2": {
             "descrizione": "Suono sintetico (onda semplice)",
             "kind": 1,
-            "adsr": [2.0, 1.0, 90.0, 2.0],
+            # Attacco, decadimento e rilascio in millesimi di secondo, il
+            # mantenimento in percentuale di volume. Dieci millesimi di attacco
+            # sono immediati senza fare scatto; il gradino da cento a settanta
+            # in sessanta millesimi si sente; centoventi di rilascio chiudono
+            # la nota senza strascicare sopra la successiva.
+            "adsr": ADSR_PREDEFINITO,
             "volume": 0.35
         },
         "chordpedia": {},
@@ -120,6 +133,25 @@ def _migra(dati):
             }
             dati["strumento_attivo"] = nome
             cambiamenti.append(f"Strumento {nome} portato nell'elenco degli strumenti.")
+    if formato < 2:
+        # L'inviluppo era in percentuale della durata della nota: un attacco
+        # del due per cento su nove secondi durava centottanta millesimi, e la
+        # nota si sentiva arrivare in ritardo. Adesso i tre tempi sono
+        # millesimi di secondo e non dipendono piu' dalla durata.
+        suono = dati.get("suono_2")
+        if isinstance(suono, dict) and isinstance(suono.get("adsr"), list) and len(suono["adsr"]) == 4:
+            vecchio = [float(v) for v in suono["adsr"]]
+            if vecchio == ADSR_VECCHIO_PREDEFINITO:
+                suono["adsr"] = list(ADSR_PREDEFINITO)
+                cambiamenti.append("Inviluppo del suono 2 portato ai millesimi, con i valori predefiniti nuovi.")
+            else:
+                durata = float(suono.get("dur_accordi", 9.0))
+                suono["adsr"] = [round(vecchio[0] / 100.0 * durata * 1000, 1),
+                                 round(vecchio[1] / 100.0 * durata * 1000, 1),
+                                 vecchio[2],
+                                 round(vecchio[3] / 100.0 * durata * 1000, 1)]
+                cambiamenti.append(
+                    f"Inviluppo del suono 2 convertito in millesimi di secondo: {suono['adsr']}.")
     predefiniti = get_impostazioni_default()
     for chiave, valore in predefiniti.items():
         if chiave == "versione_formato":

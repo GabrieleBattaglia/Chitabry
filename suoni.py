@@ -83,10 +83,10 @@ def mono_da_renderer(renderer):
 
 def secondi_di_rilascio(parametri, minimo=0.02):
     """Quanto dura la chiusura di una nota lasciata, in secondi.
-    E' il rilascio dell'inviluppo, cioe' il quarto valore dell'ADSR, che come
-    gli altri tre e' una percentuale della durata di riferimento del suono: con
-    il preset di fabbrica, due per cento di nove secondi fa centottanta
-    millesimi. Il minimo serve per gli inviluppi che il rilascio non ce l'hanno:
+    E' il rilascio dell'inviluppo, cioe' il quarto valore dell'ADSR, che dal
+    formato 2 delle impostazioni e' scritto in millesimi di secondo e non piu'
+    in percentuale della durata. Il minimo serve per gli inviluppi che il
+    rilascio non ce l'hanno:
     chiudere di colpo farebbe uno scatto, e venti millesimi bastano a evitarlo
     senza che la nota strascichi.
     La corda pizzicata non ha un inviluppo da leggere: li' il rilascio e' la
@@ -94,7 +94,7 @@ def secondi_di_rilascio(parametri, minimo=0.02):
     """
     if parametri['karplus']:
         return 0.06
-    return max(minimo, parametri['adsr'][3] / 100.0 * parametri['dur'])
+    return max(minimo, parametri['adsr'][3] / 1000.0)
 
 
 def pan_per_voce(indice, numero_voci):

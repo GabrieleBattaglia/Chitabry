@@ -96,3 +96,67 @@ def test_aggiorna_manico_ripiega_sul_primo_strumento(archivio):
     assert config.NUM_TASTI == 12
     assert config.CORDE["4.0"] == "G4"
     assert config.CORDE["1.3"] == "C5"
+
+
+def scrivi_archivio(percorso, dati):
+    with open(percorso, "w", encoding="utf-8") as f:
+        json.dump(dati, f)
+
+
+def test_inviluppo_convertito_in_millesimi(archivio):
+    # Il due per cento di nove secondi faceva centottanta millesimi di attacco:
+    # la conversione conserva il suono che l'utente si era tarato.
+    scrivi_archivio(archivio, {
+        "versione_formato": 1,
+        "suono_2": {"descrizione": "Suono sintetico (onda semplice)", "kind": 1,
+                    "adsr": [0.2, 99.8, 0.0, 0.0], "volume": 0.35},
+    })
+    config.carica_impostazioni()
+    assert config.impostazioni["suono_2"]["adsr"] == [18.0, 8982.0, 0.0, 0.0]
+    assert config.impostazioni["versione_formato"] == 2
+
+
+def test_chi_non_aveva_toccato_niente_prende_i_valori_nuovi(archivio):
+    # Con la conversione fedele si ritroverebbe centottanta millesimi di
+    # attacco, cioe' proprio il difetto che il formato nuovo toglie.
+    scrivi_archivio(archivio, {
+        "versione_formato": 1,
+        "suono_2": {"descrizione": "Suono sintetico (onda semplice)", "kind": 1,
+                    "adsr": list(config.ADSR_VECCHIO_PREDEFINITO), "volume": 0.35},
+    })
+    config.carica_impostazioni()
+    assert config.impostazioni["suono_2"]["adsr"] == config.ADSR_PREDEFINITO
+
+
+def test_il_mantenimento_resta_una_percentuale(archivio):
+    # I tre tempi diventano millesimi, il mantenimento no: e' un livello di
+    # volume e in millesimi non vorrebbe dire niente.
+    scrivi_archivio(archivio, {
+        "versione_formato": 1,
+        "suono_2": {"descrizione": "x", "kind": 1, "adsr": [1.0, 2.0, 55.0, 3.0], "volume": 0.35},
+    })
+    config.carica_impostazioni()
+    assert config.impostazioni["suono_2"]["adsr"][2] == 55.0
+
+
+def test_un_archivio_gia_al_formato_2_non_si_riconverte(archivio):
+    # Riconvertirlo vorrebbe dire prendere dei millesimi per percentuali e
+    # moltiplicarli per novanta: l'attacco diventerebbe di novanta secondi.
+    scrivi_archivio(archivio, {
+        "versione_formato": 2,
+        "suono_2": {"descrizione": "x", "kind": 1, "adsr": [10.0, 60.0, 70.0, 120.0], "volume": 0.35},
+    })
+    config.carica_impostazioni()
+    assert config.impostazioni["suono_2"]["adsr"] == [10.0, 60.0, 70.0, 120.0]
+
+
+def test_la_conversione_usa_la_durata_del_suono(archivio):
+    # Le percentuali erano della durata di riferimento: chi l'aveva cambiata
+    # aveva tempi diversi a parita' di percentuali.
+    scrivi_archivio(archivio, {
+        "versione_formato": 1,
+        "suono_2": {"descrizione": "x", "kind": 1, "adsr": [10.0, 10.0, 50.0, 10.0],
+                    "dur_accordi": 2.0, "volume": 0.35},
+    })
+    config.carica_impostazioni()
+    assert config.impostazioni["suono_2"]["adsr"] == [200.0, 200.0, 50.0, 200.0]

@@ -37,16 +37,25 @@ def ModificaSuono(suono_key):
         suono['dur_accordi'] = dgt(f"Durata max accordi (sec) (attuale: {suono['dur_accordi']}): ", kind='f', fmin=0.1, fmax=10.0, default=suono['dur_accordi'])
     elif suono_key == 'suono_2':
         suono['kind'] = dgt(f"Onda (1=Sin, 2=Quadra, 3=Tri, 4=Saw, 5=String) (attuale: {suono['kind']}): ", kind='i', imin=1, imax=5, default=suono['kind'])
-        print("Inserisci i valori ADSR (premi Invio per confermare il valore attuale):")
-        labels_adsr = ["Attacco % (tempo)", "Decadimento % (tempo)", "Sustain Livello % (vol)", "Rilascio % (tempo)"]
+        print("Inviluppo della nota. Invio conferma il valore attuale.")
+        print("I tre tempi sono in millesimi di secondo, il mantenimento e' un livello di volume.")
         vecchio_adsr = suono['adsr']
-        nuovo_adsr = [dgt(f"{labels_adsr[i]} (attuale: {vecchio_adsr[i]}): ", kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[i]) for i in range(4)]
-        somma_adr = nuovo_adsr[0] + nuovo_adsr[1] + nuovo_adsr[3]
-        if somma_adr > 100.0:
-            print(f"ATTENZIONE: La somma di Attacco, Decadimento e Rilascio ({somma_adr}%) supera 100%.")
-            print("ADSR non modificato.")
-        else:
-            suono['adsr'] = nuovo_adsr
+        nuovo_adsr = [
+            dgt(f"Attacco, ms (attuale: {vecchio_adsr[0]}): ", kind='f', fmin=0.0, fmax=10000.0, default=vecchio_adsr[0]),
+            dgt(f"Decadimento, ms (attuale: {vecchio_adsr[1]}): ", kind='f', fmin=0.0, fmax=10000.0, default=vecchio_adsr[1]),
+            dgt(f"Mantenimento, % (attuale: {vecchio_adsr[2]}): ", kind='f', fmin=0.0, fmax=100.0, default=vecchio_adsr[2]),
+            dgt(f"Rilascio, ms (attuale: {vecchio_adsr[3]}): ", kind='f', fmin=0.0, fmax=10000.0, default=vecchio_adsr[3]),
+        ]
+        suono['adsr'] = nuovo_adsr
+        # I tempi non si sommano piu' a cento per forza: se sforano la durata
+        # della nota, l'inviluppo si stringe da solo. Va detto, perche' chi ha
+        # messo quei numeri si aspetta di sentirli.
+        somma = (nuovo_adsr[0] + nuovo_adsr[1] + nuovo_adsr[3]) / 1000.0
+        durata = suono.get('dur_accordi', 9.0)
+        if somma > durata:
+            print(f"Attacco, decadimento e rilascio fanno {somma:.1f} s,")
+            print(f"piu' della durata della nota, {durata:.1f} s: su una nota")
+            print("non tenuta l'inviluppo verra' stretto per starci dentro.")
     suono['volume'] = dgt(f"Volume (0.0 - 1.0) (attuale: {suono['volume']}): ", kind='f', fmin=0.0, fmax=1.0, default=suono['volume'])
     config.salva_modifiche()
     print(f"Impostazioni per {suono['descrizione']} aggiornate.")

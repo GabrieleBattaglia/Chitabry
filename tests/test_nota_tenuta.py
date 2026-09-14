@@ -9,12 +9,13 @@ import numpy as np
 import GBAudio
 
 FRAMES = 1024
-# Un inviluppo che tiene: attacco corto, discesa breve, mantenimento alto,
-# rilascio corto. E' il preset di fabbrica di config.py.
-ADSR_TENUTO = [2.0, 1.0, 90.0, 2.0]
-# Quello che Gabriele ha nel suo file: sale e scende fino al silenzio, cioe'
-# non tiene niente.
-ADSR_PIZZICATO = [0.2, 99.8, 0.0, 0.0]
+# Attacco, decadimento e rilascio in millesimi di secondo, il mantenimento in
+# percentuale di volume: e' il formato 2 delle impostazioni. Questo e' il
+# preset di fabbrica, che tiene.
+ADSR_TENUTO = [10.0, 60.0, 70.0, 120.0]
+# Un inviluppo che sale e scende fino al silenzio, cioe' che non tiene niente:
+# e' il pizzicato, e con il mantenimento a zero non c'e' niente da ripetere.
+ADSR_PIZZICATO = [1.0, 900.0, 0.0, 0.0]
 
 
 def renderer_osc(adsr, freq=220.0, dur=2.0, vol=0.5):
