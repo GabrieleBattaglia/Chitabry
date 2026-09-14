@@ -2,6 +2,14 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 8.1.0 (14 settembre 2026)
+Le note del Player Generico durano finche' tenete giu' il tasto.
+*   Tenendo premuto un tasto, la nota non si ripizzica piu' trentadue volte al secondo. Era l'auto-ripetizione di Windows, che comincia dopo mezzo secondo di tenuta e che fin qui arrivava al player come una raffica di note nuove: e' quel tremolo che si sentiva tenendo giu' un tasto.
+*   Lasciando il tasto la nota si chiude in sessanta millesimi di secondo, con una discesa e non con un taglio netto. Sul suono di chitarra e' la mano appoggiata sulle corde; con il MIDI e' il note off vero, quindi la nota la tiene il sintetizzatore finche' tenete voi.
+*   Quanto una nota tenuta duri davvero dipende dal suono: un inviluppo che scende fino al silenzio, come i due suoni di serie, decade comunque. Per sentire una nota che si tiene davvero, alzate il Sustain Livello nelle impostazioni del suono sintetico: da li' in su il suono resta fermo su quel livello finche' non lasciate il tasto.
+*   La tastiera MIDI esterna guadagna la stessa cosa: con il suono sintetico, una nota tenuta sulla tastiera fisica resta tenuta anche qui, dove prima diventava una nota a durata fissa.
+*   Fuori da Windows non cambia niente, perche' li' il terminale non sa dire quando un tasto viene lasciato: le note restano quelle che decadono da sole.
+
 Versione 8.0.1 (12 settembre 2026)
 I percorsi dei file passano da GBUtils, che dalla V138 li offre a tutti con cartella_applicazione e percorso_risorsa: la logica che dice dove stanno i dati e le risorse era riscritta in dieci progetti, e adesso e' scritta in un posto solo. Il comportamento non cambia, tranne che una risorsa che nel pacchetto non c'e' viene ora cercata anche accanto all'eseguibile.
 

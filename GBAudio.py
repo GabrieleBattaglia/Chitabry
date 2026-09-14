@@ -163,6 +163,14 @@ class PolyphonicPlayer:
         self.buses = [np.zeros(0, dtype=np.float32) for _ in range(num_strings)]
         self.indices = [0] * num_strings
         self.pans = np.zeros(num_strings, dtype=np.float32)
+        # Il tratto da ripetere finche' la nota e' tenuta, come coppia di
+        # indici, o None per le note che decadono da sole e per tutte quelle
+        # suonate con pluck, che restano one-shot come sono sempre state.
+        self.cicli = [None] * num_strings
+        # Il rilascio in corso: quanti campioni ne sono stati fatti e quanti
+        # ne servono in tutto. La rampa scende da dov'era il suono fino a zero,
+        # cosi' lasciare un tasto non produce lo scatto di un taglio netto.
+        self.rilasci = [None] * num_strings
         self._lock = threading.Lock()
         self.stream = None
         self.is_running = False
@@ -198,35 +206,126 @@ class PolyphonicPlayer:
             with self._lock:
                 self.buses[string_idx] = audio_mono
                 self.indices[string_idx] = 0
+                self.cicli[string_idx] = None
+                self.rilasci[string_idx] = None
+
+    def tieni(self, string_idx, audio_mono, ciclo=None):
+        """Suona una nota che resta viva finche' non le si dice di lasciare.
+        ciclo e' la coppia di indici del tratto da ripetere, quello che
+        render_tenuta ha ricavato dall'inviluppo: finche' la nota e' tenuta il
+        suono gira li' dentro invece di finire. Senza ciclo la nota decade come
+        con pluck, e lasciare il tasto la smorza prima: e' il caso della corda
+        pizzicata, dove tenere non allunga niente ma lasciare mette la mano
+        sulla corda."""
+        if not 0 <= string_idx < self.num_strings:
+            return
+        with self._lock:
+            self.buses[string_idx] = audio_mono
+            self.indices[string_idx] = 0
+            self.cicli[string_idx] = ciclo
+            self.rilasci[string_idx] = None
+
+    def lascia(self, string_idx, secondi=0.06):
+        """Chiude una nota con una rampa discendente, invece di troncarla.
+        Sessanta millesimi sono il compromesso trovato: piu' corti si sente lo
+        scatto, piu' lunghi la nota strascica sotto quella dopo. La voce esce
+        dal ciclo e finisce, quindi anche una nota tenuta da un'ora si spegne."""
+        if not 0 <= string_idx < self.num_strings:
+            return
+        with self._lock:
+            if self.indices[string_idx] >= len(self.buses[string_idx]) and self.cicli[string_idx] is None:
+                return
+            if self.rilasci[string_idx] is not None:
+                return
+            quanti = max(1, round(secondi * self.fs))
+            self.rilasci[string_idx] = [0, quanti]
+
+    def sta_suonando(self, string_idx):
+        """Se quella voce ha ancora qualcosa da dire: serve a chi distribuisce
+        le note fra le voci per sapere quale puo' riusare."""
+        if not 0 <= string_idx < self.num_strings:
+            return False
+        with self._lock:
+            if self.cicli[string_idx] is not None and self.rilasci[string_idx] is None:
+                return True
+            return self.indices[string_idx] < len(self.buses[string_idx])
 
     def mute(self, string_idx=None):
-        """Silenzia una corda specifica o tutte."""
+        """Silenzia una corda specifica o tutte, subito e senza rampa."""
         with self._lock:
-            if string_idx is None:
-                for i in range(self.num_strings):
+            quali = range(self.num_strings) if string_idx is None else [string_idx]
+            for i in quali:
+                if 0 <= i < self.num_strings:
                     self.buses[i] = np.zeros(0, dtype=np.float32)
                     self.indices[i] = 0
-            elif 0 <= string_idx < self.num_strings:
-                self.buses[string_idx] = np.zeros(0, dtype=np.float32)
-                self.indices[string_idx] = 0
+                    self.cicli[i] = None
+                    self.rilasci[i] = None
+
+    def _preleva(self, i, frames):
+        """I prossimi campioni di una voce, gia' passati per il ciclo e per il
+        rilascio. Restituisce None quando quella voce non ha piu' niente da
+        dire, cosi' chi mixa la salta.
+        Va chiamata con il lucchetto in mano: tocca buffer, indici e stato."""
+        buf = self.buses[i]
+        ciclo = self.cicli[i]
+        idx = self.indices[i]
+        fine = len(buf) if ciclo is None else ciclo[1]
+        if idx >= fine and ciclo is None:
+            return None
+        fuori = np.zeros(frames, dtype=np.float32)
+        scritti = 0
+        while scritti < frames:
+            if ciclo is not None and idx >= ciclo[1]:
+                # Torna all'inizio del tratto da ripetere: la coda del tratto e'
+                # stata raccordata a questo punto quando la nota e' nata,
+                # quindi il giro non produce nessuno scatto.
+                idx = ciclo[0]
+            if idx >= fine:
+                break
+            quanti = min(frames - scritti, fine - idx)
+            fuori[scritti:scritti + quanti] = buf[idx:idx + quanti]
+            idx += quanti
+            scritti += quanti
+        self.indices[i] = idx
+        rilascio = self.rilasci[i]
+        if rilascio is not None:
+            fatti, totali = rilascio
+            restano = totali - fatti
+            if restano <= 0:
+                self._spegni(i)
+                return None
+            quanti = min(frames, restano)
+            # Il guadagno scende linearmente da dov'era rimasto fino a zero, e
+            # riprende dallo stesso punto al blocco dopo: senza la memoria di
+            # quanti campioni sono gia' passati, ogni blocco ripartirebbe da
+            # uno e la rampa non scenderebbe mai.
+            passi = np.arange(fatti, fatti + quanti, dtype=np.float32)
+            fuori[:quanti] *= 1.0 - passi / totali
+            fuori[quanti:] = 0.0
+            rilascio[0] = fatti + quanti
+            if rilascio[0] >= totali:
+                self._spegni(i)
+        return fuori
+
+    def _spegni(self, i):
+        """Chiude una voce e libera il suo buffer. Con il lucchetto in mano."""
+        self.buses[i] = np.zeros(0, dtype=np.float32)
+        self.indices[i] = 0
+        self.cicli[i] = None
+        self.rilasci[i] = None
 
     def _audio_callback(self, outdata, frames, time, status):
         mix = np.zeros((frames, 2), dtype=np.float32)
         with self._lock:
             for i in range(self.num_strings):
-                buf = self.buses[i]
-                idx = self.indices[i]
-                buf_len = len(buf)
-                if idx >= buf_len:
+                mono = self._preleva(i, frames)
+                if mono is None:
                     continue
-                chunk_len = min(frames, buf_len - idx)
                 pan = self.pans[i]
                 pan_l = np.cos((pan + 1.0) * np.pi / 4.0)
                 pan_r = np.sin((pan + 1.0) * np.pi / 4.0)
-                mono_chunk = buf[idx:idx + chunk_len]
-                mix[:chunk_len, 0] += mono_chunk * pan_l
-                mix[:chunk_len, 1] += mono_chunk * pan_r
-                self.indices[i] += chunk_len
+                mix[:, 0] += mono * pan_l
+                mix[:, 1] += mono * pan_r
         np.clip(mix, -1.0, 1.0, out=mix)
         outdata[:] = mix
 
@@ -329,20 +428,103 @@ class NoteRenderer:
         return wave * envelope
 
     def render(self):
-        if self.freq <= 0.0: return np.array([], dtype=np.float32)
-        total_note_samples = round(self.dur * self.fs)
-        if total_note_samples == 0: return np.array([], dtype=np.float32)
+        wave = self._mono()
+        if wave.size == 0:
+            return np.array([], dtype=np.float32)
+        stereo = np.zeros((wave.size, 2), dtype=np.float32)
+        stereo[:, 0] = wave * self.pan_l
+        stereo[:, 1] = wave * self.pan_r
+        return stereo
 
+    def render_tenuta(self, ciclo_minimo=2048, raccordo=256):
+        """La nota pronta a essere tenuta: il suono in mono e, se il suo
+        inviluppo ha un mantenimento, il tratto da ripetere finche' il dito
+        resta giu'.
+        Restituisce la coppia (mono, ciclo), dove ciclo e' la coppia di indici
+        del tratto ripetibile oppure None quando non c'e' niente da ripetere:
+        la corda pizzicata decade e basta, e cosi' fa anche un inviluppo con il
+        mantenimento a zero, che e' come dire che il suono finisce da solo.
+        Il tratto da ripetere e' lungo un numero intero di periodi dell'onda,
+        cosi' il giro cade sempre nello stesso punto della forma; l'ultimo
+        pezzetto viene raccordato a cio' che precede l'inizio del tratto, cosi'
+        il salto fra la fine e l'inizio non si sente. Il raccordo sta in coda e
+        non in testa apposta: la prima volta che il suono entra nel tratto ci
+        arriva dal decadimento, e quel passaggio deve restare intatto.
+        ciclo_minimo e' la lunghezza minima in campioni del tratto ripetibile:
+        piu' e' lungo, meno spesso si torna indietro. raccordo e' quanti
+        campioni durano le due rampe incrociate della giunzione.
+        """
+        mono = self._mono()
+        if mono.size == 0:
+            return mono, None
+        if self.pluck_hardness > 0.0:
+            # Karplus-Strong: la corda decade, e ripetere un tratto del suo
+            # decadimento vorrebbe dire risentire sempre lo stesso pezzo di
+            # spegnimento. Tenere non allunga; lasciare, quello si', smorza.
+            return mono, None
+        livello = self.adsr_list[2] / 100.0
+        if livello <= 0.0 or self.freq <= 0.0:
+            return mono, None
+        n = round(self.dur * self.fs)
+        attacco = round((self.adsr_list[0] / 100.0) * n)
+        decadimento = round((self.adsr_list[1] / 100.0) * n)
+        inizio = attacco + decadimento
+        periodo = self.fs / self.freq
+        giri = max(1, math.ceil(ciclo_minimo / periodo))
+        lunghezza = max(2, round(giri * periodo))
+        raccordo = min(raccordo, lunghezza // 2, inizio)
+        # Il suono si rigenera lungo quanto serve: attacco, decadimento e poi
+        # il tratto al livello di mantenimento, con la fase che continua.
+        quanti = inizio + lunghezza
+        onda = self._onda(quanti)
+        inviluppo = np.full(quanti, livello, dtype=np.float32)
+        if attacco > 0:
+            inviluppo[:attacco] = np.linspace(0.0, 1.0, attacco, dtype=np.float32)
+        if decadimento > 0:
+            inviluppo[attacco:inizio] = np.linspace(1.0, livello, decadimento, dtype=np.float32)
+        tenuto = (onda * inviluppo * self.vol).astype(np.float32)
+        if raccordo > 1:
+            rampa = np.linspace(0.0, 1.0, raccordo, dtype=np.float32)
+            coda = slice(quanti - raccordo, quanti)
+            prima = slice(inizio - raccordo, inizio)
+            tenuto[coda] = tenuto[coda] * (1.0 - rampa) + tenuto[prima] * rampa
+        return tenuto, (inizio, quanti)
+
+    def _onda(self, n_samples):
+        """La forma d'onda nuda, senza inviluppo e senza volume."""
+        t = np.linspace(0., n_samples / self.fs, n_samples, endpoint=False)
+        phase_vector = 2 * np.pi * self.freq * t
+        if self.kind == 2:
+            onda = signal.square(phase_vector)
+        elif self.kind == 3:
+            onda = signal.sawtooth(phase_vector, 0.5)
+        elif self.kind == 4:
+            onda = signal.sawtooth(phase_vector)
+        elif self.kind == 5:
+            onda = np.zeros(n_samples, dtype=np.float32)
+            for i, h_amp in enumerate(HARMONICS):
+                onda += np.sin((i + 1) * phase_vector) * h_amp
+            massimo = np.max(np.abs(onda))
+            if massimo > 0:
+                onda /= massimo
+        else:
+            onda = np.sin(phase_vector)
+        return onda.astype(np.float32)
+
+    def _mono(self):
+        """Il suono della nota in mono, cioe' quello che render mette poi nei
+        due canali. Sta a parte perche' il mixer vuole il mono e ricavarlo
+        dividendo per il pan costava una divisione e un cambio di tipo."""
+        if self.freq <= 0.0:
+            return np.array([], dtype=np.float32)
+        total_note_samples = round(self.dur * self.fs)
+        if total_note_samples == 0:
+            return np.array([], dtype=np.float32)
         if self.pluck_hardness > 0.0:
             wave = self._render_karplus_strong(total_note_samples)
         else:
             wave = self._render_legacy_osc(total_note_samples)
-
-        wave *= self.vol
-        stereo = np.zeros((total_note_samples, 2), dtype=np.float32)
-        stereo[:, 0] = wave * self.pan_l
-        stereo[:, 1] = wave * self.pan_r
-        return stereo
+        return (wave * self.vol).astype(np.float32)
 
 def render_scale_audio(note_list, suono_params, bpm):
     s_vol = suono_params.get('volume', 0.35)

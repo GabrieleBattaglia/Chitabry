@@ -337,6 +337,7 @@ Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 vo
   - F1 - F8: Impostano istantaneamente l'ottava base per la tastiera del PC, da 2 (F1) a 9 (F8); all'ingresso l'ottava base e' la 3.
   - SPAZIO: Cambia il tipo di suono del sintetizzatore alternando tra: Sintesi Karplus-Strong (Chitarra) -> Sintesi Onda Semplice (Sintetico) -> MIDI (Strumento del banco attivo).
   - ESC: Torna al menu principale.
+- Note tenute: dalla 8.1.0 la nota vive finche' tenete giu' il tasto, e lasciandolo si chiude in sessanta millesimi di secondo invece di essere troncata. Tenendo premuto non si sente piu' il tremolo dell'auto-ripetizione di Windows. Quanto la nota tenuta duri dipende dal suono scelto: i due suoni di serie scendono comunque fino al silenzio, e per sentire una nota che si tiene davvero si alza il Sustain Livello nelle impostazioni del suono sintetico. Su Linux e Mac questo non vale, perche' il terminale non sa dire quando un tasto viene lasciato.
 - Display Braille: Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
 
 

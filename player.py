@@ -6,7 +6,7 @@
 
 from time import sleep as aspetta
 
-from GBUtils import key
+from GBUtils import Tastiera, key
 from music21 import pitch
 
 import config
@@ -36,6 +36,38 @@ KB_MAP = {
 # I tasti funzione impostano l'ottava base
 OTTAVE_FUNZIONE = {'f1': 2, 'f2': 3, 'f3': 4, 'f4': 5, 'f5': 6, 'f6': 7, 'f7': 8, 'f8': 9}
 NUM_VOCI = 16
+
+
+class _TastiSenzaRilascio:
+    """Il ripiego per dove la tastiera a eventi non c'e', cioe' fuori da
+    Windows e in un processo senza console.
+    Un terminale consegna caratteri e non sa dire quando un tasto viene
+    lasciato, quindi qui ogni tasto e' solo una pressione e le note restano
+    quelle che decadono da sole, come prima della issue 55. Il ciclo che le
+    suona e' lo stesso: cambia soltanto chi gli passa gli eventi, e tiene dice
+    a chi suona se le note si possano tenere o no."""
+
+    tiene = False
+    premuti = frozenset()
+
+    def eventi(self, attesa=None):
+        nome = key(attesa=attesa)
+        return [(nome, "giu")] if nome else []
+
+    def chiudi(self):
+        pass
+
+
+def apri_tastiera():
+    """La tastiera a eventi, o il ripiego dove non si puo' avere.
+    Non e' un guasto da riferire: e' una differenza di sistema, e chi suona se
+    ne accorge perche' le note non si tengono."""
+    try:
+        tastiera = Tastiera()
+    except (NotImplementedError, EOFError, RuntimeError):
+        return _TastiSenzaRilascio()
+    tastiera.tiene = True
+    return tastiera
 
 
 def Suona(tablatura):
@@ -116,7 +148,17 @@ def Suona(tablatura):
 
 
 def PlayerGenerico():
-    """La tastiera del PC come strumento, con la tastiera MIDI se collegata."""
+    """La tastiera del PC come strumento, con la tastiera MIDI se collegata.
+
+    Dalla issue 55 la nota e' legata alla coppia pressione e rilascio invece
+    che alla sola pressione: dura finche' il dito resta sul tasto, e lasciarlo
+    la chiude con una rampa. Ne viene anche che l'auto-ripetizione di Windows
+    non si sente piu': un tasto gia' giu' non riaccende niente, dove prima
+    ripizzicava la nota trentadue volte al secondo dopo mezzo secondo di
+    tenuta. Quanto la nota tenuta duri davvero dipende dal suono scelto: un
+    inviluppo con il mantenimento a zero, come una corda pizzicata, decade
+    comunque, e tenere il tasto non lo allunga.
+    """
     print("Tastiera virtuale (Player Generico).")
     print("Suona usando la tastiera del tuo PC (layout italiano).")
     print("  Ottava base (Z, X, C e seguenti): Z=Do, S=Do#, X=Re, D=Re# e cosi' via.")
@@ -129,15 +171,60 @@ def PlayerGenerico():
     stato['parametri'] = suoni.parametri_suono(stato['suono'])
     poly_player = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=NUM_VOCI)
     renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(NUM_VOCI)]
+    tastiera = apri_tastiera()
+    if tastiera.tiene:
+        print("  Le note si spengono quando lasci il tasto.")
+    # Che cosa sta suonando: dal tasto della tastiera del PC e dalla tastiera
+    # MIDI, tenuti separati perche' lo stesso Do puo' arrivare da tutte e due.
+    da_tasto = {}
+    da_midi = {}
 
-    def suona_sintesi(midi_num):
-        """Una voce a rotazione, cosi' le note tenute continuano a suonare."""
+    def voce_libera():
+        """Una voce che non stia suonando, o la piu' vecchia se sono tutte
+        impegnate: con sedici voci e dieci dita capita solo tenendo il pedale
+        di un accordo mentre se ne suona un altro."""
+        for _giro in range(NUM_VOCI):
+            v = stato['voce'] % NUM_VOCI
+            stato['voce'] += 1
+            if not poly_player.sta_suonando(v):
+                return v
         v = stato['voce'] % NUM_VOCI
         stato['voce'] += 1
+        return v
+
+    def accendi(midi_num, velocity=127):
+        """Fa partire una nota e dice su quale voce, per poterla poi spegnere.
+        Con il suono MIDI la voce non serve: la nota la tiene il sintetizzatore
+        e si chiude con note_off."""
+        if stato['suono'] == 'midi':
+            GBAudio.get_midi_out().note_on(midi_num, velocity)
+            return None
+        v = voce_libera()
         suoni.configura_renderer(renderers[v], GBAudio.midi_to_freq(midi_num), stato['parametri'])
-        mono = suoni.mono_da_renderer(renderers[v])
-        if mono is not None:
+        mono, ciclo = renderers[v].render_tenuta()
+        if mono.size == 0:
+            return None
+        if tastiera.tiene:
+            poly_player.tieni(v, mono, ciclo)
+        else:
             poly_player.pluck(v, mono)
+        return v
+
+    def spegni(midi_num, voce):
+        if stato['suono'] == 'midi':
+            GBAudio.get_midi_out().note_off(midi_num)
+        elif voce is not None and tastiera.tiene:
+            poly_player.lascia(voce)
+
+    def spegni_tutto():
+        """Chiude quello che sta suonando: serve al cambio di suono, dove le
+        note vecchie non avrebbero piu' chi le spenga, e all'uscita."""
+        for _nome, (midi_num, voce) in list(da_tasto.items()):
+            spegni(midi_num, voce)
+        da_tasto.clear()
+        for nota, voce in list(da_midi.items()):
+            spegni(nota, voce)
+        da_midi.clear()
 
     def nome_nota(midi_num):
         return get_nota(pitch.Pitch(midi=midi_num).nameWithOctave.replace('-', 'b'))
@@ -152,47 +239,48 @@ def PlayerGenerico():
         old_on_note_off = midi_in.on_note_off
 
         def player_note_on(note_num, velocity):
-            if stato['suono'] == 'midi':
-                GBAudio.get_midi_out().note_on(note_num, velocity)
-            else:
-                suona_sintesi(note_num)
+            da_midi[note_num] = accendi(note_num, velocity)
             print(f"\r[Tastiera MIDI] Nota: {nome_nota(note_num)} ({GBAudio.midi_to_freq(note_num):.1f} Hz){' ' * 15}\r", end="", flush=True)
 
         def player_note_off(note_num):
-            if stato['suono'] == 'midi':
-                GBAudio.get_midi_out().note_off(note_num)
+            spegni(note_num, da_midi.pop(note_num, None))
 
         midi_in.on_note_on = player_note_on
         midi_in.on_note_off = player_note_off
     poly_player.start()
     riga_stato()
+    finito = False
     try:
-        while True:
-            ch = key()
-            if not ch:
-                continue
-            if ch == chr(27):
-                break
-            if ch == ' ':
-                stato['suono'] = suoni.prossimo_suono(stato['suono'])
-                stato['parametri'] = suoni.parametri_suono(stato['suono'])
-                riga_stato()
-            elif ch in OTTAVE_FUNZIONE:
-                stato['ottava'] = OTTAVE_FUNZIONE[ch]
-                riga_stato()
-            elif ch in KB_MAP:
-                semitones, oct_offset = KB_MAP[ch]
-                # Tiene le frequenze dentro l'udibile
-                actual_octave = min(9, max(1, stato['ottava'] + oct_offset))
-                midi_num = 12 + semitones + 12 * actual_octave
-                if stato['suono'] == 'midi':
-                    GBAudio.play_midi_note_temp(midi_num, stato['parametri']['dur'])
-                else:
-                    suona_sintesi(midi_num)
-                print(f"\rUltima nota: {nome_nota(midi_num)} ({GBAudio.midi_to_freq(midi_num):.1f} Hz) [Ottava base: {stato['ottava']}]{' ' * 15}\r", end="", flush=True)
+        while not finito:
+            for nome, azione in tastiera.eventi(None):
+                if azione == "su":
+                    acceso = da_tasto.pop(nome, None)
+                    if acceso is not None:
+                        spegni(*acceso)
+                    continue
+                if nome == chr(27):
+                    finito = True
+                    break
+                if nome == ' ':
+                    spegni_tutto()
+                    stato['suono'] = suoni.prossimo_suono(stato['suono'])
+                    stato['parametri'] = suoni.parametri_suono(stato['suono'])
+                    riga_stato()
+                elif nome in OTTAVE_FUNZIONE:
+                    stato['ottava'] = OTTAVE_FUNZIONE[nome]
+                    riga_stato()
+                elif nome in KB_MAP and nome not in da_tasto:
+                    semitones, oct_offset = KB_MAP[nome]
+                    # Tiene le frequenze dentro l'udibile
+                    actual_octave = min(9, max(1, stato['ottava'] + oct_offset))
+                    midi_num = 12 + semitones + 12 * actual_octave
+                    da_tasto[nome] = (midi_num, accendi(midi_num))
+                    print(f"\rUltima nota: {nome_nota(midi_num)} ({GBAudio.midi_to_freq(midi_num):.1f} Hz) [Ottava base: {stato['ottava']}]{' ' * 15}\r", end="", flush=True)
     finally:
         if midi_in is not None:
             midi_in.on_note_on = old_on_note_on
             midi_in.on_note_off = old_on_note_off
+        spegni_tutto()
+        tastiera.chiudi()
         poly_player.stop()
         print("\nUscita dal Player Generico.")

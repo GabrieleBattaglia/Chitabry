@@ -4,10 +4,10 @@
 # nella stessa stringa dentro Chitabry.py, e midistudy la importava da li'
 # rieseguendo tutto il modulo principale.
 
-VERSIONE = "8.0.1"
-RELEASE_DATE = "2026-09-12"
+VERSIONE = "8.1.0"
+RELEASE_DATE = "2026-09-14"
 APP_NAME = "Chitabry"
-AUTORI = "Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode)"
+AUTORI = "Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5, modalità auto)"
 API_RELEASE = "https://api.github.com/repos/GabrieleBattaglia/Chitabry/releases/latest"
 
 _MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
