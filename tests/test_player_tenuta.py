@@ -40,6 +40,7 @@ class PolyFinto:
         self.chiamate = []
         self.occupate = set()
         self.rubate = []
+        self.rilasci = []
         self.avviato = False
         self.fermato = False
 
@@ -64,6 +65,7 @@ class PolyFinto:
 
     def lascia(self, voce, secondi=0.06):
         self.chiamate.append(("lascia", voce))
+        self.rilasci.append(secondi)
         self.occupate.discard(voce)
 
     def mute(self, voce=None):
@@ -241,3 +243,28 @@ def test_il_mono_della_nota_e_quello_che_il_mixer_si_aspetta():
     assert mono.ndim == 1
     assert mono.dtype == np.float32
     assert 0.4 < float(np.max(np.abs(mono))) <= 0.5
+
+
+def test_il_rilascio_dura_quanto_dice_l_inviluppo(scena, monkeypatch):
+    # Sessanta millesimi fissi facevano morire la nota all'improvviso: la
+    # chiusura deve durare quanto il quarto valore dell'ADSR dichiara, cioe' il
+    # due per cento della durata di riferimento, che qui e' di due secondi.
+    poly, _midi = scena
+    gira(monkeypatch, [[("z", "giu")], [("z", "su")]])
+    assert poly.rilasci == [pytest.approx(0.04)], poly.rilasci
+
+
+def test_un_inviluppo_senza_rilascio_prende_il_minimo():
+    # Chiudere di colpo farebbe uno scatto: venti millesimi bastano a evitarlo.
+    senza = {'karplus': False, 'dur': 9.0, 'adsr': [0.2, 99.8, 0.0, 0.0]}
+    assert suoni.secondi_di_rilascio(senza) == pytest.approx(0.02)
+
+
+def test_la_corda_pizzicata_si_smorza_in_sessanta_millesimi():
+    corda = {'karplus': True, 'dur': 6.0, 'adsr': [0, 0, 0, 0]}
+    assert suoni.secondi_di_rilascio(corda) == pytest.approx(0.06)
+
+
+def test_un_rilascio_lungo_arriva_intero():
+    lungo = {'karplus': False, 'dur': 4.0, 'adsr': [2.0, 1.0, 90.0, 25.0]}
+    assert suoni.secondi_di_rilascio(lungo) == pytest.approx(1.0)

@@ -81,6 +81,22 @@ def mono_da_renderer(renderer):
     return stereo[:, 0]
 
 
+def secondi_di_rilascio(parametri, minimo=0.02):
+    """Quanto dura la chiusura di una nota lasciata, in secondi.
+    E' il rilascio dell'inviluppo, cioe' il quarto valore dell'ADSR, che come
+    gli altri tre e' una percentuale della durata di riferimento del suono: con
+    il preset di fabbrica, due per cento di nove secondi fa centottanta
+    millesimi. Il minimo serve per gli inviluppi che il rilascio non ce l'hanno:
+    chiudere di colpo farebbe uno scatto, e venti millesimi bastano a evitarlo
+    senza che la nota strascichi.
+    La corda pizzicata non ha un inviluppo da leggere: li' il rilascio e' la
+    mano appoggiata sulle corde, e sessanta millesimi sono il gesto giusto.
+    """
+    if parametri['karplus']:
+        return 0.06
+    return max(minimo, parametri['adsr'][3] / 100.0 * parametri['dur'])
+
+
 def pan_per_voce(indice, numero_voci):
     """Posizione stereo della voce indice fra numero_voci, da -0.8 a sinistra a 0.8 a destra."""
     if numero_voci <= 1:

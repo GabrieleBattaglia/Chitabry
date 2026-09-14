@@ -214,7 +214,7 @@ def PlayerGenerico():
         if stato['suono'] == 'midi':
             GBAudio.get_midi_out().note_off(midi_num)
         elif voce is not None and tastiera.tiene:
-            poly_player.lascia(voce)
+            poly_player.lascia(voce, suoni.secondi_di_rilascio(stato['parametri']))
 
     def spegni_tutto():
         """Chiude quello che sta suonando: serve al cambio di suono, dove le
