@@ -14,9 +14,9 @@ import threading
 import time
 
 import numpy as np
-import sounddevice as sd
 
 import config
+import GBAudio
 
 SAMPLE_RATE = 44100
 COMANDI = {
@@ -468,7 +468,10 @@ class Metronome:
         self.is_running.set()
         self._servizio = threading.Thread(target=self._servizio_battute, name="clitronomo-servizio", daemon=True)
         self._servizio.start()
-        self.stream = sd.OutputStream(
+        # Sull'interfaccia piu' pronta, come il mixer polifonico: il click
+        # deve arrivare quando il battito lo vuole, e novantuno millesimi di
+        # scorta sono quasi un sedicesimo a centoventi battute.
+        self.stream = GBAudio.apri_flusso_uscita(
             samplerate=SAMPLE_RATE, channels=1, dtype=np.int16,
             callback=self._audio_callback, latency='low'
         )

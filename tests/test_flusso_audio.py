@@ -56,7 +56,11 @@ def driver_finto(monkeypatch):
         creati.append(flusso)
         return flusso
 
-    monkeypatch.setattr(clitronomo.sd, "OutputStream", fabbrica)
+    # Il flusso nasce in un posto solo, GBAudio.apri_flusso_uscita, che lo
+    # apre sull'interfaccia piu' pronta. Qui la scelta si spegne, perche' per
+    # sapere quale sia proverebbe ad aprire un dispositivo vero.
+    import GBUtils
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (None, None))
     monkeypatch.setattr(GBAudio.sd, "OutputStream", fabbrica)
     return creati
 
