@@ -4,6 +4,8 @@
 # non leggono nessuna tastiera: gli eventi arrivano da una finta, e il mixer e'
 # un finto che si limita a segnare le chiamate che riceve.
 
+from typing import ClassVar
+
 import numpy as np
 import pytest
 
@@ -268,3 +270,60 @@ def test_la_corda_pizzicata_si_smorza_in_sessanta_millesimi():
 def test_un_rilascio_lungo_arriva_intero():
     lungo = {'karplus': False, 'dur': 4.0, 'adsr': [2.0, 1.0, 90.0, 25.0]}
     assert suoni.secondi_di_rilascio(lungo) == pytest.approx(1.0)
+
+
+class FlussoDiCarta:
+    """Al posto di sd.OutputStream: segna con che argomenti e' stato aperto."""
+
+    aperture: ClassVar[list] = []
+
+    def __init__(self, **argomenti):
+        FlussoDiCarta.aperture.append(argomenti)
+        if argomenti.get("device") == "non apre":
+            raise RuntimeError("questa interfaccia non regge il formato")
+
+    def start(self):
+        pass
+
+
+@pytest.fixture
+def flusso(monkeypatch):
+    FlussoDiCarta.aperture = []
+    monkeypatch.setattr(GBAudio.sd, "OutputStream", FlussoDiCarta)
+    return FlussoDiCarta
+
+
+def test_il_flusso_si_apre_sul_dispositivo_scelto_da_gbutils(flusso, monkeypatch):
+    import GBUtils
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (7, "Windows WASAPI"))
+    GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
+    assert len(flusso.aperture) == 1
+    assert flusso.aperture[0]["device"] == 7
+
+
+def test_se_quella_interfaccia_non_apre_si_ripiega(flusso, monkeypatch):
+    # Un ritardo si sopporta, restare muti no.
+    import GBUtils
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: ("non apre", "Fantasia"))
+    GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
+    assert len(flusso.aperture) == 2
+    assert "device" not in flusso.aperture[1]
+
+
+def test_se_la_scelta_fallisce_si_lascia_fare_al_sistema(flusso, monkeypatch):
+    import GBUtils
+
+    def rotta():
+        raise OSError("nessun dispositivo")
+
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", rotta)
+    GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
+    assert len(flusso.aperture) == 1
+    assert "device" not in flusso.aperture[0]
+
+
+def test_senza_niente_da_scegliere_si_apre_come_prima(flusso, monkeypatch):
+    import GBUtils
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (None, None))
+    GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
+    assert "device" not in flusso.aperture[0]

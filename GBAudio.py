@@ -84,6 +84,36 @@ def note_to_freq(note):
     midi_num, micro = scomposta
     return midi_to_freq(midi_num + micro)
 
+def apri_flusso_uscita(samplerate, channels, dtype, callback, latency='low'):
+    """Apre un flusso di uscita sull'interfaccia piu' pronta fra quelle che
+    puntano al dispositivo scelto nel sistema.
+    Senza dire niente, sounddevice prende la prima interfaccia che trova, che su
+    Windows e' MME: misurati novantuno millesimi di scorta contro i ventidue di
+    WASAPI, sulla stessa scheda. Sono ritardo che chi suona sente fra il dito e
+    la nota, e sono tre quarti del ritardo totale.
+    A scegliere e' scegli_dispositivo_audio di GBUtils, la stessa che usano
+    CWzator e Acusticator: guarda solo le interfacce che portano allo stesso
+    dispositivo, perche' scegliere per sola latenza manderebbe il suono da
+    un'altra parte. Costa quattro millesimi la prima volta e niente dopo.
+    Se quella scelta non si apre, o se GBUtils non c'e', si lascia fare al
+    sistema come si e' sempre fatto: un ritardo si sopporta, restare muti no.
+    """
+    scelto = None
+    try:
+        from GBUtils import scegli_dispositivo_audio
+        scelto, _api = scegli_dispositivo_audio()
+    except Exception:  # noqa: BLE001 - senza la scelta si va avanti col predefinito
+        scelto = None
+    if scelto is not None:
+        try:
+            return sd.OutputStream(samplerate=samplerate, channels=channels, dtype=dtype,
+                                   device=scelto, callback=callback, latency=latency)
+        except Exception:  # noqa: BLE001, S110 - l'interfaccia scelta non regge questo formato, si ripiega sotto
+            pass
+    return sd.OutputStream(samplerate=samplerate, channels=channels, dtype=dtype,
+                           callback=callback, latency=latency)
+
+
 class FastGuitarSynth:
     """
     Sintetizzatore Karplus-Strong ottimizzato.
@@ -179,7 +209,7 @@ class PolyphonicPlayer:
     def start(self):
         if self.is_running:
             return
-        self.stream = sd.OutputStream(
+        self.stream = apri_flusso_uscita(
             samplerate=self.fs, channels=2, dtype=np.float32,
             callback=self._audio_callback, latency='low'
         )
