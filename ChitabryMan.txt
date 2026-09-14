@@ -332,6 +332,7 @@ Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 vo
   - SHIFT: Se premuto insieme ai tasti, sposta l'esecuzione di un'ulteriore ottava (sotto per la riga Z, sopra per la riga Q).
 - Tastiera MIDI Esterna:
   - Se hai connesso e abilitato un dispositivo MIDI di input (tastiera fisica o bluetooth) tramite la voce "Connetti Tastiera MIDI" nel menu "Impostazioni", potrai utilizzarla direttamente.
+  - Con il suono MIDI la nota la produce il sintetizzatore del sistema, che ha un suo ritardo: e' normale che risponda un po' meno pronto degli altri due suoni, e non dipende da Chitabry.
   - Una volta all'interno di questa funzione, suonando i tasti fisici della tua tastiera MIDI esterna potrai suonare liberamente in tempo reale con piena polifonia nativa, e lo schermo stamperà in tempo reale la nota suonata e la sua frequenza (es. `[Tastiera MIDI] Nota: DO4 (261.6 Hz)`).
 - Controlli Comuni:
   - F1 - F8: Impostano istantaneamente l'ottava base per la tastiera del PC, da 2 (F1) a 9 (F8); all'ingresso l'ottava base e' la 3.
