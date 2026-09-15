@@ -54,13 +54,17 @@ def apri_flusso_uscita(samplerate, channels, dtype, callback, latency='low'):
     CWzator e Acusticator: guarda solo le interfacce che portano allo stesso
     dispositivo, perche' scegliere per sola latenza manderebbe il suono da
     un'altra parte. Costa quattro millesimi la prima volta e niente dopo.
+    Le si dice anche come il flusso verra' aperto, perche' la prova si fa nello
+    stesso modo: qui il dispositivo chiede i campioni per conto suo, cioe' un
+    callback, e non tutte le interfacce reggono tutti e due i modi. WDM-KS, per
+    dirne una, a scrittura non si apre mai e a callback a volte si'.
     Se quella scelta non si apre, o se GBUtils non c'e', si lascia fare al
     sistema come si e' sempre fatto: un ritardo si sopporta, restare muti no.
     """
     scelto = None
     try:
         from GBUtils import scegli_dispositivo_audio
-        scelto, _api = scegli_dispositivo_audio()
+        scelto, _api = scegli_dispositivo_audio(modo="callback" if callback else "scrittura")
     except Exception:  # noqa: BLE001 - senza la scelta si va avanti col predefinito
         scelto = None
     if scelto is not None:

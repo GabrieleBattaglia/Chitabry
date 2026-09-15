@@ -303,7 +303,7 @@ def flusso(monkeypatch):
 
 def test_il_flusso_si_apre_sul_dispositivo_scelto_da_gbutils(flusso, monkeypatch):
     import GBUtils
-    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (7, "Windows WASAPI"))
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda **_: (7, "Windows WASAPI"))
     GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
     assert len(flusso.aperture) == 1
     assert flusso.aperture[0]["device"] == 7
@@ -312,7 +312,7 @@ def test_il_flusso_si_apre_sul_dispositivo_scelto_da_gbutils(flusso, monkeypatch
 def test_se_quella_interfaccia_non_apre_si_ripiega(flusso, monkeypatch):
     # Un ritardo si sopporta, restare muti no.
     import GBUtils
-    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: ("non apre", "Fantasia"))
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda **_: ("non apre", "Fantasia"))
     GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
     assert len(flusso.aperture) == 2
     assert "device" not in flusso.aperture[1]
@@ -321,7 +321,7 @@ def test_se_quella_interfaccia_non_apre_si_ripiega(flusso, monkeypatch):
 def test_se_la_scelta_fallisce_si_lascia_fare_al_sistema(flusso, monkeypatch):
     import GBUtils
 
-    def rotta():
+    def rotta(**_chiavi):
         raise OSError("nessun dispositivo")
 
     monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", rotta)
@@ -332,6 +332,21 @@ def test_se_la_scelta_fallisce_si_lascia_fare_al_sistema(flusso, monkeypatch):
 
 def test_senza_niente_da_scegliere_si_apre_come_prima(flusso, monkeypatch):
     import GBUtils
-    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (None, None))
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda **_: (None, None))
     GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=None)
     assert "device" not in flusso.aperture[0]
+
+
+def test_chitabry_dichiara_di_aprire_col_callback(flusso, monkeypatch):
+    # Se lo chiedesse a scrittura, GBUtils scarterebbe le interfacce che solo
+    # il callback sa aprire, e ne sceglierebbe una piu' lenta.
+    import GBUtils
+    chiesto = {}
+
+    def finta(modo="scrittura", **_chiavi):
+        chiesto["modo"] = modo
+        return None, None
+
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", finta)
+    GBAudio.apri_flusso_uscita(44100, 2, "float32", callback=lambda *_: None)
+    assert chiesto["modo"] == "callback"

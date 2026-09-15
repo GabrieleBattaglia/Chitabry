@@ -60,7 +60,7 @@ def driver_finto(monkeypatch):
     # apre sull'interfaccia piu' pronta. Qui la scelta si spegne, perche' per
     # sapere quale sia proverebbe ad aprire un dispositivo vero.
     import GBUtils
-    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda: (None, None))
+    monkeypatch.setattr(GBUtils, "scegli_dispositivo_audio", lambda **_: (None, None))
     monkeypatch.setattr(GBAudio.sd, "OutputStream", fabbrica)
     return creati
 
