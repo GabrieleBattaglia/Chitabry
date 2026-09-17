@@ -2,6 +2,12 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 8.1.1 (17 settembre 2026)
+Il pacchetto dimagrisce di centoquarantatre megabyte.
+*   L'eseguibile passa da 322 a 179 megabyte, il quarantaquattro per cento in meno, misurato compilando le due ricette a poche ore di distanza. Escono matplotlib, PyQt6 e i backend grafici Tk e Qt, che arrivavano nel pacchetto al seguito di music21 e non servivano a niente: Chitabry e' un programma a console e non disegna un solo grafico. Restano numpy e scipy, che sono le librerie con cui Acusticator genera i suoni, e restano i 3932 file dell'archivio Scala, che sono il catalogo delle scale.
+*   Senza matplotlib, music21 all'avvio stampava tre righe che invitavano a installarlo, indirizzo web compreso: tre righe che lo screen reader leggeva a ogni avvio a chi non aveva chiesto niente. Un hook di avvio, che gira solo nel pacchetto compilato, importa music21 una volta sola con le uscite deviate, e l'avviso non si sente piu'. Da sorgente non cambia niente, perche' li' matplotlib e' installato.
+*   Il percorso di GBUtils nella ricetta di compilazione si ricava adesso dalla posizione della ricetta stessa, dove prima era scritto per esteso come e:\git\Mine\GBUtils: cosi' il pacchetto si compila anche su una macchina dove i repository stanno altrove.
+
 Versione 8.1.0 (14 settembre 2026)
 Le note del Player Generico durano finche' tenete giu' il tasto.
 *   Tenendo premuto un tasto, la nota non si ripizzica piu' trentadue volte al secondo. Era l'auto-ripetizione di Windows, che comincia dopo mezzo secondo di tenuta e che fin qui arrivava al player come una raffica di note nuove: e' quel tremolo che si sentiva tenendo giu' un tasto.
@@ -21,6 +27,7 @@ Versione 8.0.1 (12 settembre 2026)
 I percorsi dei file passano da GBUtils, che dalla V138 li offre a tutti con cartella_applicazione e percorso_risorsa: la logica che dice dove stanno i dati e le risorse era riscritta in dieci progetti, e adesso e' scritta in un posto solo. Il comportamento non cambia, tranne che una risorsa che nel pacchetto non c'e' viene ora cercata anche accanto all'eseguibile.
 
 Versione 8.0.0 (10 settembre 2026)
+Pubblicata su GitHub il 10 settembre 2026 come release v8.0.0, con il solo archivio Chitabry.zip in allegato.
 Revisione generale del codice, la prima secondo il metodo del refactoring di tutto il parco software. Nessun comando cambia; cambiano la solidita' e cio' che si ascolta.
 *   Salvataggi:
     *   Le impostazioni, la chordpedia e gli strumenti si salvano nel momento in cui li modificate, non piu' solo all'uscita dal menu: un Ctrl+C o una finestra chiusa non perdono piu' il lavoro della sessione.
