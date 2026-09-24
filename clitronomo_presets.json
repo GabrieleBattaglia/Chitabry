@@ -38,35 +38,6 @@
     ]
    }
   },
-  "1": {
-   "name": "ID1 Tre quarti",
-   "state": {
-    "bpm": 75,
-    "time_signature": "3/4",
-    "subdivision_level": 0,
-    "config_accento": {
-     "beep_duration_ms": 70,
-     "volume_perc": 20,
-     "attack_ms": 5,
-     "decay_ms": 8,
-     "frequency_hz": 1300
-    },
-    "config_tick": {
-     "beep_duration_ms": 40,
-     "volume_perc": 10,
-     "attack_ms": 5,
-     "decay_ms": 12,
-     "frequency_hz": 800
-    },
-    "config_subdivision": {
-     "beep_duration_ms": 10,
-     "volume_perc": 15,
-     "attack_ms": 2,
-     "decay_ms": 8,
-     "frequency_hz": 1030.0
-    }
-   }
-  },
   "5": {
    "name": "ID5 Flauto2 long decay on accent",
    "state": {
@@ -78,7 +49,7 @@
      "volume_perc": 50,
      "attack_ms": 2,
      "decay_ms": 950,
-     "frequency_hz": 500
+     "frequency_hz": 800
     },
     "config_tick": {
      "beep_duration_ms": 80,
@@ -218,9 +189,9 @@
   "3": {
    "name": "ID3 Chitarra",
    "state": {
-    "bpm": 110,
+    "bpm": 60,
     "time_signature": "4/4",
-    "subdivision_level": 2,
+    "subdivision_level": 0,
     "config_accento": {
      "beep_duration_ms": 25,
      "volume_perc": 35,
