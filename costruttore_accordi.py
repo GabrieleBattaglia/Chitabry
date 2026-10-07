@@ -112,7 +112,8 @@ def CostruttoreAccordi():
     except (Music21Exception, ValueError) as e:
         print(f"Errore durante la creazione dell'accordo: {e}")
         print("Verifica la correttezza della fondamentale e del tipo.")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     note_formattate = []
     for p_note in accordo.pitches:
@@ -132,14 +133,16 @@ def CostruttoreAccordi():
     print("Calcolo delle migliori diteggiature in corso...")
     model = _strumento_attivo()
     if model is None:
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     target_pc = {p.pitchClass for p in accordo.pitches}
     solver = AccordoSolver(model, target_pc, accordo.root().pitchClass)
     sols = solver.solve(max_stretch=4)
     if not sols:
         print("Nessuna diteggiatura fisicamente possibile trovata per questo accordo.")
-        key("Premi un tasto per tornare al menu...")
+        key("\rPremi un tasto per tornare al menu...\r")
+        print()
         return
     voci, soluzioni = _diteggiature(model, solver, sols)
     if len(voci) == 1:

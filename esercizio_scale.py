@@ -1,5 +1,5 @@
 # Chitabry, esercizio scale: scelta della scala dal catalogo, note sul manico, diteggiature e ascolto a tempo.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Nato con la revisione 1 del 2026-09-09 dallo spezzettamento di views.py:
 # la funzione unica di 665 righe e' divisa nelle sue fasi, e l'ascolto a
 # tempo, che era scritto due volte, una per il loop e una per il comando
@@ -9,6 +9,9 @@
 # passando da due sintetizzatori diversi nota e battito arrivavano in tempi
 # diversi. Dalla 9.0.0, issue 58, con un'armonica attiva al posto del manico
 # ci sono la posizione, la tablatura e la scelta dell'ottava da esercitare.
+# Dalla 10.0.0 il MIDI e' solo il banco di suoni, nel mixer con il battito
+# del preset, e i tasti delle note suonano finche' sono giu', come nella
+# Tastiera; il loop della scala tiene le sue durate.
 
 from time import monotonic as orologio
 
@@ -22,6 +25,7 @@ import armonica_vista
 import clitronomo
 import config
 import GBAudio
+import player
 import scale_catalog
 import suoni
 from generatore_scale import ScalePathfinder
@@ -31,7 +35,7 @@ from ricerca import fuzzy_search_and_select
 from strumento import InstrumentModel
 
 MENU_ESERCIZIO = {
-    "1-9 e 0": "Suona la nota singola",
+    "1-9 e 0": "Suona la nota singola, finche' tieni il tasto",
     "a": "Ascolta ascendente",
     "d": "Ascolta discendente",
     "l": "Attiva o disattiva il loop",
@@ -40,15 +44,6 @@ MENU_ESERCIZIO = {
 }
 # Con quanta frequenza si ascolta la tastiera durante un passo, in secondi
 PASSO_ASCOLTO = 0.02
-# Con il suono MIDI il click e' un wood block General MIDI su un canale suo:
-# due altezze vicine ai beep di fabbrica, forte l'accento e piu' piano il battito.
-NOTA_ACCENTO = 81   # La5, 880 Hz, accanto ai 915 Hz dell'accento di fabbrica
-NOTA_TICK = 72      # Do5, 523 Hz, accanto ai 550 Hz del battito di fabbrica
-DURATA_CLICK_MIDI = 0.1   # secondi prima del note off: il wood block e' un colpo secco
-# Il note off di una nota MIDI arriva un po' prima del battito seguente: se
-# due battiti hanno la stessa nota, altrimenti spegnerebbe quella appena partita.
-ANTICIPO_NOTE_OFF = 0.03
-DURATA_MINIMA_NOTA_MIDI = 0.05
 # Quanto una nota puo' scostarsi dal temperamento, in semitoni, e contare
 # ancora come quella nota sull'armonica: trentadue centesimi tengono dentro
 # le intonazioni naturali, anche la settima naturale 7/4, a 969 centesimi, cioe'
@@ -74,17 +69,9 @@ def midi_temperato(p):
     return vicino if abs(ps - vicino) <= SCARTO_TEMPERATO else None
 
 
-def velocita_del_click(config_suono):
-    """La velocita' MIDI del wood block da un suono del metronomo: il suo
-    volume in percentuale, sui 127 della velocita', almeno 1."""
-    return max(1, min(127, round(127 * config_suono.get('volume_perc', 100) / 100)))
-
-
 class Scala:
     """Una scala pronta per l'esercizio: nome, note per il manico, note da
     mostrare in salita e in discesa, frequenze da suonare."""
-    # Le note MIDI escono sul primo canale, con lo strumento delle impostazioni
-    canale_midi = 0
 
     def __init__(self, tonica_std, nome_base, scala_m21):
         self.tonica_std = tonica_std
@@ -153,9 +140,7 @@ class Scala:
 class ScalaArmonica(Scala):
     """La scala su un tratto dell'armonica attiva: per ogni nota anche il
     modo meno faticoso di suonarla, che la riga di stato dell'esercizio
-    mostra al posto del nome. In MIDI le note escono con il programma
-    Harmonica, sul canale dell'armonica."""
-    canale_midi = GBAudio.CANALE_ARMONICA
+    mostra al posto del nome."""
 
     def __init__(self, tonica_std, nome_base, scala_m21, modello):
         super().__init__(tonica_std, nome_base, scala_m21)
@@ -260,7 +245,7 @@ def _mostra_diteggiature(s, maninf, mansup):
             target_pc = [pitch.Pitch(n).pitchClass for n in s.note_manico]
         root_pc = pitch.Pitch(s.tonica_std + "4").pitchClass
         solver = ScalePathfinder(model, target_pc, root_pc)
-        priorita_caged = enter_escape("Desideri dare priorita' alla forma CAGED? (INVIO per si', ESC per forme a 3 note per corda): ")
+        priorita_caged = enter_escape("\rDesideri dare priorita' alla forma CAGED? (INVIO per si', ESC per forme a 3 note per corda): \r")
         sols = solver.find_paths(maninf, mansup, priorita_caged=priorita_caged)
     except (Music21Exception, ValueError, KeyError, RecursionError) as e:
         print(f"Errore durante il calcolo delle diteggiature: {e}")
@@ -296,7 +281,8 @@ def _mostra_diteggiature(s, maninf, mansup):
     if top_n == 1:
         print("Dettagli dell'unica forma trovata:")
         print(dettagli_map['1'])
-        key("Premi un tasto per proseguire all'esercizio audio...")
+        key("\rPremi un tasto per proseguire all'esercizio audio...\r")
+        print()
         return True
     voci["p"] = ">> Prosegui all'esercizio audio"
     while True:
@@ -306,7 +292,8 @@ def _mostra_diteggiature(s, maninf, mansup):
             break
         print(f"Dettagli della forma {scelta}:")
         print(dettagli_map[scelta])
-        key("Premi un tasto per tornare alle opzioni...")
+        key("\rPremi un tasto per tornare alle opzioni...\r")
+        print()
     return True
 
 
@@ -547,9 +534,9 @@ class Esercizio:
     I battiti cadono su una griglia di scadenze assolute: la sintesi di una
     nota e il polling della tastiera non allungano piu' il tempo. Ogni nota
     si sintetizza durante l'attesa del battito precedente, fresca a ogni
-    pizzico come una corda vera, e con il suono MIDI anche il click e' un
-    wood block MIDI: nota e battito passano dallo stesso sintetizzatore e
-    arrivano insieme."""
+    pizzico come una corda vera, e nota e battito passano dallo stesso mixer
+    e arrivano insieme, anche con il banco di suoni. I tasti delle note
+    suonano finche' sono giu'."""
     def __init__(self, s):
         self.s = s
         self.num_notes = len(s.frequenze)
@@ -564,11 +551,10 @@ class Esercizio:
         self.renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(self.num_notes)]
         config_accento, config_tick = self._preset_metronomo()
         self.accent_beep, self.tick_beep = self._beep_metronomo(config_accento, config_tick)
-        # Col suono MIDI il click e' un wood block, ma il volume e' quello del
-        # preset: fino alla 9.8 era fisso, al massimo sull'accento, e copriva
-        # le note (collaudo di Gabriele del 7 ottobre 2026)
-        self.velocita_accento = velocita_del_click(config_accento)
-        self.velocita_tick = velocita_del_click(config_tick)
+        self.parametri = suoni.parametri_suono(self.suono)
+        # La tastiera a eventi, aperta da avvia: le note dei tasti durano
+        # finche' il tasto e' giu'
+        self.tasti = None
         self.key_map = {str(i + 1): i for i in range(min(self.num_notes, 9))}
         if self.num_notes >= 10:
             self.key_map['0'] = 9
@@ -593,29 +579,10 @@ class Esercizio:
 
     def _configura_renderer(self):
         self.note_pronte.clear()
-        if self.suono == 'midi':
-            self._prepara_midi()
-            if self.s.canale_midi != 0:
-                suoni.prepara_canale_armonica()
-            return
-        parametri = suoni.parametri_suono(self.suono)
-        if parametri.get('banco') and self.s.canale_midi != 0:
-            # Dal banco l'armonica suona con lo strumento Harmonica, come col MIDI
-            parametri = dict(parametri, programma=GBAudio.PROGRAMMA_ARMONICA)
+        self.parametri = suoni.parametri_suono(self.suono)
         for i in range(self.num_notes):
             self.poly.set_pan(i, suoni.pan_per_voce(i, self.num_notes))
-            suoni.configura_renderer(self.renderers[i], self.s.frequenze[i] or 0.0, parametri)
-
-    @staticmethod
-    def _prepara_midi():
-        """Apre la porta MIDI, se non lo era gia', e prepara il canale del click:
-        programma Woodblock, pan al centro, niente riverbero ne' chorus."""
-        porta = GBAudio.get_midi_out()
-        if porta.h_midi is not None:
-            porta.program_change(GBAudio.PROGRAMMA_WOODBLOCK, GBAudio.CANALE_CLICK)
-            porta.control_change(GBAudio.CC_PAN, GBAudio.PAN_CENTRO, GBAudio.CANALE_CLICK)
-            porta.control_change(GBAudio.CC_RIVERBERO, 0, GBAudio.CANALE_CLICK)
-            porta.control_change(GBAudio.CC_CHORUS, 0, GBAudio.CANALE_CLICK)
+            suoni.configura_renderer(self.renderers[i], self.s.frequenze[i] or 0.0, self.parametri)
 
     def _cambia_suono(self):
         self.suono = suoni.prossimo_suono(self.suono)
@@ -642,7 +609,7 @@ class Esercizio:
     def _prepara(self, idx):
         """Sintetizza in anticipo la nota idx, se non e' gia' pronta: si chiama
         durante l'attesa di un battito, cosi' il pizzico che segue non aspetta."""
-        if idx is not None and self.suono != 'midi' and idx not in self.note_pronte:
+        if idx is not None and idx not in self.note_pronte:
             self.note_pronte[idx] = suoni.mono_da_renderer(self.renderers[idx])
 
     def _suona_nota(self, idx, dur):
@@ -650,25 +617,36 @@ class Esercizio:
         freq = self.s.frequenze[idx]
         if freq is None or freq <= 0:
             return False
-        if self.suono == 'midi':
-            GBAudio.play_midi_note_temp(GBAudio.freq_to_midi(freq), max(DURATA_MINIMA_NOTA_MIDI, dur - ANTICIPO_NOTE_OFF),
-                                        canale=self.s.canale_midi)
-            return False
         mono = self._mono(idx)
         if mono is None:
             return False
         self.poly.pluck(idx, mono)
         return True
 
+    def _tieni_nota(self, idx):
+        """La nota idx da un tasto: suona finche' il tasto e' giu', sulla sua
+        voce. True se suona."""
+        freq = self.s.frequenze[idx]
+        if freq is None or freq <= 0:
+            return False
+        return suoni.tieni_nota(self.poly, idx, freq, self.parametri, tiene=self.tasti.tiene)
+
+    def _lascia_nota(self, idx):
+        if idx is not None and self.tasti.tiene:
+            suoni.lascia_nota(self.poly, idx, self.parametri)
+
+    def _lascia_tutte(self, tenute):
+        """Chiude le note dei tasti ancora giu': prima dei BPM, che chiudono
+        la tastiera e con lei i rilasci che aspettano, del cambio di suono e
+        dell'ascolto a tempo, durante il quale i rilasci non si guardano e
+        la nota continuerebbe sotto la scala."""
+        for idx in tenute.values():
+            self._lascia_nota(idx)
+        tenute.clear()
+
     def _click(self, accento):
-        """Il battito del metronomo: con il suono MIDI e' un wood block sul canale
-        del click, con gli altri suoni e' il beep del metronomo sul mixer.
-        Se la porta MIDI non si e' aperta, il beep resta l'unico click."""
-        if self.suono == 'midi' and GBAudio.get_midi_out().h_midi is not None:
-            nota = NOTA_ACCENTO if accento else NOTA_TICK
-            velocita = self.velocita_accento if accento else self.velocita_tick
-            GBAudio.play_midi_note_temp(nota, DURATA_CLICK_MIDI, velocita, canale=GBAudio.CANALE_CLICK)
-            return
+        """Il battito del metronomo: il beep del preset, sul mixer insieme
+        alle note."""
         click = self.accent_beep if accento else self.tick_beep
         if click.size > 0:
             self.poly.pluck(self.num_notes, click)
@@ -687,18 +665,21 @@ class Esercizio:
         self._prepara(prossima)
         while True:
             residuo = scadenza - orologio()
-            tasto = key(attesa=max(0.0, min(PASSO_ASCOLTO, residuo)))
-            if tasto == ' ':
-                self._cambia_suono()
-                self._prepara(prossima)
-                self._riga_stato(in_loop)
-            elif tasto.lower() == 'l' and in_loop:
-                self._ferma_voci()
-                print(f"\rLoop disattivato.{' ' * 40}\r", end="", flush=True)
-                return 'fermato'
-            elif tasto == chr(27):
-                self._ferma_voci()
-                return 'esci' if in_loop else 'interrotto'
+            for nome, azione in self.tasti.eventi(max(0.0, min(PASSO_ASCOLTO, residuo))):
+                if azione != "giu":
+                    continue
+                tasto = nome.lower()
+                if tasto == ' ':
+                    self._cambia_suono()
+                    self._prepara(prossima)
+                    self._riga_stato(in_loop)
+                elif tasto == 'l' and in_loop:
+                    self._ferma_voci()
+                    print(f"\rLoop disattivato.{' ' * 40}\r", end="", flush=True)
+                    return 'fermato'
+                elif tasto == chr(27):
+                    self._ferma_voci()
+                    return 'esci' if in_loop else 'interrotto'
             if residuo <= 0:
                 return None
 
@@ -736,7 +717,16 @@ class Esercizio:
         return None
 
     def _imposta_bpm(self):
-        nuovo_bpm = dgt(f"\rNuovi BPM (attuale: {self.bpm}): ", kind='i', imin=20, imax=300, default=self.bpm)
+        # La domanda la fa dgt, che legge la console: la tastiera a eventi si
+        # chiude e si riapre dopo
+        self.tasti.chiudi()
+        # La domanda parte su una riga sua: la riga di stato finisce con un
+        # ritorno carrello, e la domanda le avrebbe scritto sopra
+        print()
+        try:
+            nuovo_bpm = dgt(f"Nuovi BPM (attuale: {self.bpm}): ", kind='i', imin=20, imax=300, default=self.bpm)
+        finally:
+            self.tasti = player.apri_tastiera()
         if nuovo_bpm != self.bpm:
             self.bpm = nuovo_bpm
             config.impostazioni['default_bpm'] = nuovo_bpm
@@ -753,9 +743,12 @@ class Esercizio:
 
     def avvia(self):
         print("Menu esercizio scala. Premi '?' per aiuto.")
+        self.tasti = player.apri_tastiera()
         self.poly.start()
         self._configura_renderer()
         loop_attivo = False
+        # Il tasto di una nota tenuta -> la sua voce, per chiuderla al rilascio
+        tenute = {}
         try:
             while True:
                 if loop_attivo:
@@ -769,34 +762,48 @@ class Esercizio:
                     self.loop_count += 1
                     continue
                 self._riga_stato(False)
-                scelta = key()
-                if not scelta:
-                    continue
-                scelta = scelta.lower()
-                if scelta == chr(27):
+                esci = False
+                for nome, azione in self.tasti.eventi(None):
+                    if azione == "su":
+                        self._lascia_nota(tenute.pop(nome, None))
+                        continue
+                    scelta = nome.lower()
+                    if scelta == chr(27):
+                        esci = True
+                        break
+                    if scelta == '?':
+                        self._aiuto()
+                    elif scelta == 'm':
+                        self.metronomo = not self.metronomo
+                        print(f"\nMetronomo {'attivo' if self.metronomo else 'disattivato'} per l'esercizio.")
+                    elif scelta == ' ':
+                        self._lascia_tutte(tenute)
+                        self._cambia_suono()
+                    elif nome in self.key_map:
+                        if self._tieni_nota(self.key_map[nome]):
+                            tenute[nome] = self.key_map[nome]
+                    elif scelta == 'l':
+                        self._lascia_tutte(tenute)
+                        loop_attivo = True
+                        self.loop_count = 1
+                        self.ultima_voce = None
+                        self.griglia = None
+                        print(f"\rLoop attivo. Premi L per fermare.{' ' * 20}\r", end="", flush=True)
+                        break
+                    elif scelta == 'b':
+                        self._lascia_tutte(tenute)
+                        self._imposta_bpm()
+                    elif scelta in ('a', 'd'):
+                        self._lascia_tutte(tenute)
+                        self.direzione = scelta
+                        self._suona_sequenza(False)
+                if esci:
                     break
-                if scelta == '?':
-                    self._aiuto()
-                elif scelta == 'm':
-                    self.metronomo = not self.metronomo
-                    print(f"\rMetronomo {'attivo' if self.metronomo else 'disattivato'} per l'esercizio.{' ' * 20}")
-                elif scelta == ' ':
-                    self._cambia_suono()
-                elif scelta in self.key_map:
-                    self._suona_nota(self.key_map[scelta], suoni.parametri_suono('midi')['dur'])
-                elif scelta == 'l':
-                    loop_attivo = True
-                    self.loop_count = 1
-                    self.ultima_voce = None
-                    self.griglia = None
-                    print(f"\rLoop attivo. Premi L per fermare.{' ' * 20}\r", end="", flush=True)
-                elif scelta == 'b':
-                    self._imposta_bpm()
-                elif scelta in ('a', 'd'):
-                    self.direzione = scelta
-                    self._suona_sequenza(False)
         finally:
+            self.tasti.chiudi()
             self.poly.stop()
+            # Dopo la riga di stato, che finisce con un ritorno carrello
+            print()
 
 
 def VisualizzaEsercitatiScala():
@@ -810,19 +817,22 @@ def VisualizzaEsercitatiScala():
         s = _costruisci_scala(tonica_std, selected_key)
     except (scale_catalog.ScaleException, Music21Exception, ValueError) as e:
         print(f"Errore nella generazione della scala: {e}")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     s.stampa_riepilogo()
     if config.ARMONICA is not None:
         s = _mostra_armonica(s, tonica_std, selected_key)
         if s is None:
-            key("Premi un tasto per tornare al menu...")
+            key("\rPremi un tasto per tornare al menu...\r")
+            print()
             return
     else:
         _mostra_manico(s)
     if not s.frequenze:
         print("Nessuna nota audio generata per l'esercizio.")
-        key("Premi un tasto per tornare al menu...")
+        key("\rPremi un tasto per tornare al menu...\r")
+        print()
         return
     Esercizio(s).avvia()
     print("Fine esercizio.")

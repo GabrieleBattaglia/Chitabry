@@ -1,4 +1,4 @@
-# GBAudio, motore audio di Chitabry: sintesi dello strumento e dialogo con il MIDI.
+# GBAudio, motore audio di Chitabry: sintesi dello strumento, mixer e tastiera MIDI esterna.
 # Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Data creazione: 6 gennaio 2026.
 # Non e' un doppione di Acusticator e non va unificato con quello: Acusticator
@@ -9,15 +9,13 @@
 # Revisione 1 del 2026-09-09: un solo interprete dei nomi di nota da cui
 # derivano note_to_freq e note_to_midi; il mixer polifonico protegge buffer e
 # indici con un lucchetto e chiude il flusso audio quando si ferma; le
-# eccezioni catturate sono quelle che si sanno nominare. Dal 2026-09-10 i
-# messaggi MIDI accettano il canale, per le percussioni del canale 10.
+# eccezioni catturate sono quelle che si sanno nominare. Dalla 10.0.0 il
+# sintetizzatore MIDI di Windows non si usa piu': il MIDI e' il banco di suoni.
 
 import atexit
 import ctypes
-import itertools
 import math
 import threading
-import time
 import weakref
 
 import numpy as np
@@ -623,130 +621,11 @@ MIDI_INSTRUMENTS = [
     "Telephone Ring", "Helicopter", "Applause", "Gunshot"
 ]
 
-# Il click dell'esercizio delle scale, quando il suono e' MIDI, suona su un
-# canale melodico tutto suo con il programma Woodblock del General MIDI. Sul
-# canale delle percussioni il kit GS di Windows tiene i wood block a destra e
-# il pan del canale non li sposta; su un canale melodico il pan comanda.
-CANALE_CLICK = 1
-PROGRAMMA_WOODBLOCK = 115
-# Con un'armonica attiva le sue note, in MIDI, suonano con il programma
-# Harmonica su un canale loro: lo strumento MIDI scelto nelle impostazioni
-# resta sul canale 1 per tutto il resto, senza doverlo rimettere a posto.
-CANALE_ARMONICA = 2
-PROGRAMMA_ARMONICA = 22
-# Controlli continui: pan al centro, e riverbero e chorus a zero, perche' il
-# sintetizzatore GS li mette di suo su ogni canale e un click li vuole secchi.
-CC_PAN = 10
-# Il volume del canale, che Chitabry regola dalle impostazioni per le note
-# degli strumenti MIDI e dell'armonica. Il canale del click non lo riceve e
-# resta al volume di partenza del sintetizzatore, 100 su 127; il suo volume
-# lo danno le velocita' prese dal preset del metronomo.
-CC_VOLUME = 7
-CC_RIVERBERO = 91
-CC_CHORUS = 93
-PAN_CENTRO = 64
+# Dalla 10.0.0 il MIDI di Chitabry e' il banco di suoni, suonato da
+# FluidSynth nel mixer: il sintetizzatore di Windows, con il suo ritardo che
+# non si regola, non si usa piu'. Resta l'ingresso della tastiera MIDI
+# esterna, qui sotto, e l'elenco dei nomi General MIDI qui sopra.
 
-
-class WindowsMidiOut:
-    """Gestore dell'output MIDI nativo di Windows tramite winmm.dll.
-    Note on, note off, program change e controlli vanno di norma sul canale
-    1, che nei messaggi vale 0; con canale si scrive su un altro, per esempio
-    CANALE_CLICK."""
-    def __init__(self):
-        self.h_midi = None
-        self.winmm = None
-        self.active_program = -1
-        self.open_port()
-
-    def open_port(self):
-        try:
-            self.winmm = ctypes.windll.winmm
-
-            # Ottimizzazione dei tipi ctypes per abbattere la latenza delle chiamate
-            self.winmm.midiOutShortMsg.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
-            self.winmm.midiOutShortMsg.restype = ctypes.c_uint
-
-            HMIDIOUT = ctypes.c_void_p
-            self.h_midi = HMIDIOUT()
-            res = self.winmm.midiOutOpen(ctypes.byref(self.h_midi), -1, None, None, 0)
-            if res != 0:
-                self.h_midi = None
-                print(f"\n[MIDI] Errore apertura MIDI Mapper (Codice: {res})")
-        except (AttributeError, OSError) as e:
-            self.h_midi = None
-            print(f"\n[MIDI] Inizializzazione fallita: {e}")
-
-    def select_instrument(self, program):
-        """Lo strumento del canale 1, quello delle note: si manda solo se cambia."""
-        if self.h_midi is not None and program != self.active_program:
-            self.active_program = program
-            self.program_change(program)
-
-    def program_change(self, program, canale=0):
-        if self.h_midi is not None:
-            # Program Change: status 0xC0 piu' il canale
-            msg = (program << 8) | (0xC0 | canale)
-            self.winmm.midiOutShortMsg(self.h_midi, msg)
-
-    def note_on(self, note_num, velocity=127, canale=0):
-        if self.h_midi is not None and note_num is not None:
-            # Note On: status 0x90 piu' il canale
-            msg = (velocity << 16) | (note_num << 8) | (0x90 | canale)
-            self.winmm.midiOutShortMsg(self.h_midi, msg)
-
-    def note_off(self, note_num, canale=0):
-        if self.h_midi is not None and note_num is not None:
-            # Note Off: status 0x80 piu' il canale
-            msg = (note_num << 8) | (0x80 | canale)
-            self.winmm.midiOutShortMsg(self.h_midi, msg)
-
-    def control_change(self, controllo, valore, canale=0):
-        """Manda un controllo continuo, per esempio CC_RIVERBERO a zero."""
-        if self.h_midi is not None:
-            # Control Change: status 0xB0 piu' il canale
-            msg = (valore << 16) | (controllo << 8) | (0xB0 | canale)
-            self.winmm.midiOutShortMsg(self.h_midi, msg)
-
-    def close_port(self):
-        if self.h_midi is not None:
-            # Spegne eventuali note prima della chiusura
-            for n in range(128):
-                self.note_off(n)
-            self.winmm.midiOutClose(self.h_midi)
-            self.h_midi = None
-
-_midi_out = None
-
-def get_midi_out():
-    """Restituisce l'istanza condivisa di WindowsMidiOut."""
-    global _midi_out
-    if _midi_out is None:
-        _midi_out = WindowsMidiOut()
-        # Seleziona lo strumento impostato inizialmente per evitare overhead successivi
-        try:
-            import config
-        except ImportError:
-            return _midi_out
-        _midi_out.select_instrument(config.impostazioni.get("midi_strumento", 0))
-        _midi_out.control_change(CC_VOLUME, volume_midi(config.impostazioni.get("midi_volume", 100)))
-    return _midi_out
-
-
-def volume_midi(percentuale):
-    """Da percentuale, come la scrive chi usa Chitabry, al valore MIDI da 0 a 127."""
-    try:
-        valore = float(percentuale)
-    except (TypeError, ValueError):
-        valore = 100.0
-    return max(0, min(127, round(127 * valore / 100)))
-
-@atexit.register
-def cleanup_midi():
-    """Garantisce la chiusura pulita del canale MIDI all'uscita di Python."""
-    global _midi_out
-    if _midi_out is not None:
-        _midi_out.close_port()
-        _midi_out = None
 
 def note_to_midi(note_str):
     """Converte un nome di nota in numero MIDI intero; un numero lo arrotonda;
@@ -771,44 +650,6 @@ def freq_to_midi(freq):
     if freq <= 0.0:
         return None
     return round(12 * math.log2(freq / 440.0) + 69)
-
-# Le note accese da play_midi_note_temp, per canale e numero, con il numero
-# dell'ultima accensione: il timer di una nota spegne solo la sua, e non
-# quella ribattuta dopo di lei. Il numero cresce sempre, per tutte le note,
-# cosi' un timer vecchio e lungo non ritrova mai il suo numero su una nota
-# accesa dopo.
-_NOTE_ACCESE = {}
-_ACCENSIONI = itertools.count(1)
-_BLOCCO_NOTE = threading.Lock()
-
-
-def play_midi_note_temp(note_num, duration, velocity=127, canale=0):
-    """Riproduce una nota MIDI per una determinata durata in secondi, sul
-    canale indicato. Se la stessa nota suona ancora, prima la si spegne, e il
-    suo timer non tocca piu' quella nuova: fino alla 9.13 il note_off della
-    nota vecchia spegneva quella ribattuta, che durava meno del dovuto."""
-    if note_num is None:
-        return
-    m_out = get_midi_out()
-    chiave = (canale, note_num)
-    with _BLOCCO_NOTE:
-        if chiave in _NOTE_ACCESE and m_out.h_midi is not None:
-            m_out.note_off(note_num, canale)
-        generazione = next(_ACCENSIONI)
-        _NOTE_ACCESE[chiave] = generazione
-        m_out.note_on(note_num, velocity, canale)
-
-    def off():
-        time.sleep(duration)
-        with _BLOCCO_NOTE:
-            if _NOTE_ACCESE.get(chiave) != generazione:
-                return
-            del _NOTE_ACCESE[chiave]
-            if m_out.h_midi is not None:
-                m_out.note_off(note_num, canale)
-
-    threading.Thread(target=off, daemon=True).start()
-
 
 # --- Supporto MIDI IN Nativo ---
 
@@ -932,27 +773,21 @@ def get_midi_in():
     return _midi_in
 
 def on_midi_in_note_on(note_num, velocity):
-    """Callback di default per Note On da tastiera MIDI."""
+    """Callback di default per Note On da tastiera MIDI: la nota suona con il
+    suono attivo finche' il tasto e' giu'."""
     try:
-        import config
-        tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
-        if tipo_suono == 'midi':
-            get_midi_out().note_on(note_num, velocity)
-        else:
-            # suoni importa questo modulo: lo si importa qui, alla prima nota.
-            # Passando da suoni, la tastiera MIDI suona anche con il banco.
-            import suoni
-            suoni.suona_note([note_num])
+        # suoni importa questo modulo: lo si importa qui, alla prima nota
+        import suoni
+        suoni.nota_esterna_giu(note_num, velocity)
     except Exception as e:  # noqa: BLE001 - callback di winmm: un errore qui non ha nessuno a cui risalire
         print(f"Nota MIDI non riprodotta: {e}")
 
 
 def on_midi_in_note_off(note_num):
-    """Callback di default per Note Off da tastiera MIDI."""
+    """Callback di default per Note Off da tastiera MIDI: la nota si chiude."""
     try:
-        import config
-        if config.impostazioni.get('tipo_suono', 'suono_1') == 'midi':
-            get_midi_out().note_off(note_num)
+        import suoni
+        suoni.nota_esterna_su(note_num)
     except Exception as e:  # noqa: BLE001 - callback di winmm: un errore qui non ha nessuno a cui risalire
         print(f"Nota MIDI non spenta: {e}")
 
@@ -970,3 +805,9 @@ def close_global_midi_in():
     if _midi_in is not None:
         _midi_in.close_port()
         _midi_in = None
+        # Le note rimaste giu' non riceveranno piu' il rilascio
+        try:
+            import suoni
+            suoni.chiudi_note_esterne()
+        except Exception as e:  # noqa: BLE001 - anche all'uscita di Python: niente deve fermare la chiusura
+            print(f"Note MIDI esterne non chiuse: {e}")

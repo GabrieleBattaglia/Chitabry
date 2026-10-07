@@ -65,7 +65,8 @@ def ModificaSuono(suono_key):
     suono['volume'] = dgt(f"Volume (0.0 - 1.0) (attuale: {suono['volume']}): ", kind='f', fmin=0.0, fmax=1.0, default=suono['volume'])
     config.salva_modifiche()
     print(f"Impostazioni per {suono['descrizione']} aggiornate.")
-    key("Premi un tasto per continuare...")
+    key("\rPremi un tasto per continuare...\r")
+    print()
 
 
 def _chiedi_accordatura(num_corde):
@@ -101,6 +102,7 @@ def _descrivi_strumenti(strumenti):
                 descrizioni[nome] = "armonica con dati da correggere"
         else:
             descrizioni[nome] = f"{conf.get('tasti')} tasti, {len(conf.get('accordatura', []))} corde"
+        descrizioni[nome] += f", General MIDI {suoni.nome_del_programma(config.programma_dello_strumento(conf))}"
     return descrizioni
 
 
@@ -210,8 +212,14 @@ def _aggiungi_strumento(strumenti):
         nome, voce = _nuova_armonica(strumenti)
     if voce is None:
         return
+    voce['programma_gm'] = config.programma_proposto(nome, voce)
     strumenti[nome] = voce
     config.impostazioni['strumenti'] = strumenti
+    if voce['programma_gm'] is None:
+        print("Il General MIDI non ha uno strumento simile: il banco con lo strumento dell'attivo, per questo strumento, si salta.")
+    else:
+        print(f"Strumento General MIDI proposto: {suoni.nome_del_programma(voce['programma_gm'])}.")
+    print("Lo strumento General MIDI si cambia con la voce g di Gestisci Strumenti.")
     ans = dgt(f"Vuoi impostare {nome} come strumento attivo? (S/N): ", kind="s")
     if ans.strip().lower() == 's':
         config.impostazioni['strumento_attivo'] = nome
@@ -220,8 +228,35 @@ def _aggiungi_strumento(strumenti):
     print(f"Strumento {nome} aggiunto con successo!")
 
 
+def _scegli_programma_dello_strumento(strumenti):
+    """La voce g: lo strumento General MIDI di uno strumento, cioe' quello
+    con cui suona il banco quando lo strumento e' attivo. Si sceglie dal
+    nome, e nessuno lo toglie."""
+    if len(strumenti) == 1:
+        nome = next(iter(strumenti))
+    else:
+        print("Di quale strumento? Scrivi le prime lettere del nome:")
+        nome = _scegli_strumento(strumenti)
+        if nome is None:
+            return
+    conf = strumenti[nome]
+    attuale = suoni.nome_del_programma(config.programma_dello_strumento(conf))
+    # Lo zero, e non la parola nessuno: il menu sceglie alla prima lettera, e
+    # le altre finivano nel menu di Gestisci Strumenti
+    print(f"Strumento General MIDI di {nome} (attuale: {attuale}). Scrivi le prime lettere del nome, o 0 per toglierlo:")
+    voci = {"0": "nessuno strumento: il banco con lo strumento dell'attivo si salta"}
+    voci.update((n, n) for n in GBAudio.MIDI_INSTRUMENTS)
+    scelto = menu(d=voci, keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Strumento non valido")
+    if scelto is None:
+        return
+    conf['programma_gm'] = None if scelto == "0" else GBAudio.MIDI_INSTRUMENTS.index(scelto)
+    config.salva_modifiche()
+    print(f"Strumento General MIDI di {nome}: {suoni.nome_del_programma(conf['programma_gm'])}.")
+
+
 def GestoreStrumenti():
-    """Scelta, aggiunta ed eliminazione degli strumenti, a corda e armoniche."""
+    """Scelta, aggiunta ed eliminazione degli strumenti, a corda e armoniche,
+    e il loro strumento General MIDI."""
     print("Gestore strumenti.")
     while True:
         strumenti = config.impostazioni.get('strumenti', {})
@@ -229,7 +264,8 @@ def GestoreStrumenti():
         menu_strum = {
             's': f"Seleziona strumento attivo (Attuale: {strum_attivo})",
             'a': "Aggiungi nuovo strumento",
-            'e': "Elimina strumento"
+            'e': "Elimina strumento",
+            'g': "Strumento General MIDI di uno strumento, per il banco di suoni",
         }
         scelta = menu(d=menu_strum, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
         if scelta is None:
@@ -251,6 +287,8 @@ def GestoreStrumenti():
                 print(f"Strumento attivo impostato su: {scelto}.")
         elif scelta == 'a':
             _aggiungi_strumento(strumenti)
+        elif scelta == 'g':
+            _scegli_programma_dello_strumento(strumenti)
         elif scelta == 'e':
             eliminabili = {k: v for k, v in strumenti.items() if k != strum_attivo}
             if not eliminabili:
@@ -271,60 +309,54 @@ def GestoreStrumenti():
 
 
 def _descrizione_tipo_suono():
-    tipo_suono = config.impostazioni.get('tipo_suono', 'suono_1')
-    if tipo_suono == 'suono_1':
-        return "Sintesi Karplus-Strong"
-    if tipo_suono == 'suono_2':
-        return "Sintesi Onda Semplice"
-    if tipo_suono == 'banco':
-        return suoni.descrizione_suono('banco')
-    return f"MIDI ({GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})"
+    return suoni.descrizione_suono(suoni.suono_attivo())
 
 
 def _scegli_tipo_suono():
-    menu_tipi = {'1': "Sintesi Karplus-Strong", '2': "Sintesi Onda Semplice", '3': "Strumento MIDI di Windows",
-                 '4': "Banco di suoni, un soundfont suonato da FluidSynth"}
+    menu_tipi = {'1': "Sintesi Karplus-Strong", '2': "Sintesi Onda Semplice",
+                 '3': "Banco di suoni, con lo strumento scelto per il banco",
+                 '4': "Banco di suoni, con lo strumento General MIDI dello strumento attivo"}
     print("Seleziona il tipo di suono attivo:")
     scelta_t = menu(d=menu_tipi, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
-    tipi = {'1': 'suono_1', '2': 'suono_2', '3': 'midi', '4': 'banco'}
-    if scelta_t == '4' and not suoni.banco_pronto():
+    tipi = {'1': 'suono_1', '2': 'suono_2', '3': 'banco', '4': 'banco_strumento'}
+    if scelta_t == '4' and suoni.programma_attivo() is None:
+        print(f"Lo strumento attivo, {config.impostazioni.get('strumento_attivo')}, non ha uno strumento General MIDI: "
+              "lo scegli in Gestisci Strumenti, alla voce g.")
+    elif scelta_t in ('3', '4') and not suoni.banco_pronto():
         # Il banco non e' ancora pronto: lo si prepara, e alla fine si chiede
         # se usarlo come suono attivo
-        _configura_banco()
+        _configura_banco(tipi[scelta_t])
         return
-    if scelta_t in tipi:
+    elif scelta_t in tipi:
         config.impostazioni['tipo_suono'] = tipi[scelta_t]
         config.salva_modifiche()
-        print(f"Tipo suono attivo impostato su: {menu_tipi[scelta_t]}.")
-    key("Premi un tasto...")
+        print(f"Tipo suono attivo impostato su: {suoni.descrizione_suono(tipi[scelta_t])}.")
+    key("\rPremi un tasto...\r")
+    print()
 
 
 def _scegli_strumento_midi():
+    """Lo strumento General MIDI scelto per il banco di suoni: quello del
+    suono BAN, accanto a quello dello strumento attivo."""
     midi_dict = {name: name for name in GBAudio.MIDI_INSTRUMENTS}
-    print("Seleziona uno strumento MIDI iniziando a digitare il nome per filtrare:")
+    print("Seleziona lo strumento del banco di suoni iniziando a digitare il nome per filtrare:")
     scelto = menu(d=midi_dict, keyslist=True, show=True, show_on_filter=False, ntf="Strumento non valido")
     if scelto is not None:
-        program = GBAudio.MIDI_INSTRUMENTS.index(scelto)
-        config.impostazioni['midi_strumento'] = program
-        # Il banco suona con lo stesso strumento: se e' il suono attivo resta,
-        # invece di lasciare il posto al MIDI di Windows
-        banco_attivo = config.impostazioni.get('tipo_suono') == 'banco'
-        if not banco_attivo:
-            config.impostazioni['tipo_suono'] = 'midi'
+        config.impostazioni['midi_strumento'] = GBAudio.MIDI_INSTRUMENTS.index(scelto)
         config.salva_modifiche()
-        if banco_attivo:
-            print(f"Strumento impostato su: {scelto}. Il suono attivo resta il banco.")
-        else:
-            print(f"Strumento MIDI impostato su: {scelto} e attivato.")
-        GBAudio.get_midi_out().select_instrument(program)
-    key("Premi un tasto...")
+        print(f"Strumento del banco impostato su: {scelto}.")
+        if not suoni.banco_pronto():
+            print("Il banco di suoni non e' ancora pronto: lo prepari alla voce 5 delle Impostazioni.")
+    key("\rPremi un tasto...\r")
+    print()
 
 
 def _scegli_tastiera_midi():
     dispositivi = GBAudio.get_midi_in_devices()
     if not dispositivi:
         print("Nessun dispositivo MIDI di input rilevato nel sistema.")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     midi_in_menu = {"0": "Disconnetti / Nessuno"}
     for idx, name in enumerate(dispositivi):
@@ -343,7 +375,8 @@ def _scegli_tastiera_midi():
         config.salva_modifiche()
         GBAudio.open_global_midi_in(idx_sel)
         print(f"Tastiera MIDI connessa ed attivata: {nome_sel}")
-    key("Premi un tasto...")
+    key("\rPremi un tasto...\r")
+    print()
 
 
 def _riga(testo):
@@ -368,12 +401,14 @@ def _scarica_con_avanzamento(funzione, cosa):
     return True if risultato is None else risultato
 
 
-def _configura_banco():
+def _configura_banco(chiave='banco'):
     """Il banco di suoni: FluidSynth, se manca, la ricerca dei banchi General
     MIDI sui dischi, la scelta, il volume. Il codice che cerca e scarica viene
-    da MeTeOra, che fa la stessa cosa per i suoi MIDI."""
-    print("Banco di suoni. Chitabry suona un banco General MIDI, cioe' un file sf2, con FluidSynth: e' un quarto suono, "
-          "accanto ai due sintetici e al MIDI di Windows, e lo scegli fra i banchi che hai sul computer.")
+    da MeTeOra, che fa la stessa cosa per i suoi MIDI. chiave e' il suono da
+    attivare alla fine, se lo si vuole: il banco con lo strumento scelto o con
+    quello dell'attivo."""
+    print("Banco di suoni. Chitabry suona un banco General MIDI, cioe' un file sf2, con FluidSynth: e' il suo MIDI, "
+          "accanto ai due suoni sintetici, e lo scegli fra i banchi che hai sul computer.")
     presente = banchi.fluidsynth_pronto()
     if not presente:
         # Una copia salvata che non si carica piu' si dimentica: altrimenti
@@ -427,7 +462,8 @@ def _configura_banco():
             if not enter_escape(f"\r{perche} Lo scarico da GitHub, dalla pagina ufficiale? (INVIO per si', ESC per no): \r"):
                 return
             if _scarica_con_avanzamento(banchi.scarica_fluidsynth, "FluidSynth") is None:
-                key("Premi un tasto...")
+                key("\rPremi un tasto...\r")
+                print()
                 return
             print("FluidSynth scaricato.")
     if attuale and attuale not in voci and os.path.isfile(attuale):
@@ -448,7 +484,8 @@ def _configura_banco():
     if scelta == "scarica":
         percorso = _scarica_con_avanzamento(banchi.scarica_fluidr3, "FluidR3 GM")
         if percorso is None:
-            key("Premi un tasto...")
+            key("\rPremi un tasto...\r")
+            print()
             return
     else:
         percorso = scelta
@@ -458,22 +495,13 @@ def _configura_banco():
                           default=banco.get('volume', 0.8))
     banchi.chiudi()
     if dgt("Vuoi usarlo come suono attivo? (S/N): ", kind="s").strip().lower() == 's':
-        config.impostazioni['tipo_suono'] = 'banco'
+        config.impostazioni['tipo_suono'] = chiave
     config.salva_modifiche()
-    print(f"Banco di suoni: {os.path.basename(percorso)}. Lo strumento e' quello scelto per il MIDI, e l'armonica suona con Harmonica.")
-    key("Premi un tasto...")
-
-
-def _scegli_volume_midi():
-    """Il volume delle note MIDI, strumenti e armonica, in percentuale. Il
-    click del metronomo non c'entra: il suo volume e' quello del preset."""
-    attuale = config.impostazioni.get('midi_volume', 100)
-    nuovo = dgt(f"Volume MIDI, da 0 a 100 (attuale: {attuale}): ", kind='i', imin=0, imax=100, default=attuale)
-    config.impostazioni['midi_volume'] = nuovo
-    config.salva_modifiche()
-    suoni.applica_volume_midi()
-    print(f"Volume MIDI impostato a {nuovo}%.")
-    key("Premi un tasto...")
+    print(f"Banco di suoni: {os.path.basename(percorso)}. Suona con lo strumento scelto per il banco, "
+          f"{suoni.nome_del_programma(suoni.programma_scelto())}, e con quello dello strumento attivo: "
+          "la barra spaziatrice li alterna con i due suoni sintetici.")
+    key("\rPremi un tasto...\r")
+    print()
 
 
 def GestoreImpostazioni():
@@ -487,10 +515,9 @@ def GestoreImpostazioni():
             't': f"Cambia Tipo Suono Attivo (attuale: {_descrizione_tipo_suono()})",
             '1': f"Modifica {config.impostazioni['suono_1']['descrizione']}",
             '2': f"Modifica {config.impostazioni['suono_2']['descrizione']}",
-            '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})",
+            '3': f"Strumento del banco di suoni (attuale: {suoni.nome_del_programma(suoni.programma_scelto())})",
             '4': f"Connetti Tastiera MIDI (Attivo: {midi_in_attivo if midi_in_attivo else 'Nessuno'})",
-            '5': f"Volume MIDI (attuale: {config.impostazioni.get('midi_volume', 100)}%)",
-            '6': f"Banco di suoni (attuale: {os.path.basename(config.impostazioni.get('banco', {}).get('percorso', '')) or 'nessuno'})",
+            '5': f"Banco di suoni (attuale: {os.path.basename(config.impostazioni.get('banco', {}).get('percorso', '')) or 'nessuno'})",
         }
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
         if scelta is None:
@@ -505,7 +532,8 @@ def GestoreImpostazioni():
                 config.impostazioni['nomenclatura'] = 'latino'
             config.salva_modifiche()
             print(f"Nomenclatura impostata su: {config.impostazioni['nomenclatura']}")
-            key("Premi un tasto...")
+            key("\rPremi un tasto...\r")
+            print()
         elif scelta == 't':
             _scegli_tipo_suono()
         elif scelta == '1':
@@ -517,6 +545,5 @@ def GestoreImpostazioni():
         elif scelta == '4':
             _scegli_tastiera_midi()
         elif scelta == '5':
-            _scegli_volume_midi()
-        elif scelta == '6':
-            _configura_banco()
+            # Chi suona gia' con lo strumento dell'attivo lo conserva
+            _configura_banco('banco_strumento' if config.impostazioni.get('tipo_suono') == 'banco_strumento' else 'banco')

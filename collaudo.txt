@@ -1,10 +1,22 @@
-Prove a mano della 9.13.4, piu' quelle della 9.10 e della 9.11 che restavano: soglia dell'accordatore, strumenti per nome, ascolto dei gruppi di fori, FluidSynth trovato sul computer, banco di suoni. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le tue note del giro precedente sono salvate in git.
-Passo 6: Scale, SOL blues con la Hohner e il suono BAN, esercizio con A, D e L, con il metronomo acceso.
-Domanda 6: l'armonica del banco suona senza vibrato, a tempo con il battito, e al volume giusto rispetto al click?
-GB: no qui la nota è lunga, fra l'altro ho visto che in tastiera si accorge di quando lascio il tasto quindi la durata vale solo per gli automatismi come il loop della scala ma per le singole note, sia in scale che in accordi, potremmo suonare finché tengo premuto il tasto.
-Poi il vibrato c'è ancora su certe note, ma quello credo dipenda dal banco in uso: adesso sto provando il general che dicevi e ce l'ha, come ce l'ha il fluid.
-
-Ho poi notato altri difetti.
-In tatiera, le note con lo shift non funzionano: vanno a ripetizione e producono una cascata di note invece di una tenuta.
-Poi, ora c'è un po di confusione: ci sono 2 midi, ciclando con la barra. Io direi che potremmo ridurre ad un midi solo valido per tutta l'applicazione. Poi, in base allo strumento attivo, lo spazio cicla fra il synth, lo strumento midi scelto nelle impostazioni e, sempre dallo stesso banco, lo strumento midi uguale a quello attivo, se presente nel banco.
-Altra cosa notata in tastiera musicale: uno dei 2 midi implementato, quello sviluppato ora per l'armonica è molto veloce, l'altro ha molta più latenza. Non sono certo di quale dei due, magari misurali e teniamo solo quello veloce.
+Prove a mano della 10.0.0, piu' quelle della 9.10 e della 9.11 che restavano: un MIDI solo, il giro dei quattro suoni, lo strumento General MIDI di ogni strumento, le note tenute nelle scale e negli accordi, lo Shift nella Tastiera, i prompt. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le tue note del giro precedente sono salvate in git.
+Passo 1: avvia Chitabry e leggi le righe dell'avvio.
+Domanda 1: dice che il suono MIDI di Windows diventa il banco, che il volume MIDI se ne va e che gli strumenti hanno ricevuto lo strumento General MIDI proposto?
+Passo 2: Impostazioni, Gestisci Strumenti, g, e scorri gli strumenti General MIDI proposti: per l'Ukulele Tenore scegli Acoustic Guitar (nylon), per l'Ukulele Concerto prova lo 0, che vuol dire nessuno, poi esci.
+Domanda 2: le proposte, Harmonica per le armoniche, chitarra nylon, basso e banjo, ti tornano? La scelta per nome e' comoda?
+Passo 3: con la Hohner attiva, Tastiera: premi la barra spaziatrice piu' volte, poi suona qualche nota tenuta con lo Shift, per esempio Z e Q maiuscole.
+Domanda 3: il giro e' S1, S2, BAN con la Marimba e STR con l'Harmonica, e le note con lo Shift restano tenute senza raffica?
+Domanda 4: con il banco senti ancora il ritardo che sentivi col MIDI di Windows?
+Passo 4: Scale, SOL blues con la Hohner e il suono STR: tieni giu' i tasti delle note, poi A, D e L con il metronomo acceso.
+Domanda 5: le note dei tasti durano finche' li tieni, e l'ascolto a tempo e il loop restano a tempo con il battito del preset?
+Domanda 6: l'armonica del banco GeneralUser vibra? Se vuoi provare senza vibrato, il banco SGM-V2.01 si sceglie alla voce 5 delle Impostazioni.
+Passo 5: Costruttore Accordi con SOL settima di dominante: lascia finire l'accordo che parte da solo, poi tieni giu' i tasti da 1 a 4 e A, uno alla volta.
+Domanda 7: l'accordo iniziale dura due quarti, e poi note e accordo durano finche' tieni il tasto, un fiato alla volta?
+Passo 6: rimetti la chitarra, Costruttore Accordi con DO maggiore, scegli una forma e tieni giu' le corde e la pennata Q, prima con S1 e poi con BAN, la tua Marimba. Poi Impostazioni, voce 3, Church Organ, e riprova con BAN; alla fine rimetti la Marimba.
+Domanda 8: corde e marimba si smorzano quando lasci il tasto, e con l'organo la nota resta finche' tieni, fino a otto secondi?
+Passo 7: Gioca col suono, Note, premi la barra spaziatrice quattro volte ascoltando la nota a ogni cambio.
+Domanda 9: il giro e' lo stesso degli altri, e il banco ha l'altezza giusta?
+Passo 8: Impostazioni, voce t e poi ESC, e voce 3 e poi ESC: tutte e due finiscono con Premi un tasto. Poi Nota sul manico, che finisce con Premi un tasto per tornare al menu, e Accordatore, con la domanda Invio o ESC del rilevamento.
+Domanda 10: la barra braille resta sul prompt, e la riga dopo non scrive sopra?
+Passo 9: Guida: cerca 12.3. poi 12.6. e 12.8. con la ricerca del tuo editor.
+Domanda 11: le parti nuove sul MIDI unico, sui quattro suoni e sullo strumento General MIDI si capiscono?
+Esito:

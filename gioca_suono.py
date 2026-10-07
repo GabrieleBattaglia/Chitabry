@@ -48,17 +48,6 @@ def _risposta_nota(ans_str):
     return pitch.Pitch(nota_std + ans_str[-1]).midi
 
 
-def _prossimo_suono(attuale):
-    """Il suono dopo quello attuale, per la barra spaziatrice: i due
-    sintetici, e il banco quando ce n'e' uno pronto, come ha chiesto
-    Gabriele il 7 ottobre 2026. Il MIDI di Windows resta fuori, come prima:
-    il gioco suona dal mixer."""
-    giro = ['suono_1', 'suono_2'] + (['banco'] if suoni.banco_pronto() else [])
-    if attuale not in giro:
-        return giro[0]
-    return giro[(giro.index(attuale) + 1) % len(giro)]
-
-
 def _durata_testo(durata_sec):
     minuti = int(durata_sec // 60)
     secondi = int(durata_sec % 60)
@@ -102,7 +91,7 @@ def avvia():
         return
     include_diesis = False
     if tipo == 'n':
-        include_diesis = enter_escape("Includere le note alterate (diesis/bemolli)? [INVIO per si', ESC per no]: ")
+        include_diesis = enter_escape("\rIncludere le note alterate (diesis/bemolli)? [INVIO per si', ESC per no]: \r")
     score_totale = 0.0
     start_time = time.time()
     stato = {'suono': 'suono_1'}
@@ -136,8 +125,9 @@ def avvia():
                     print("\nEsercizio concluso prematuramente. Il punteggio non sara' salvato.")
                     return
                 if comando == ' ':
-                    stato['suono'] = _prossimo_suono(stato['suono'])
-                    print(f"\r[Suono: {suoni.descrizione_suono(stato['suono'])}]{' ' * 20}\r", end="", flush=True)
+                    stato['suono'] = suoni.prossimo_suono(stato['suono'])
+                    # Su una riga sua: il prompt del round, che segue, la copriva
+                    print(f"\nSuono: {suoni.descrizione_suono(stato['suono'])}")
                     continue
                 if comando not in ('\r', '\n'):
                     suona_obiettivo(target_freq)
@@ -182,4 +172,5 @@ def avvia():
     print(f"Precisione: {precisione_finale:.2f}%")
     print(f"Tempo: {durata_str}")
     _aggiorna_classifica(tipo, precisione_finale, durata_sec, durata_str)
-    key("Premi un tasto per tornare al menu...")
+    key("\rPremi un tasto per tornare al menu...\r")
+    print()

@@ -39,12 +39,24 @@ CARTELLA_MIDI = os.path.join(BASE_DIR, "midi")
 # Numero di versione del formato dell'archivio. Si alza quando una chiave
 # cambia nome o significato; l'aggiunta di una chiave nuova non lo richiede,
 # perche' le chiavi mancanti si completano da sole dai valori predefiniti.
-VERSIONE_FORMATO = 3
+VERSIONE_FORMATO = 4
 # Dal formato 3, cioe' dalla 9.0.0, ogni strumento dice di che tipo e': a
 # corda, con accordatura e tasti, o armonica, con famiglia, tonalita',
 # accordatura e fori.
 TIPO_CORDE = "corde"
 TIPO_ARMONICA = "armonica"
+# Dal formato 4, cioe' dalla 10.0.0, ogni strumento ha anche il suo strumento
+# General MIDI, in programma_gm, o None se il General MIDI non ne ha uno
+# simile: e' quello che suona il banco con lo strumento dell'attivo. Si
+# propone dal tipo e dal nome, e si cambia in Gestisci Strumenti.
+PROGRAMMA_ARMONICA = 22
+# Le parole del nome che fanno proporre uno strumento, nell'ordine in cui si
+# cercano: contrabbasso prima di basso, che ci sta dentro.
+PROGRAMMI_DAL_NOME = (
+    ("contrabbass", 43), ("violoncell", 42), ("cello", 42), ("violin", 40), ("viola", 41),
+    ("basso", 32), ("bass", 32), ("banjo", 105), ("arpa", 46), ("harp", 46), ("sitar", 104),
+    ("shamisen", 106), ("koto", 107), ("guitalele", 24), ("chitarr", 24), ("guitar", 24),
+)
 # L'inviluppo del suono sintetico: attacco, decadimento, mantenimento,
 # rilascio. I tre tempi sono millesimi di secondo, il mantenimento e' il
 # livello di volume in percentuale a cui la nota si assesta.
@@ -83,9 +95,8 @@ def get_impostazioni_default():
         "nomenclatura": "latino",
         "default_bpm": 60,
         "tipo_suono": "suono_1",
+        # Lo strumento General MIDI scelto per il banco di suoni
         "midi_strumento": 0,
-        # Il volume delle note MIDI, in percentuale: dalla 9.9.0
-        "midi_volume": 100,
         "midi_in_dispositivo": "",
         "strumento_attivo": STRUMENTO_PREDEFINITO,
         "strumenti": {
@@ -93,6 +104,7 @@ def get_impostazioni_default():
                 "tipo": TIPO_CORDE,
                 "accordatura": list(ACCORDATURA_CHITARRA),
                 "tasti": TASTI_PREDEFINITI,
+                "programma_gm": 24,
             }
         },
         "suono_1": {
@@ -181,6 +193,31 @@ def _migra(dati):
                     segnati += 1
         if segnati:
             cambiamenti.append(f"Strumenti segnati come strumenti a corda: {segnati}.")
+    if formato < 4:
+        # Dalla 10.0.0 c'e' un MIDI solo, il banco di suoni: il sintetizzatore
+        # di Windows, lento a rispondere, se ne va, e con lui il suo volume.
+        # Chi lo usava passa al banco, che se non e' pronto lascia il posto
+        # al primo suono sintetico.
+        if dati.get("tipo_suono") == "midi":
+            dati["tipo_suono"] = "banco"
+            cambiamenti.append("Il suono MIDI di Windows diventa il banco di suoni.")
+        if dati.pop("midi_volume", None) is not None:
+            cambiamenti.append("Tolto il volume MIDI, che valeva solo per il sintetizzatore di Windows.")
+        strumenti = dati.get("strumenti")
+        proposti = senza = 0
+        if isinstance(strumenti, dict):
+            for nome, conf in strumenti.items():
+                if isinstance(conf, dict) and "programma_gm" not in conf:
+                    conf["programma_gm"] = programma_proposto(nome, conf)
+                    if conf["programma_gm"] is None:
+                        senza += 1
+                    else:
+                        proposti += 1
+        if proposti:
+            cambiamenti.append(f"Strumento General MIDI proposto per {proposti} strumenti.")
+        if senza:
+            cambiamenti.append(f"Strumenti che restano senza, perche' il General MIDI non ne ha uno simile: {senza}. "
+                               "Si sceglie con la voce g di Gestisci Strumenti.")
     predefiniti = get_impostazioni_default()
     for chiave, valore in predefiniti.items():
         if chiave == "versione_formato":
@@ -240,6 +277,30 @@ def e_armonica(conf):
     return isinstance(conf, dict) and conf.get("tipo") == TIPO_ARMONICA
 
 
+def programma_proposto(nome, conf):
+    """Lo strumento General MIDI da proporre per uno strumento di Chitabry:
+    Harmonica per le armoniche, poi dalle parole del nome, per esempio
+    Acoustic Guitar (nylon) per una chitarra e Acoustic Bass per un basso.
+    None se il General MIDI non ha niente di simile, come per l'ukulele e il
+    mandolino."""
+    if e_armonica(conf):
+        return PROGRAMMA_ARMONICA
+    minuscolo = str(nome).casefold()
+    for parola, programma in PROGRAMMI_DAL_NOME:
+        if parola in minuscolo:
+            return programma
+    return None
+
+
+def programma_dello_strumento(conf):
+    """Lo strumento General MIDI di uno strumento, da 0 a 127, o None se non
+    ne ha uno o se nell'archivio c'e' scritto qualcosa che non lo e'."""
+    programma = conf.get("programma_gm") if isinstance(conf, dict) else None
+    if isinstance(programma, bool) or not isinstance(programma, int) or not 0 <= programma <= 127:
+        return None
+    return programma
+
+
 def modello_armonica(conf):
     """Il modello dell'armonica descritta da una voce dell'elenco.
     Solleva ValueError se tonalita', accordatura, famiglia o fori non
@@ -266,6 +327,7 @@ def aggiorna_manico():
                 "tipo": TIPO_CORDE,
                 "accordatura": list(ACCORDATURA_CHITARRA),
                 "tasti": TASTI_PREDEFINITI,
+                "programma_gm": 24,
             }
         strum_attivo = next(iter(strumenti))
         impostazioni['strumento_attivo'] = strum_attivo

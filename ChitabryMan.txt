@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 26, di mercoledi' 7 ottobre 2026, per la versione 9.13.4.
+L'ultima revisione di questo documento e' la numero 27, di mercoledi' 7 ottobre 2026, per la versione 10.0.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -51,10 +51,9 @@ Indice Dettagliato degli Argomenti:
    - 12.3. Cambia Tipo Suono Attivo.
    - 12.4. Modifica suono 1 (Accordi).
    - 12.5. Modifica suono 2 (Sintetico).
-   - 12.6. Seleziona Strumento MIDI.
+   - 12.6. Strumento del banco di suoni.
    - 12.7. Connetti Tastiera MIDI.
-   - 12.8. Volume MIDI.
-   - 12.9. Banco di suoni.
+   - 12.8. Banco di suoni.
 13. Nota sul manico.
 14. Trova Posizione.
 15. Armonica a bocca.
@@ -130,10 +129,11 @@ Subito dopo, l'algoritmo intelligente di Chitabry calcolerà le 10 migliori dite
    - All'interno del dettaglio, potrete riascoltare l'accordo o tornare alla lista delle forme.
 
 4.2. Durante l'ascolto di una forma.
-   - Tasti 1-0: Suonano le singole note (1=grave, 0=acuta).
-   - Q: Pennata in giù (Strum "battere", dal grave all'acuto).
-   - A: Pennata in su (Strum "levare", dall'acuto al grave).
-   - SPAZIO: Alterna i suoni Chitarra, Sintetico, MIDI e, se ne hai scelto uno, il banco di suoni.
+   - Tasti 1-0: Suonano le singole note (1=grave, 0=acuta), finche' tenete il tasto.
+   - Q: Pennata in giù (Strum "battere", dal grave all'acuto), finche' tenete il tasto.
+   - A: Pennata in su (Strum "levare", dall'acuto al grave), finche' tenete il tasto.
+   - SPAZIO: Alterna i suoni Chitarra, Sintetico e, se ne hai scelto uno, i due del banco di suoni, descritti al sottocapitolo 12.3.
+   Una corda pizzicata decade comunque, ma lasciare il tasto la smorza; con un banco d'organo o d'archi la nota resta finche' tenete, fino a otto secondi.
 
 Se lo strumento attivo e' un'armonica, al posto delle diteggiature Chitabry cerca i gruppi di fori vicini che suonano l'accordo: lo trovate nel capitolo 15, Armonica a bocca.
 
@@ -307,11 +307,11 @@ Chitabry vi mostrerà:
 
 9.2. Menu Esercizio Scala.
    - A / D: Ascolta la scala a tempo, in salita o in discesa.
-   - Tasti 1-9 e 0: Suonano le singole note della scala appena generata.
+   - Tasti 1-9 e 0: Suonano le singole note della scala appena generata, finche' tenete il tasto. L'ascolto in salita e in discesa e il loop tengono invece le loro durate, a tempo.
    - L: Attiva il loop; premuto durante il loop lo ferma.
    - M: Attiva o disattiva il metronomo dell'esercizio. Se le note non riempiono la battuta di 4/4, la completano battiti senza nota.
    - B: Cambia i BPM per l'esercizio.
-   - SPAZIO: Alterna i suoni Chitarra (S1), Sintetico (S2), MIDI (MID) e, se ne hai scelto uno, il banco di suoni (BAN), con la sigla che compare nella riga di stato, anche mentre il loop gira. Con il suono MIDI anche il battito del metronomo e' un wood block MIDI, al centro, piu' alto sull'accento, cosi' nota e battito escono dallo stesso sintetizzatore e arrivano insieme; il suo volume e' quello di accento e battito del preset attivo del metronomo, mentre le note hanno il volume MIDI delle impostazioni; con gli altri suoni il battito e' il beep del metronomo.
+   - SPAZIO: Alterna i suoni Chitarra (S1), Sintetico (S2) e, se ne hai scelto uno, il banco con lo strumento scelto (BAN) e con lo strumento dell'attivo (STR), con la sigla che compare nella riga di stato, anche mentre il loop gira. Il battito del metronomo e' sempre il beep del preset attivo del metronomo, con il suo volume di accento e battito: passa dallo stesso mixer delle note e arriva insieme a loro.
    - ?: Mostra l'aiuto.
    - ESC: durante un ascolto singolo lo interrompe e si resta nell'esercizio; dal menu dell'esercizio, o mentre il loop gira, esce dall'esercizio e torna al menu principale.
 
@@ -327,14 +327,14 @@ Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 vo
   - SHIFT: Se premuto insieme ai tasti, sposta l'esecuzione di un'ulteriore ottava (sotto per la riga Z, sopra per la riga Q).
 10.2. Tastiera MIDI Esterna.
   - Se hai connesso e abilitato un dispositivo MIDI di input (tastiera fisica o bluetooth) tramite la voce "Connetti Tastiera MIDI" nel menu "Impostazioni", potrai utilizzarla direttamente.
-  - Con il suono MIDI la nota la produce il sintetizzatore del sistema, che ha un suo ritardo: e' normale che risponda un po' meno pronto degli altri due suoni, e non dipende da Chitabry.
   - Una volta all'interno di questa funzione, suonando i tasti fisici della tua tastiera MIDI esterna potrai suonare liberamente in tempo reale con piena polifonia nativa, e lo schermo stamperà in tempo reale la nota suonata e la sua frequenza (es. [Tastiera MIDI] Nota: DO4 (261.6 Hz)).
+  - Fuori dalla Tastiera, per esempio dal menu principale, le note della tastiera MIDI esterna suonano lo stesso, con il suono attivo, finche' tieni il tasto, con il banco fino a otto secondi.
 10.3. Controlli Comuni.
   - F1 - F8: Impostano istantaneamente l'ottava base per la tastiera del PC, da 2 (F1) a 9 (F8); all'ingresso l'ottava base e' la 3.
-  - SPAZIO: Cambia il tipo di suono del sintetizzatore alternando fra la sintesi Karplus-Strong, che e' la chitarra, la sintesi a onda semplice, che e' il suono sintetico, il MIDI, che suona con il sintetizzatore di Windows, e, se ne hai scelto uno, il banco di suoni, che con le note tenute suona fino a otto secondi.
+  - SPAZIO: Cambia il suono alternando fra la sintesi Karplus-Strong, che e' la chitarra, la sintesi a onda semplice, che e' il suono sintetico, e, se ne hai scelto uno, il banco di suoni, con lo strumento scelto e con quello dello strumento attivo, che con le note tenute suona fino a otto secondi.
   - ESC: Torna al menu principale.
 10.4. Note tenute.
-Dalla 8.1.0 la nota vive finche' tenete giu' il tasto, e lasciandolo si chiude con la discesa che l'inviluppo del suono dichiara nel suo rilascio, invece di essere troncata. Tenendo premuto non si sente piu' il tremolo dell'auto-ripetizione di Windows. Quanto la nota tenuta duri dipende dal suono scelto: la corda pizzicata del suono 1 decade comunque, mentre il suono sintetico resta fermo sul suo livello di mantenimento finche' tenete il tasto, e quel livello si regola dalle impostazioni. Su Linux e Mac questo non vale, perche' il terminale non sa dire quando un tasto viene lasciato.
+Dalla 8.1.0 la nota vive finche' tenete giu' il tasto, e lasciandolo si chiude con la discesa che l'inviluppo del suono dichiara nel suo rilascio, invece di essere troncata. Tenendo premuto non si sente piu' il tremolo dell'auto-ripetizione di Windows. Quanto la nota tenuta duri dipende dal suono scelto: la corda pizzicata del suono 1 decade comunque, mentre il suono sintetico resta fermo sul suo livello di mantenimento finche' tenete il tasto, e quel livello si regola dalle impostazioni. Su Linux e Mac questo non vale, perche' il terminale non sa dire quando un tasto viene lasciato. Dalla 10.0.0 Chitabry riconosce anche le ripetizioni di un tasto tenuto che arrivano come un rilascio e una pressione nuova, come succedeva con lo Shift: la nota resta tenuta, e in cambio una nota lasciata si chiude qualche centesimo di secondo dopo.
 10.5. Display Braille.
 Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
 
@@ -350,7 +350,7 @@ Selezionando questa voce potrete mettere alla prova la vostra capacità di ricon
 11.2. Svolgimento.
    Una partita è composta da 30 round. Ad ogni round ascolterete il suono bersaglio. Il prompt, estremamente compatto e ottimizzato per i display Braille, vi mostrerà il risultato del round precedente e i comandi disponibili.
    - Premete un tasto qualsiasi per riascoltare il suono quante volte volete.
-   - Premete la Barra Spaziatrice per passare al volo fra il suono della Chitarra, quello del Sintetizzatore e, se ne avete scelto uno, il banco di suoni del sottocapitolo 12.9, per aiutarvi nel riconoscimento. Il suono MIDI di Windows qui non c'e'.
+   - Premete la Barra Spaziatrice per passare al volo fra il suono della Chitarra, quello del Sintetizzatore e, se ne avete scelto uno, i due del banco di suoni del sottocapitolo 12.8, per aiutarvi nel riconoscimento.
    - Premete Invio quando vi sentite pronti a digitare la vostra risposta.
 
 11.3. Calcolo del Punteggio.
@@ -365,26 +365,24 @@ Selezionando questa voce potrete mettere alla prova la vostra capacità di ricon
 Qui potete configurare alcuni parametri di Chitabry:
 
 12.1. Gestisci Strumenti.
-Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Lo strumento da attivare o da eliminare si sceglie dal nome: ne scrivi le prime lettere, e il menu completa da solo; il punto interrogativo rilegge l'elenco. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo 15, Armonica a bocca.
+Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Lo strumento da attivare o da eliminare si sceglie dal nome: ne scrivi le prime lettere, e il menu completa da solo; il punto interrogativo rilegge l'elenco. Con la voce g scegli lo strumento General MIDI di uno strumento, quello con cui suona il banco di suoni nel suono STR quando lo strumento e' attivo: Chitabry lo propone dal tipo e dal nome, Harmonica per le armoniche, Acoustic Guitar (nylon) per le chitarre, Acoustic Bass per i bassi, Banjo per il banjo, e lo dice quando aggiungi uno strumento. Ukulele e mandolino, che nel General MIDI non hanno un corrispondente, partono senza: puoi sceglierne uno simile, o scrivere 0 per nessuno, e allora quel suono si salta. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo 15, Armonica a bocca.
 12.2. Cambia nomenclatura.
 Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
 12.3. Cambia Tipo Suono Attivo.
-Sceglie il suono con cui Chitabry suona le note: 1 la sintesi Karplus-Strong, 2 la sintesi a onda semplice, 3 lo strumento MIDI di Windows, 4 il banco di suoni. Se scegli il banco e non ce n'e' ancora uno pronto, parte la configurazione descritta al sottocapitolo 12.9, Banco di suoni. Dove la barra spaziatrice cambia suono gira fra questi, e il banco entra nel giro solo quando e' pronto; in Gioca col suono il MIDI di Windows resta fuori.
+Sceglie il suono con cui Chitabry suona le note: 1 la sintesi Karplus-Strong, 2 la sintesi a onda semplice, 3 il banco di suoni con lo strumento scelto alla voce 3 delle Impostazioni, 4 il banco con lo strumento General MIDI dello strumento attivo, per esempio Harmonica con un'armonica attiva. Dalla 10.0.0 il MIDI di Chitabry e' solo il banco: il sintetizzatore di Windows, che rispondeva con un ritardo suo e non regolabile, non si usa piu', e chi lo aveva scelto passa al banco. Se scegli il banco e non ce n'e' ancora uno pronto, parte la configurazione descritta al sottocapitolo 12.8, Banco di suoni. Dove la barra spaziatrice cambia suono gira fra questi quattro, con le sigle S1, S2, BAN e STR: i suoni del banco entrano nel giro solo quando e' pronto, e quello dello strumento attivo solo se l'attivo ha uno strumento General MIDI diverso da quello scelto.
 12.4. Modifica suono 1 (Accordi).
 Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
 12.5. Modifica suono 2 (Sintetico).
 Permette di configurare i parametri del sintetizzatore ad onda semplice: la forma d'onda e l'inviluppo, cioe' come la nota nasce, si assesta e si spegne. L'inviluppo ha quattro valori. Attacco, decadimento e rilascio sono tempi in millesimi di secondo: l'attacco e' quanto la nota ci mette a raggiungere il volume pieno, il decadimento quanto ci mette a scendere dal picco al livello di mantenimento, il rilascio quanto ci mette a spegnersi quando lasciate il tasto. Il mantenimento invece non e' un tempo ma un livello, in percentuale del volume: e' il volume a cui la nota resta finche' la tenete. Con i valori di serie, dieci millesimi di attacco, sessanta di decadimento, settanta per cento di mantenimento e centoventi millesimi di rilascio, la nota parte subito, fa un gradino udibile e si chiude senza strascicare. Un attacco lungo fa sentire la nota in ritardo rispetto a quando avete premuto: fino alla versione 8.1.0 questi valori erano percentuali della durata della nota, e i valori di serie facevano un attacco di centottanta millesimi.
-12.6. Seleziona Strumento MIDI.
-Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome. Scegliere lo strumento attiva anche il suono MIDI, tranne quando il suono attivo e' il banco: il banco suona con lo stesso strumento, e resta attivo.
+12.6. Strumento del banco di suoni.
+Consente di scegliere uno dei 128 strumenti General MIDI, filtrandoli direttamente per nome: e' lo strumento con cui suona il banco di suoni nel suono BAN. Non cambia il suono attivo.
 12.7. Connetti Tastiera MIDI.
 Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
-12.8. Volume MIDI.
-Il volume delle note suonate con il suono MIDI, da 0 a 100: vale per lo strumento MIDI scelto e per l'armonica, che suona sul suo canale. Non tocca il battito del metronomo nell'esercizio delle scale, che prende il volume dal preset attivo del metronomo, accento e battito ciascuno con il suo.
-12.9. Banco di suoni.
-Il quarto suono di Chitabry, accanto ai due sintetici e al MIDI: un banco General MIDI, cioe' un file sf2 o sf3, suonato da FluidSynth, lo stesso motore che usa MeTeOra. Serve quando lo strumento del sintetizzatore di Windows non piace, come l'armonica, che li' ha un vibrato che non si toglie: nel banco SGM, per esempio, l'armonica e' ferma.
+12.8. Banco di suoni.
+Il MIDI di Chitabry, accanto ai due suoni sintetici: un banco General MIDI, cioe' un file sf2 o sf3, suonato da FluidSynth, lo stesso motore che usa MeTeOra. Dalla 10.0.0 e' l'unico MIDI: il sintetizzatore di Windows, che rispondeva in ritardo, non si usa piu'. Il vibrato dipende dal banco: nel banco SGM, per esempio, l'armonica e' ferma, mentre in GeneralUser e in FluidR3 vibra.
 Chitabry chiede se cercare i banchi su tutti i dischi fissi: la ricerca puo' durare qualche minuto, una riga dice le cartelle visitate, e ESC la ferma. Se FluidSynth non e' ancora pronto, la stessa ricerca cerca anche una copia di FluidSynth gia' presente sul computer, per esempio quella di MeTeOra: Chitabry usa la prima che si carica, senza scaricarne un doppione, e se la ricorda; se un giorno quella copia non si carica piu', Chitabry la dimentica e la cerca di nuovo. Solo se non ne trova nessuna che funzioni, chiede se scaricarlo dalla pagina ufficiale su GitHub, e mostra i megabyte che arrivano; la domanda dice perche': FluidSynth non c'e', le copie trovate non si caricano, oppure la ricerca e' stata fermata con ESC prima di trovarlo. Se la ricerca non la vuoi, chiede subito se scaricarlo. Si tengono solo i banchi General MIDI completi, con i 128 strumenti e la batteria.
-Nell'elenco, numerato, ogni banco ha il nome, la dimensione e la cartella; c'e' anche il banco attuale, se ce n'e' uno, e la voce per scaricare FluidR3 GM, il banco libero di FluidSynth, 148 MB. Se non c'e' nessun banco da scegliere, Chitabry chiede prima di scaricare FluidR3, e ESC lascia tutto com'e'. Scelto il banco, Chitabry chiede il volume, da 0 a 1, e se usarlo come suono attivo; da li' in poi la barra spaziatrice lo comprende nel giro dei suoni, con la sigla BAN.
-Lo strumento e' quello scelto alla voce Seleziona Strumento MIDI, e con un'armonica attiva le sue note suonano con lo strumento Harmonica. Le note si preparano in memoria, una per una, e passano dal mixer di Chitabry come quelle sintetiche: nell'esercizio delle scale il battito del metronomo e' quello del preset e arriva insieme alla nota. Ogni strumento del banco viene pareggiato sul suo DO centrale, perche' nei banchi gli strumenti hanno volumi molto diversi, e il volume del banco vale uguale per tutti: il livello si misura su una nota lunga, cosi' anche gli archi e i pad, che crescono piano, non superano gli altri. Sulla Tastiera una nota tenuta suona fino a otto secondi, e poi si spegne con il rilascio del suo strumento. Anche le note fuori dal temperamento, come quelle di molte scale dell'archivio Scala, suonano alla frequenza giusta.
+Nell'elenco, numerato, ogni banco ha il nome, la dimensione e la cartella; c'e' anche il banco attuale, se ce n'e' uno, e la voce per scaricare FluidR3 GM, il banco libero di FluidSynth, 148 MB. Se non c'e' nessun banco da scegliere, Chitabry chiede prima di scaricare FluidR3, e ESC lascia tutto com'e'. Scelto il banco, Chitabry chiede il volume, da 0 a 1, e se usarlo come suono attivo; da li' in poi la barra spaziatrice comprende nel giro i suoi due suoni, BAN e STR.
+Il banco suona in due modi: con lo strumento scelto alla voce 3 delle Impostazioni, nel suono BAN, e con lo strumento General MIDI dello strumento attivo, nel suono STR, che si sceglie in Gestisci Strumenti. Le note si preparano in memoria, una per una, e passano dal mixer di Chitabry come quelle sintetiche: nell'esercizio delle scale il battito del metronomo e' quello del preset e arriva insieme alla nota. Ogni strumento del banco viene pareggiato sul suo DO centrale, perche' nei banchi gli strumenti hanno volumi molto diversi, e il volume del banco vale uguale per tutti: il livello si misura su una nota lunga, cosi' anche gli archi e i pad, che crescono piano, non superano gli altri. Dove le note si tengono, cioe' nella Tastiera, nelle scale, nelle corde e nei gruppi di fori del Costruttore Accordi e con la tastiera MIDI esterna, una nota tenuta del banco suona fino a otto secondi, e poi si spegne con il rilascio del suo strumento. Anche le note fuori dal temperamento, come quelle di molte scale dell'archivio Scala, suonano alla frequenza giusta.
 FluidSynth e i banchi scaricati stanno nelle cartelle fluidsynth e banchi, accanto al programma.
 
 13. Nota sul manico.
@@ -455,8 +453,8 @@ Nelle Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento: scegliete Armo
    Manico dello strumento mostra lo schema dei fori: una griglia con un foro per colonna e una tecnica per riga, la riga + per i soffiati, - per gli aspirati, poi i bending e gli overbend, e sulla cromatica le righe con il cursore. In fondo, l'estensione.
    Nota sul manico vi chiede una nota e vi dice in quali fori e con quale tecnica si suona, dalla piu' comoda, in tutte le ottave; aggiungendo l'ottava, per esempio SOL4, solo in quella. Per esempio: SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato).
    Trova Posizione vi chiede un simbolo, vi dice che nota suona e ve la fa sentire. Se il simbolo su quell'armonica non esiste, Chitabry vi spiega perche': per esempio che il foro 3 si piega aspirando e non soffiando. Si continua un simbolo dopo l'altro, finche' non premete Invio a vuoto.
-   Costruttore Accordi, dopo le note, cerca i gruppi di fori vicini che suonano l'accordo, nello stesso verso e senza tecniche, larghi quanto le note dell'accordo e al massimo quattro: per esempio SOL7, su un'armonica in DO, e' -2 -3 -4 -5. Se nessun gruppo lo suona per intero, Chitabry mostra quelli che ne suonano di piu' e dice quale nota manca. Con un gruppo solo, come il SOL7, l'ascolto parte subito; con piu' gruppi si sceglie il numero del gruppo. Il gruppo si riascolta quanto volete, come gli accordi della chitarra: i tasti da 1 in su suonano le note del gruppo una per una, dal foro piu' basso, A o Q l'accordo intero, la barra spaziatrice cambia suono, ESC torna alla scelta dei gruppi, o al menu principale se il gruppo era uno solo. Si suona un fiato alla volta, come sull'armonica: una nota o un accordo nuovo chiude con una breve sfumatura quello che stava suonando. Note e accordo durano due quarti al tempo del metronomo attivo, quello del suo ultimo preset, o a 120 BPM se il metronomo non ne ha.
-   Con il suono MIDI le note dell'armonica escono con lo strumento Harmonica del General MIDI, su un canale tutto loro: lo strumento MIDI scelto nelle impostazioni resta quello per tutto il resto.
+   Costruttore Accordi, dopo le note, cerca i gruppi di fori vicini che suonano l'accordo, nello stesso verso e senza tecniche, larghi quanto le note dell'accordo e al massimo quattro: per esempio SOL7, su un'armonica in DO, e' -2 -3 -4 -5. Se nessun gruppo lo suona per intero, Chitabry mostra quelli che ne suonano di piu' e dice quale nota manca. Con un gruppo solo, come il SOL7, l'ascolto parte subito; con piu' gruppi si sceglie il numero del gruppo. Il gruppo si riascolta quanto volete, come gli accordi della chitarra: i tasti da 1 in su suonano le note del gruppo una per una, dal foro piu' basso, A o Q l'accordo intero, la barra spaziatrice cambia suono, ESC torna alla scelta dei gruppi, o al menu principale se il gruppo era uno solo. Scelto il gruppo, l'accordo si sente da solo per due quarti al tempo del metronomo attivo, quello del suo ultimo preset, o a 120 BPM se il metronomo non ne ha; poi note e accordo suonano finche' tenete il tasto, con il banco fino a otto secondi. Si suona un fiato alla volta, come sull'armonica: una nota o un accordo nuovo chiude con una breve sfumatura quello che stava suonando.
+   Con il banco di suoni, il suono STR fa suonare le note dell'armonica con lo strumento Harmonica del General MIDI, e il suono BAN con lo strumento scelto per il banco.
 
 15.5. Le scale sull'armonica.
 Scelta la scala, al posto del manico Chitabry mostra:

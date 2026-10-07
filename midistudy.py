@@ -578,7 +578,7 @@ def esegui_trasposizione(part):
     if min_accidentals != 999999:
         print(f"Tonalità ottimale calcolata: trasposizione di {segno}{best_interval} semitoni.")
         print(f"Note alterate (non naturali) previste: {min_accidentals}")
-        scelta = enter_escape("Vuoi applicare questa trasposizione ottimale? [INVIO=Sì, ESC=No]")
+        scelta = enter_escape("\rVuoi applicare questa trasposizione ottimale? [INVIO=Sì, ESC=No]\r")
     else:
         print("Impossibile calcolare una tonalità ottimale.")
         scelta = False
@@ -720,7 +720,7 @@ def salva_pdf(part, label, filepath):
         print("Una volta installato, riavvia Chitabry o il terminale per aggiornare i percorsi di sistema.")
 
         # Optionally allow them to say they just installed it
-        scelta = enter_escape("\nHai appena installato LilyPond e vuoi riprovare? [INVIO=Sì, ESC=No]")
+        scelta = enter_escape("\rHai appena installato LilyPond e vuoi riprovare? [INVIO=Sì, ESC=No]\r")
         if scelta:
             # Re-check (sometimes PATH changes don't propagate without a shell restart, but we try)
             lilypond_path = shutil.which("lilypond")
@@ -829,13 +829,13 @@ def check_midi_folder_cleanup():
         return
     print("Attenzione: manutenzione della cartella midi.")
     print(f"Sono stati trovati {len(file_vecchi)} file nella cartella midi non modificati da oltre un anno.")
-    if not enter_escape("Desideri fare pulizia e cancellarli definitivamente? [INVIO=Si', ESC=No]"):
+    if not enter_escape("\rDesideri fare pulizia e cancellarli definitivamente? [INVIO=Si', ESC=No]\r"):
         print("Operazione rimandata di 30 giorni.")
         return
     print("Elenco dei file che verranno eliminati definitivamente:")
     for nome, _path, mtime in file_vecchi:
         print(f"- {nome} (ultima modifica: {mtime.strftime('%Y-%m-%d')})")
-    if not enter_escape("Sei assolutamente sicuro di voler eliminare questi file? [INVIO=Procedi, ESC=Annulla]"):
+    if not enter_escape("\rSei assolutamente sicuro di voler eliminare questi file? [INVIO=Procedi, ESC=Annulla]\r"):
         print("Operazione annullata.")
         return
     cancellati = 0

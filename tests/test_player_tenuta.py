@@ -73,38 +73,28 @@ class PolyFinto:
     def mute(self, voce=None):
         self.chiamate.append(("mute", voce))
 
+    def set_pan(self, voce, pan):
+        pass
+
     def sta_suonando(self, voce):
         return voce in self.occupate
-
-
-class MidiFinto:
-    def __init__(self):
-        self.chiamate = []
-
-    def note_on(self, nota, velocity=127):
-        self.chiamate.append(("on", nota, velocity))
-
-    def note_off(self, nota):
-        self.chiamate.append(("off", nota))
 
 
 @pytest.fixture
 def scena(monkeypatch):
     """Il player con tutto il mondo intorno sostituito da finti."""
     poly = PolyFinto()
-    midi = MidiFinto()
     # Le impostazioni non sono caricate da nessuno, qui dentro: il player
     # stampa il nome delle note e quello passa dalla nomenclatura scelta.
     monkeypatch.setattr(config, "impostazioni", config.get_impostazioni_default())
     monkeypatch.setattr(GBAudio, "PolyphonicPlayer", lambda fs=None, num_strings=16: poly)
     monkeypatch.setattr(GBAudio, "get_midi_in", lambda: None)
-    monkeypatch.setattr(GBAudio, "get_midi_out", lambda: midi)
     monkeypatch.setattr(suoni, "suono_attivo", lambda: "suono_2")
     monkeypatch.setattr(suoni, "descrizione_suono", lambda chiave: chiave)
     monkeypatch.setattr(suoni, "parametri_suono", lambda chiave: {
         'karplus': False, 'dur': 2.0, 'vol': 0.5, 'hardness': 0.6, 'damping': 0.997,
         'pick_pos': 0.15, 'bright': 0.4, 'kind': 1, 'adsr': [10.0, 60.0, 70.0, 120.0]})
-    return poly, midi
+    return poly, None
 
 
 def gira(monkeypatch, giri, tiene=True):
@@ -171,14 +161,127 @@ def test_senza_rilasci_le_note_restano_quelle_di_prima(scena, monkeypatch):
     assert "lascia" not in [c[0] for c in poly.chiamate]
 
 
-def test_col_suono_midi_la_nota_si_tiene_col_note_off(scena, monkeypatch):
-    poly, midi = scena
-    monkeypatch.setattr(suoni, "suono_attivo", lambda: "midi")
+class TastieraACoppie:
+    """La tastiera di GBUtils come la riceveva Gabriele tenendo lo Shift:
+    ogni ripetizione arriva come rilascio e subito dopo pressione. Ogni
+    chiamata a eventi consegna il giro dopo e fa passare il tempo dato."""
+
+    def __init__(self, giri, orologio):
+        self.giri = list(giri)
+        self.orologio = orologio
+        self.chiusa = False
+        self.premuti = frozenset()
+
+    def eventi(self, attesa=None):
+        if not self.giri:
+            self.orologio[0] += attesa or 0.0
+            return []
+        passo, eventi = self.giri.pop(0)
+        self.orologio[0] += passo
+        return eventi
+
+    def chiudi(self):
+        self.chiusa = True
+
+
+def test_le_righe_della_tastiera_coprono_quelle_di_prima(scena, monkeypatch, capsys):
+    """Le descrizioni del banco sono lunghe: la riga Ultima nota, piu'
+    corta della riga di stato, ne lasciava i pezzi sulla barra braille."""
+    monkeypatch.setattr(suoni, "descrizione_suono", lambda chiave: "Banco GeneralUser-GS.sf2, strumento dell'attivo (Harmonica)")
     gira(monkeypatch, [[("z", "giu")], [("z", "su")]])
-    assert [c[0] for c in midi.chiamate] == ["on", "off"]
-    assert midi.chiamate[0][1] == midi.chiamate[1][1]
-    # Il mixer interno non c'entra: la nota la tiene il sintetizzatore.
-    assert poly.chiamate == []
+    pezzi = [p for p in capsys.readouterr().out.split("\r") if p.strip()]
+    stato = next(p for p in pezzi if p.startswith("[Suono:"))
+    nota = next(p for p in pezzi if p.startswith("Ultima nota:"))
+    assert len(nota) >= len(stato) and nota.rstrip() != nota
+
+
+def test_una_nota_tenuta_oltre_il_suo_suono_non_perde_la_voce(scena, monkeypatch):
+    """Una nota tenuta piu' a lungo del suo suono ha finito il buffer, ma la
+    voce e' ancora sua: data alla nota dopo, il rilascio della prima
+    chiudeva la seconda."""
+    poly, _midi = scena
+    finta = TastieraFinta([[("z", "giu")]] + [[(tasto, "giu"), (tasto, "su")] for tasto in "xcvbnm,.-sdghjlqw"] + [[("z", "su")]])
+    poly_finto_tieni = poly.tieni
+
+    def tieni_e_finisci(voce, mono, ciclo=None):
+        poly_finto_tieni(voce, mono, ciclo)
+        if not poly.chiamate[:-1]:
+            # La prima nota, quella della z, finisce subito il suo buffer
+            poly.occupate.discard(voce)
+
+    monkeypatch.setattr(poly, "tieni", tieni_e_finisci)
+    monkeypatch.setattr(player, "apri_tastiera", lambda: finta)
+    player.PlayerGenerico()
+    prima = poly.chiamate[0][1]
+    altre = [voce for azione, voce in poly.chiamate[1:] if azione == "tieni"]
+    assert prima not in altre
+
+
+def test_ascolto_delle_corde_tenute_e_modificatori(scena, monkeypatch, capsys):
+    """Le corde suonano finche' il tasto e' giu', la pennata pure; Ctrl e
+    Shift premuti da soli non dicono Comando non valido."""
+    poly, _midi = scena
+    monkeypatch.setattr(config, "impostazioni", config.get_impostazioni_default())
+    config.aggiorna_manico()
+    monkeypatch.setattr(player, "aspetta", lambda _s: None)
+    finta = TastieraFinta([[("ctrl", "giu")], [("ctrl", "su"), ("1", "giu")], [("1", "su")], [("shift", "giu"), ("Q", "giu")],
+                           [("Q", "su"), ("shift", "su")]])
+    monkeypatch.setattr(player, "apri_tastiera", lambda: finta)
+    player.Suona(["0", "2", "2", "1", "0", "0"])
+    azioni = [azione for azione, _voce in poly.chiamate]
+    assert azioni == ["tieni", "lascia"] + ["tieni"] * 6 + ["lascia"] * 6
+    assert "Comando non valido" not in capsys.readouterr().out
+    assert finta.chiusa and poly.fermato
+
+
+def test_la_tastiera_esterna_tiene_le_sue_voci(monkeypatch):
+    """Fuori dalla Tastiera le note della tastiera MIDI esterna suonano su un
+    mixer loro: una nota tenuta oltre il suo suono non cede la voce, una nota
+    accesa due volte chiude la prima, e quando un ascolto si prende la
+    tastiera le note accese si chiudono."""
+    poly = PolyFinto()
+    monkeypatch.setattr(GBAudio, "PolyphonicPlayer", lambda fs=None, num_strings=16: poly)
+    monkeypatch.setattr(suoni, "_ESTERNA", {})
+    monkeypatch.setattr(suoni, "_forse_chiudi_dopo", lambda: None)
+    monkeypatch.setattr(suoni, "suono_attivo", lambda: "suono_2")
+    monkeypatch.setattr(suoni, "parametri_suono", lambda chiave: {'karplus': False, 'adsr': [0, 0, 100, 120]})
+    monkeypatch.setattr(suoni, "tieni_nota", lambda mixer, voce, *_a, **_k: mixer.tieni(voce, None) or True)
+    suoni.nota_esterna_giu(36)
+    poly.occupate.discard(0)        # il basso tenuto ha finito il suo buffer
+    suoni.nota_esterna_giu(72)
+    assert poly.chiamate == [("tieni", 0), ("tieni", 1)]
+    suoni.nota_esterna_su(36)
+    assert poly.chiamate[-1] == ("lascia", 0) and poly.occupate == {1}
+    # La stessa nota due volte, come da una tastiera che manda due canali
+    suoni.nota_esterna_giu(72)
+    assert poly.chiamate[-2:] == [("lascia", 1), ("tieni", 0)]
+    suoni.chiudi_note_esterne()
+    assert poly.chiamate[-1] == ("lascia", 0) and suoni._ESTERNA["accese"] == {}
+    # Quando tace, il mixer si chiude e la prossima nota lo riapre
+    suoni._chiudi_se_tace()
+    assert poly.fermato and suoni._ESTERNA == {}
+
+
+def test_le_ripetizioni_a_coppie_non_spezzano_la_nota(monkeypatch):
+    """Shift+Z tenuto: le coppie rilascio e pressione, a trentatre millesimi
+    l'una dall'altra, non arrivano piu' a chi suona; il rilascio vero si',
+    passata la grazia."""
+    orologio = [0.0]
+    monkeypatch.setattr(player.time, "monotonic", lambda: orologio[0])
+    sotto = TastieraACoppie([(0.0, [("Z", "giu")])]
+                            + [(0.033, [("Z", "su"), ("Z", "giu")])] * 5
+                            + [(0.033, [("Z", "su")])], orologio)
+    tenuta = player.TastieraTenuta(sotto, grazia=0.06)
+    visti = []
+    for _giro in range(12):
+        visti.extend(tenuta.eventi(0.05))
+    assert visti == [("Z", "giu"), ("Z", "su")]
+    tenuta.chiudi()
+    assert sotto.chiusa
+
+
+def test_la_grazia_segue_la_ripetizione_di_windows():
+    assert player.grazia_del_rilascio() >= player.GRAZIA_MINIMA
 
 
 def test_i_tasti_funzione_cambiano_ottava_e_non_suonano(scena, monkeypatch):

@@ -102,12 +102,14 @@ def TrovaNota():
     s_nota = dgt("Inserisci il nome della nota (Invio per annullare): ", smax=5).strip().upper()
     if s_nota == "":
         print("Operazione annullata.")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     nota_std = nome_utente_in_std(s_nota)
     if nota_std is None:
         print(f"'{s_nota}' non e' un nome di nota valido in questa nomenclatura.")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     print("Puoi indicare una porzione di manico per la ricerca (es. 0-4).")
     scelta_manico = dgt("Limiti Tasti (Invio per tutto il manico): ")
@@ -115,7 +117,8 @@ def TrovaNota():
     if scelta_manico != "":
         maninf, mansup = Manlimiti(scelta_manico)
     MostraCorde(nota_std, maninf=maninf, mansup=mansup)
-    key("Premi un tasto per tornare al menu...")
+    key("\rPremi un tasto per tornare al menu...\r")
+    print()
 
 
 def TrovaPosizione():
@@ -137,7 +140,8 @@ def TrovaPosizione():
         suoni.suona_una_nota(nota_std, pan=suoni.pan_per_voce(indice_corda, config.NUM_CORDE))
     else:
         print(f"Posizione '{s}' non valida. Formato richiesto: C.T (es. 6.3), tasti da 0 a {config.NUM_TASTI}.")
-    key("Premi un tasto per tornare al menu...")
+    key("\rPremi un tasto per tornare al menu...\r")
+    print()
 
 
 def VisualizzaManico():
@@ -193,4 +197,5 @@ def VisualizzaManico():
             row_cells.append(cell_val.ljust(col_width))
         col0_row = f"{corda:<{col0_width}}"
         print(f"{col0_row}|" + "|".join(row_cells) + "|")
-    key("Premi un tasto per tornare al menu...")
+    key("\rPremi un tasto per tornare al menu...\r")
+    print()

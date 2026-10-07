@@ -229,8 +229,40 @@ def test_il_formato_3_dice_il_tipo_degli_strumenti(archivio):
                    "strumento_attivo": "Basso"}, f)
     config.carica_impostazioni()
     assert config.impostazioni["strumenti"]["Basso"]["tipo"] == config.TIPO_CORDE
-    assert config.impostazioni["versione_formato"] == 3
+    assert config.impostazioni["versione_formato"] == config.VERSIONE_FORMATO
     assert config.get_impostazioni_default()["strumenti"][config.STRUMENTO_PREDEFINITO]["tipo"] == config.TIPO_CORDE
+
+
+def test_il_formato_4_toglie_il_midi_di_windows(archivio):
+    """Dalla 10.0.0 il MIDI e' solo il banco: il suono MIDI di Windows
+    diventa il banco, il suo volume se ne va, e ogni strumento riceve lo
+    strumento General MIDI proposto dal tipo e dal nome."""
+    with open(archivio, "w", encoding="utf-8") as f:
+        json.dump({"versione_formato": 3, "tipo_suono": "midi", "midi_volume": 80, "strumento_attivo": "Basso 5 corde",
+                   "strumenti": {"Basso 5 corde": {"tipo": "corde", "accordatura": ["B0", "E1", "A1", "D2", "G2"], "tasti": 24},
+                                 "Ukulele soprano": {"tipo": "corde", "accordatura": ["G4", "C4", "E4", "A4"], "tasti": 12},
+                                 "Hohner": {"tipo": "armonica", "famiglia": "diatonica", "tonalita": "C",
+                                            "accordatura": "richter", "fori": 10},
+                                 "Banjo Bluegrass": {"tipo": "corde", "accordatura": ["G4", "D3", "G3", "B3", "D4"], "tasti": 22},
+                                 "Guitalele": {"tipo": "corde", "accordatura": ["A2", "D3", "G3", "C4", "E4", "A4"], "tasti": 18}}}, f)
+    config.carica_impostazioni()
+    assert config.impostazioni["tipo_suono"] == "banco"
+    assert "midi_volume" not in config.impostazioni
+    programmi = {nome: conf["programma_gm"] for nome, conf in config.impostazioni["strumenti"].items()}
+    assert programmi == {"Basso 5 corde": 32, "Ukulele soprano": None, "Hohner": 22, "Banjo Bluegrass": 105, "Guitalele": 24}
+    assert config.programma_dello_strumento({"programma_gm": True}) is None
+    assert config.programma_dello_strumento({"programma_gm": 200}) is None
+    assert config.programma_dello_strumento({"programma_gm": 40}) == 40
+
+
+def test_la_migrazione_conta_a_parte_gli_strumenti_senza():
+    """L'avvio diceva 12 strumenti con lo strumento proposto, ma quattro
+    restavano senza."""
+    dati = {"versione_formato": 3, "strumenti": {"Chitarra": {"tipo": "corde"}, "Ukulele": {"tipo": "corde"},
+                                                 "Mandolino": {"tipo": "corde"}}}
+    cambiamenti = config._migra(dati)
+    assert "Strumento General MIDI proposto per 1 strumenti." in cambiamenti
+    assert any(c.startswith("Strumenti che restano senza, perche' il General MIDI non ne ha uno simile: 2.") for c in cambiamenti)
 
 
 def test_l_armonica_attiva_svuota_il_manico(archivio):
@@ -484,7 +516,12 @@ class MixerFinto:
         self.voci = num_strings
         self.suonate = []
         self.lasciate = []
+        self.suonando = set()
         self.aperto = False
+
+    def sta_suonando(self, voce):
+        # Una voce lasciata sfuma ancora: per il finto resta suonante
+        return voce in self.suonando
 
     def start(self):
         self.aperto = True
@@ -494,91 +531,98 @@ class MixerFinto:
 
     def pluck(self, voce, mono):
         self.suonate.append((voce, mono))
+        self.suonando.add(voce)
 
     def lascia(self, voce, secondi=0.06):
         self.lasciate.append(voce)
 
 
-def ascolto_finto(monkeypatch, tasti, suono="suono_1", bpm=90):
-    """Prepara l'ascolto dei gruppi di fori con i tasti dati, senza audio:
-    restituisce la lista dei mixer aperti e quella delle note rese, con la
-    loro durata."""
+class TastiFinti:
+    """La tastiera a eventi degli ascolti: consegna un giro di eventi per
+    chiamata, e a copione finito Esc."""
+
+    def __init__(self, giri, tiene=True):
+        self.giri = list(giri)
+        self.tiene = tiene
+        self.chiusa = False
+
+    def eventi(self, attesa=None):
+        return self.giri.pop(0) if self.giri else [(chr(27), "giu")]
+
+    def chiudi(self):
+        self.chiusa = True
+
+
+def ascolto_finto(monkeypatch, giri, suono="suono_1", bpm=90, tiene=True):
+    """Prepara l'ascolto dei gruppi di fori con gli eventi dati, senza audio:
+    restituisce la lista dei mixer aperti, quella degli accordi a tempo, con
+    la loro durata, e quella delle note tenute."""
     mixer = []
     rese = []
+    tenute = []
     monkeypatch.setattr(armonica_vista.GBAudio, "PolyphonicPlayer", lambda **k: mixer.append(MixerFinto(**k)) or mixer[-1])
     monkeypatch.setattr(armonica_vista.suoni, "mono_delle_note",
                         lambda note, _parametri, dur=None: rese.append((tuple(note), dur)) or np.ones(4, dtype=np.float32))
+
+    def tieni_insieme(un_mixer, voci_e_frequenze, _parametri):
+        voci = [voce for voce, _ in voci_e_frequenze]
+        tenute.append(tuple(voci))
+        un_mixer.suonando.update(voci)
+        return voci
+
+    monkeypatch.setattr(armonica_vista.suoni, "tieni_note_insieme", tieni_insieme)
     monkeypatch.setattr(armonica_vista.suoni, "suono_attivo", lambda: suono)
-    monkeypatch.setattr(armonica_vista.suoni, "parametri_armonica", lambda chiave: {"chiave": chiave})
+    monkeypatch.setattr(armonica_vista.suoni, "parametri_suono", lambda chiave: {"karplus": False, "adsr": [0, 0, 100, 120]})
     monkeypatch.setattr(armonica_vista, "tempo_del_metronomo", lambda: bpm)
-    sequenza = iter(tasti)
-    monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: next(sequenza))
-    return mixer, rese
+    tasti = TastiFinti(giri, tiene=tiene)
+    monkeypatch.setattr(armonica_vista.player, "apri_tastiera", lambda: tasti)
+    return mixer, rese, tenute
 
 
 def test_un_solo_gruppo_di_fori_si_ascolta_nota_per_nota(monkeypatch, capsys, richter):
     """Con un gruppo solo menu non aspetta un tasto: il SOL7 ripartiva
     all'infinito, poi si sentiva una volta e si poteva solo uscire. Adesso,
-    come per la chitarra, un tasto per nota e A o Q per l'accordo intero,
-    che dura due quarti al tempo del metronomo (collaudo del 7 ottobre 2026)."""
+    come per la chitarra, l'accordo si sente da solo per due quarti al tempo
+    del metronomo, e poi un tasto per nota e A o Q per l'accordo intero
+    suonano finche' sono giu' (collaudi del 7 ottobre 2026)."""
     monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
     monkeypatch.setattr(config, "ARMONICA", richter)
     monkeypatch.setattr(armonica_vista, "menu", lambda **_k: pytest.fail("con un gruppo solo il menu non serve"))
-    mixer, rese = ascolto_finto(monkeypatch, ["2", "q", "x", "9", "a", chr(27)])
+    giri = [[("2", "giu")], [("2", "su")], [("q", "giu")], [("q", "su")], [("x", "giu")], [("9", "giu")], [("ctrl", "giu")],
+            [("ctrl", "su")], [("a", "giu")]]
+    mixer, rese, tenute = ascolto_finto(monkeypatch, giri)
     armonica_vista.accordi({7, 11, 2, 5}, {7: "G", 11: "B", 2: "D", 5: "F"}, "SOL7")
     accordo = (67, 71, 74, 77)
-    durata = 120 / 90
-    assert rese == [(accordo, durata), ((71,), durata), (accordo, durata), (accordo, durata)]
-    # Una voce per nota e l'ultima per l'accordo; prima di ogni suono le
-    # altre voci si chiudono con la rampa, un fiato alla volta, e il mixer
-    # non satura sommando una nota all'accordo
-    assert [voce for voce, _ in mixer[0].suonate] == [4, 1, 4, 4]
-    assert mixer[0].lasciate[:4] == [0, 1, 2, 3] and mixer[0].lasciate[4:8] == [0, 2, 3, 4]
+    # L'accordo che parte da solo dura due quarti, sulla sua voce, l'ultima
+    # di 2 per nota piu' una
+    assert rese == [(accordo, 120 / 90)]
+    assert mixer[0].voci == 9
+    assert [voce for voce, _ in mixer[0].suonate] == [8]
+    # Poi la nota del tasto 2 e l'accordo, tenuti finche' il tasto e' giu',
+    # ogni volta su voci che tacciono: quelle del fiato prima sfumano ancora,
+    # e prenderle avrebbe troncato la rampa con uno scatto
+    assert tenute == [(0,), (1, 2, 3, 4), (5, 6, 7, 0)]
+    # Lasciati i tasti, le loro voci si chiudono con la rampa; prima di ogni
+    # suono nuovo si chiudono tutte, un fiato alla volta
+    assert mixer[0].lasciate.count(0) >= 2
     assert not mixer[0].aperto
     uscita = capsys.readouterr().out
     assert "-2 -3 -4 -5: SOL4 SI4 RE5 FA5." in uscita
     assert "Note: SOL4 - SI4 - RE5 - FA5 (1-4, A, Q, SPAZIO, ESC)" in uscita
-    assert "90 BPM" in uscita and "Comando non valido" in uscita
+    # Il tasto x non vale; il Ctrl, con cui si zittisce NVDA, non dice niente
+    assert "90 BPM" in uscita and uscita.count("Comando non valido") == 1
 
 
-def test_col_suono_midi_il_gruppo_suona_sul_canale_dell_armonica(monkeypatch, richter):
+def test_senza_rilasci_anche_i_tasti_durano_due_quarti(monkeypatch, capsys, richter):
+    """Dove la tastiera non sa dire quando un tasto si lascia, note e accordo
+    dei tasti durano due quarti, come l'accordo che parte da solo."""
     monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
     monkeypatch.setattr(config, "ARMONICA", richter)
-    mixer, rese = ascolto_finto(monkeypatch, ["1", chr(27)], suono="midi", bpm=120)
-    monkeypatch.setattr(armonica_vista.suoni, "prepara_canale_armonica", lambda: 2)
-    midi = []
-    monkeypatch.setattr(armonica_vista.GBAudio, "play_midi_note_temp", lambda n, d, canale=0: midi.append((n, d, canale)))
+    _mixer, rese, tenute = ascolto_finto(monkeypatch, [[("1", "giu")]], bpm=120, tiene=False)
     armonica_vista.accordi({7, 11, 2, 5}, {7: "G", 11: "B", 2: "D", 5: "F"}, "SOL7")
-    assert midi == [(67, 1.0, 2), (71, 1.0, 2), (74, 1.0, 2), (77, 1.0, 2), (67, 1.0, 2)]
-    assert rese == [] and mixer[0].suonate == []
-
-
-def test_la_nota_midi_ribattuta_dura_quanto_deve(monkeypatch):
-    """Il timer della nota vecchia spegneva quella ribattuta: con l'accordo
-    appena partito, la nota del tasto 1 durava meno di due quarti."""
-    import time
-    eventi = []
-
-    class Porta:
-        h_midi = 1
-
-        def note_on(self, numero, _velocita, _canale):
-            eventi.append(("on", numero))
-
-        def note_off(self, numero, _canale):
-            eventi.append(("off", numero))
-
-    gb = armonica_vista.GBAudio
-    monkeypatch.setattr(gb, "get_midi_out", lambda: Porta())
-    monkeypatch.setattr(gb, "_NOTE_ACCESE", {})
-    gb.play_midi_note_temp(67, 0.2, canale=2)
-    time.sleep(0.05)
-    # La ribattuta spegne prima la nota che suona, poi la riaccende
-    gb.play_midi_note_temp(67, 0.4, canale=2)
-    time.sleep(0.25)
-    assert eventi == [("on", 67), ("off", 67), ("on", 67)]
-    time.sleep(0.35)
-    assert eventi == [("on", 67), ("off", 67), ("on", 67), ("off", 67)]
+    assert rese == [((67, 71, 74, 77), 1.0), ((67,), 1.0)]
+    assert tenute == []
+    assert "durano due quarti anche note e accordo dei tasti" in capsys.readouterr().out
 
 
 def test_la_corda_tagliata_a_due_quarti_si_chiude_con_la_rampa(monkeypatch):

@@ -191,8 +191,10 @@ def test_gli_strumenti_si_scelgono_per_nome(monkeypatch):
     """Il menu degli strumenti era numerato: adesso le chiavi sono i nomi, e
     si scelgono scrivendone le prime lettere (collaudo del 7 ottobre 2026)."""
     import gestore_impostazioni
-    strumenti = {"Chitarra Standard": {"tipo": "corde", "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"], "tasti": 21},
-                 "Special 20": {"tipo": "armonica", "famiglia": "diatonica", "tonalita": "C", "accordatura": "richter", "fori": 10}}
+    strumenti = {"Chitarra Standard": {"tipo": "corde", "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"], "tasti": 21,
+                                       "programma_gm": 24},
+                 "Special 20": {"tipo": "armonica", "famiglia": "diatonica", "tonalita": "C", "accordatura": "richter", "fori": 10,
+                                "programma_gm": 22}}
     monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumenti": strumenti, "strumento_attivo": "Chitarra Standard"})
     monkeypatch.setattr(config, "salva_modifiche", lambda: True)
     monkeypatch.setattr(config, "aggiorna_manico", lambda: None)
@@ -208,8 +210,9 @@ def test_gli_strumenti_si_scelgono_per_nome(monkeypatch):
     scelta = viste[1]
     assert not scelta.get("numbered") and scelta["keyslist"]
     assert list(scelta["d"]) == ["Chitarra Standard", "Special 20"]
-    assert scelta["d"]["Chitarra Standard"] == "21 tasti, 6 corde"
+    assert scelta["d"]["Chitarra Standard"] == "21 tasti, 6 corde, General MIDI Acoustic Guitar (nylon)"
     assert scelta["d"]["Special 20"].startswith("armonica diatonica in DO")
+    assert scelta["d"]["Special 20"].endswith(", General MIDI Harmonica")
     assert config.impostazioni["strumento_attivo"] == "Special 20"
 
 
@@ -240,28 +243,47 @@ def test_con_uno_strumento_solo_non_si_invita_a_scrivere(monkeypatch, capsys):
     assert list(config.impostazioni["strumenti"]) == ["Chitarra"]
 
 
-def test_il_banco_si_salta_finche_non_e_pronto(monkeypatch):
-    monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": ""}, "midi_strumento": 0})
-    assert suoni.prossimo_suono("midi") == "suono_1"
-    monkeypatch.setattr(suoni, "banco_pronto", lambda: True)
-    assert suoni.prossimo_suono("midi") == "banco"
-    assert suoni.prossimo_suono("banco") == "suono_1"
-    assert suoni.sigla_suono("banco") == "BAN"
-
-
-def test_il_gioco_col_suono_alterna_anche_il_banco(monkeypatch):
-    """In Gioca col suono la barra spaziatrice alternava solo i due suoni
-    sintetici: con un banco pronto c'e' anche lui."""
-    import gioca_suono
-    monkeypatch.setattr(suoni, "banco_pronto", lambda: False)
-    assert gioca_suono._prossimo_suono("suono_1") == "suono_2"
-    assert gioca_suono._prossimo_suono("suono_2") == "suono_1"
+def test_il_giro_dei_suoni(monkeypatch):
+    """Dalla 10.0.0 la barra spaziatrice gira fra i due sintetici, il banco
+    con lo strumento scelto e il banco con lo strumento General MIDI dello
+    strumento attivo (collaudo di Gabriele del 7 ottobre 2026). I suoni del
+    banco si saltano finche' non e' pronto; quello dell'attivo anche quando
+    l'attivo non ha uno strumento General MIDI, o ha proprio quello scelto."""
+    strumenti = {"Hohner": {"tipo": "armonica", "programma_gm": 22}, "Ukulele": {"tipo": "corde", "programma_gm": None}}
+    monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": ""}, "midi_strumento": 0, "strumenti": strumenti,
+                                                 "strumento_attivo": "Hohner", "tipo_suono": "banco_strumento"})
+    assert suoni.prossimo_suono("suono_2") == "suono_1"
+    assert suoni.suono_attivo() == "suono_1"
     monkeypatch.setattr(suoni, "banco_pronto", lambda: True)
     giro = ["suono_1"]
-    for _ in range(3):
-        giro.append(gioca_suono._prossimo_suono(giro[-1]))
-    assert giro == ["suono_1", "suono_2", "banco", "suono_1"]
-    assert gioca_suono._prossimo_suono("midi") == "suono_1"
+    for _ in range(4):
+        giro.append(suoni.prossimo_suono(giro[-1]))
+    assert giro == ["suono_1", "suono_2", "banco", "banco_strumento", "suono_1"]
+    assert suoni.suono_attivo() == "banco_strumento"
+    assert suoni.parametri_suono("banco_strumento")["programma"] == 22
+    assert suoni.parametri_suono("banco")["programma"] == 0
+    assert [suoni.sigla_suono(c) for c in giro[:4]] == ["S1", "S2", "BAN", "STR"]
+    # Il midi di un archivio vecchio vale il primo suono
+    assert suoni.prossimo_suono("midi") == "suono_1"
+    # Lo strumento scelto e' gia' l'armonica: un suono in meno
+    config.impostazioni["midi_strumento"] = 22
+    assert suoni.prossimo_suono("banco") == "suono_1"
+    assert suoni.suono_attivo() == "banco"
+    # L'ukulele non ha uno strumento General MIDI
+    config.impostazioni["midi_strumento"] = 0
+    config.impostazioni["strumento_attivo"] = "Ukulele"
+    assert suoni.prossimo_suono("banco") == "suono_1"
+    assert "nessuno" in suoni.descrizione_suono("banco_strumento")
+
+
+def test_il_gioco_col_suono_usa_lo_stesso_giro(monkeypatch):
+    """In Gioca col suono la barra spaziatrice alternava solo i due suoni
+    sintetici; dalla 9.11 anche il banco, e dalla 10.0.0 il giro e' quello
+    di tutta l'app."""
+    import gioca_suono
+    assert not hasattr(gioca_suono, "_prossimo_suono")
+    with open(gioca_suono.__file__, encoding="utf-8") as f:
+        assert "suoni.prossimo_suono(stato['suono'])" in f.read()
 
 
 def test_le_note_del_banco_passano_dal_renderer(monkeypatch):
@@ -312,7 +334,7 @@ def test_il_banco_vero_suona_intonato(monkeypatch):
     banchi.chiudi()
     try:
         for frequenza in (440.0, 446.0, 261.63):
-            mono = banchi.rendi_nota(BANCO_SGM, GBAudio.PROGRAMMA_ARMONICA, frequenza, 1.0, 48000)
+            mono = banchi.rendi_nota(BANCO_SGM, config.PROGRAMMA_ARMONICA, frequenza, 1.0, 48000)
             assert len(mono) == int(1.0 * 48000) + int(banchi.CODA * 48000)
             letture = [accordatore.rileva_frequenza(mono[i:i + 4096], 48000) for i in range(9600, 40000, 4096)]
             centesimi = [1200 * math.log2(f / frequenza) for f in letture if f > 0]
@@ -331,7 +353,7 @@ def test_gli_strumenti_del_banco_hanno_lo_stesso_livello(monkeypatch):
     monkeypatch.setattr(banchi, "cartella_fluidsynth", lambda: FLUIDSYNTH_DI_METEORA)
     banchi.chiudi()
     try:
-        for programma in (GBAudio.PROGRAMMA_ARMONICA, 24, 0):
+        for programma in (config.PROGRAMMA_ARMONICA, 24, 0):
             renderer = banchi.RendererBanco(BANCO_SGM, programma, 48000)
             renderer.set_params(261.63, 4.0, 1.0)
             picco = float(np.abs(renderer.render()).max())
@@ -371,7 +393,7 @@ def test_la_nota_tenuta_finisce_col_suo_rilascio(monkeypatch):
     banchi.chiudi()
     try:
         fs = 44100
-        for programma in (19, 52, GBAudio.PROGRAMMA_ARMONICA):
+        for programma in (19, 52, config.PROGRAMMA_ARMONICA):
             renderer = banchi.RendererBanco(BANCO_SGM, programma, fs)
             renderer.set_params(261.63, 1.0, 0.8)
             mono, ciclo = renderer.render_tenuta()
@@ -459,17 +481,56 @@ def test_senza_banchi_fluidr3_si_scarica_solo_con_un_si(monkeypatch):
     assert config.impostazioni["banco"]["percorso"] == "" and config.impostazioni["tipo_suono"] == "suono_1"
 
 
-def test_cambiare_strumento_lascia_attivo_il_banco(monkeypatch, capsys):
-    """Scegliere lo strumento passava sempre al MIDI di Windows, anche con il
-    banco attivo, che usa lo stesso strumento."""
+def test_lo_strumento_del_banco_non_cambia_il_suono_attivo(monkeypatch, capsys):
+    """Scegliere lo strumento del banco lo imposta e basta: fino alla 9.13
+    passava al MIDI di Windows, che dalla 10.0.0 non c'e' piu'."""
     import gestore_impostazioni
-    armonica = GBAudio.MIDI_INSTRUMENTS[GBAudio.PROGRAMMA_ARMONICA]
+    armonica = GBAudio.MIDI_INSTRUMENTS[config.PROGRAMMA_ARMONICA]
     monkeypatch.setattr(config, "salva_modifiche", lambda: True)
     monkeypatch.setattr(gestore_impostazioni, "menu", lambda **_k: armonica)
     monkeypatch.setattr(gestore_impostazioni, "key", lambda *_a, **_k: "")
-    monkeypatch.setattr(GBAudio, "get_midi_out", lambda: type("Uscita", (), {"select_instrument": lambda self, p: None})())
-    for prima, dopo in (("banco", "banco"), ("suono_1", "midi")):
+    monkeypatch.setattr(suoni, "banco_pronto", lambda: False)
+    for prima in ("banco", "suono_1"):
         monkeypatch.setattr(config, "impostazioni", {"tipo_suono": prima, "midi_strumento": 0})
         gestore_impostazioni._scegli_strumento_midi()
-        assert config.impostazioni == {"tipo_suono": dopo, "midi_strumento": GBAudio.PROGRAMMA_ARMONICA}
-    assert "Il suono attivo resta il banco." in capsys.readouterr().out
+        assert config.impostazioni == {"tipo_suono": prima, "midi_strumento": config.PROGRAMMA_ARMONICA}
+    uscita = capsys.readouterr().out
+    assert "Strumento del banco impostato su: Harmonica." in uscita and "voce 5" in uscita
+
+
+def test_lo_strumento_general_midi_di_uno_strumento(monkeypatch, capsys):
+    """La voce g di Gestisci Strumenti: lo strumento General MIDI si sceglie
+    dal nome, e nessuno lo toglie."""
+    import gestore_impostazioni
+    strumenti = {"Ukulele": {"tipo": "corde", "accordatura": ["G4", "C4", "E4", "A4"], "tasti": 12, "programma_gm": None},
+                 "Chitarra": {"tipo": "corde", "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"], "tasti": 21, "programma_gm": 24}}
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumenti": strumenti, "strumento_attivo": "Chitarra"})
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    risposte = iter(["g", "Ukulele", "Acoustic Guitar (nylon)", "g", "Chitarra", "0", None])
+    viste = []
+
+    def menu_finto(**opzioni):
+        viste.append(opzioni["d"])
+        return next(risposte)
+
+    monkeypatch.setattr(gestore_impostazioni, "menu", menu_finto)
+    gestore_impostazioni.GestoreStrumenti()
+    assert strumenti["Ukulele"]["programma_gm"] == 24
+    assert strumenti["Chitarra"]["programma_gm"] is None
+    assert list(viste[2])[:2] == ["0", "Acoustic Grand Piano"] and len(viste[2]) == 129
+    assert "Strumento General MIDI di Ukulele: Acoustic Guitar (nylon)." in capsys.readouterr().out
+
+
+def test_uno_strumento_nuovo_riceve_lo_strumento_proposto(monkeypatch, capsys):
+    import gestore_impostazioni
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumenti": {}, "strumento_attivo": ""})
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    monkeypatch.setattr(config, "aggiorna_manico", lambda: None)
+    monkeypatch.setattr(gestore_impostazioni, "menu", lambda **_k: "1")
+    monkeypatch.setattr(gestore_impostazioni, "_nuovo_strumento_a_corda",
+                        lambda _s: ("Basso fretless", {"tipo": "corde", "accordatura": ["E1", "A1", "D2", "G2"], "tasti": 24}))
+    monkeypatch.setattr(gestore_impostazioni, "dgt", lambda *_a, **_k: "n")
+    gestore_impostazioni._aggiungi_strumento(config.impostazioni["strumenti"])
+    assert config.impostazioni["strumenti"]["Basso fretless"]["programma_gm"] == 32
+    assert "Strumento General MIDI proposto: Acoustic Bass." in capsys.readouterr().out
+

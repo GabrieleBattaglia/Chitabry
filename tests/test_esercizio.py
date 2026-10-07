@@ -1,11 +1,10 @@
-# Chitabry, prove dell'esercizio delle scale: griglia dei battiti, note sintetizzate in anticipo, click MIDI.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Chitabry, prove dell'esercizio delle scale: griglia dei battiti, note sintetizzate in anticipo, note tenute.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Niente audio e niente attese vere: il mixer e' un registratore, la tastiera
 # e' muta salvo copione, la sintesi e' finta, e un orologio finto avanza solo
 # quando qualcuno aspetta o sintetizza. Cosi' gli istanti dei pizzichi sulla
 # griglia si controllano al millesimo, e il file gira in un attimo.
 
-import time
 from types import SimpleNamespace
 
 import numpy as np
@@ -15,6 +14,7 @@ import clitronomo
 import config
 import esercizio_scale
 import GBAudio
+import player
 import suoni
 
 SINTESI_LENTA = 0.05
@@ -39,9 +39,24 @@ class MixerFinto:
         self.pizzichi = []   # terne (voce, campioni, istante)
         self.muti = []       # la voce zittita, None per tutte
         self.pan = {}
+        self.tenute = []     # (voce, campioni) delle note dei tasti
+        self.lasciate = []
+        self.avviato = self.fermato = False
+
+    def start(self):
+        self.avviato = True
+
+    def stop(self):
+        self.fermato = True
 
     def pluck(self, voce, mono):
         self.pizzichi.append((voce, len(mono), self.orologio()))
+
+    def tieni(self, voce, mono, ciclo=None):
+        self.tenute.append((voce, len(mono)))
+
+    def lascia(self, voce, secondi=0.06):
+        self.lasciate.append(voce)
 
     def mute(self, voce=None):
         self.muti.append(voce)
@@ -57,18 +72,29 @@ class MixerFinto:
 
 
 class TastieraMuta:
-    """Al posto di key: fa avanzare l'orologio di quanto chiesto e risponde con
-    il tasto previsto dal copione alla chiamata indicata, altrimenti con niente."""
+    """Al posto della tastiera a eventi: fa avanzare l'orologio di quanto
+    chiesto e consegna gli eventi previsti dal copione alla chiamata
+    indicata, un tasto come pressione o una lista di eventi, altrimenti
+    niente; senza attesa e a copione finito, Esc."""
+    tiene = True
+
     def __init__(self, orologio):
         self.orologio = orologio
         self.chiamate = 0
         self.copione = {}
+        self.chiusa = False
 
-    def __call__(self, prompt="", attesa=None, alla_scadenza=""):
+    def eventi(self, attesa=None):
         self.chiamate += 1
         if attesa:
             self.orologio.avanza(attesa)
-        return self.copione.get(self.chiamate, "")
+        voce = self.copione.get(self.chiamate)
+        if voce is None:
+            return [(chr(27), "giu")] if attesa is None else []
+        return [(voce, "giu")] if isinstance(voce, str) else list(voce)
+
+    def chiudi(self):
+        self.chiusa = True
 
 
 @pytest.fixture
@@ -90,29 +116,17 @@ def esercizio(monkeypatch):
         return np.ones(100, dtype=np.float32)
 
     monkeypatch.setattr(suoni, "mono_da_renderer", sintesi_finta)
-    midi = []
-
-    def midi_finto(note_num, duration, velocity=127, canale=0):
-        midi.append((note_num, duration, velocity, canale, orologio()))
-
-    monkeypatch.setattr(GBAudio, "play_midi_note_temp", midi_finto)
-    controlli = []
-    porta = SimpleNamespace(h_midi=1,
-                            control_change=lambda cc, valore, canale=0: controlli.append(("cc", cc, valore, canale)),
-                            program_change=lambda programma, canale=0: controlli.append(("pc", programma, canale)))
-    monkeypatch.setattr(GBAudio, "get_midi_out", lambda: porta)
+    monkeypatch.setattr(suoni, "tenuta_da_renderer", lambda renderer: (np.ones(300, dtype=np.float32), None))
     tastiera = TastieraMuta(orologio)
-    monkeypatch.setattr(esercizio_scale, "key", tastiera)
-    scala = SimpleNamespace(frequenze=list(FREQUENZE), testo_note=lambda direzione: "Do Re Mi Fa Sol", canale_midi=0)
+    monkeypatch.setattr(player, "apri_tastiera", lambda: tastiera)
+    scala = SimpleNamespace(frequenze=list(FREQUENZE), testo_note=lambda direzione: "Do Re Mi Fa Sol")
     e = esercizio_scale.Esercizio(scala)
     e._configura_renderer()
     e.bpm = 600   # un decimo di secondo a battito
     e.orologio = orologio
     e.resi = resi
-    e.midi = midi
-    e.controlli = controlli
-    e.porta = porta
     e.tastiera = tastiera
+    e.tasti = tastiera
     return e
 
 
@@ -194,10 +208,8 @@ def test_ogni_pizzico_ha_la_sua_sintesi_fatta_in_anticipo(esercizio):
     assert len(esercizio.resi) == 11   # come una corda vera, ogni pizzico e' nuovo
     esercizio._cambia_suono()   # da suono_1 a suono_2: la scorta si butta
     assert esercizio.note_pronte == {}
-    esercizio._cambia_suono()   # a midi: nessuna sintesi
     esercizio._suona_sequenza(False)
-    assert len(esercizio.resi) == 11
-    assert len(esercizio.midi) == 5
+    assert len(esercizio.resi) == 17
 
 
 def test_la_tastiera_si_guarda_anche_se_la_sintesi_mangia_il_battito(esercizio):
@@ -205,42 +217,6 @@ def test_la_tastiera_si_guarda_anche_se_la_sintesi_mangia_il_battito(esercizio):
     esercizio.tastiera.copione = {3: chr(27)}
     assert esercizio._suona_sequenza(False) == 'interrotto'
     assert len(esercizio.resi) < 5
-
-
-def test_con_il_suono_midi_anche_il_click_e_midi(esercizio):
-    esercizio.suono = 'midi'
-    esercizio._configura_renderer()
-    esercizio.metronomo = True
-    esercizio._suona_sequenza(False)
-    assert esercizio.poly.pizzichi == []
-    assert esercizio.resi == []
-    note = [m for m in esercizio.midi if m[3] == 0]
-    click = [m for m in esercizio.midi if m[3] == GBAudio.CANALE_CLICK]
-    assert [m[0] for m in note] == [60, 62, 64, 65, 67]
-    # La nota si spegne un po' prima del battito seguente, per non spegnere quella nuova
-    assert all(m[1] == pytest.approx(0.1 - esercizio_scale.ANTICIPO_NOTE_OFF) for m in note)
-    battuta = [esercizio_scale.NOTA_ACCENTO] + [esercizio_scale.NOTA_TICK] * 3
-    assert [m[0] for m in click] == battuta * 2
-    assert all(m[1] == esercizio_scale.DURATA_CLICK_MIDI for m in click)
-    # Il volume del click e' quello del preset: accento al 50, battito al 35
-    assert click[0][2] == esercizio_scale.velocita_del_click(clitronomo.CONFIG_ACCENTO) == 64
-    assert click[1][2] == esercizio_scale.velocita_del_click(clitronomo.CONFIG_TICK) == 44
-    assert [m[4] for m in click] == pytest.approx([k * 0.1 for k in range(8)])
-    assert [m[4] for m in note] == pytest.approx([k * 0.1 for k in range(5)])
-    canale = GBAudio.CANALE_CLICK
-    assert esercizio.controlli == [("pc", GBAudio.PROGRAMMA_WOODBLOCK, canale), ("cc", GBAudio.CC_PAN, GBAudio.PAN_CENTRO, canale),
-                                   ("cc", GBAudio.CC_RIVERBERO, 0, canale), ("cc", GBAudio.CC_CHORUS, 0, canale)]
-
-
-def test_senza_porta_midi_il_click_resta_sul_mixer(esercizio):
-    esercizio.suono = 'midi'
-    esercizio.porta.h_midi = None
-    esercizio._configura_renderer()
-    esercizio.metronomo = True
-    esercizio._suona_sequenza(False)
-    assert esercizio.controlli == []
-    assert [m for m in esercizio.midi if m[3] == GBAudio.CANALE_CLICK] == []
-    assert [n for v, n, _ in esercizio.poly.pizzichi if v == VOCE_CLICK] == [70, 40, 40, 40, 70, 40, 40, 40]
 
 
 def test_esc_e_l_fermano_l_ascolto(esercizio):
@@ -264,77 +240,62 @@ def test_lo_spazio_cambia_suono_e_riprepara_la_nota(esercizio):
     assert esercizio.resi == [True, True, False, False, False, False, False]
 
 
-def test_i_messaggi_midi_portano_il_canale():
-    out = GBAudio.WindowsMidiOut.__new__(GBAudio.WindowsMidiOut)
-    inviati = []
-    out.winmm = SimpleNamespace(midiOutShortMsg=lambda h, msg: inviati.append(msg))
-    out.h_midi = 1
-    out.active_program = -1
-    out.note_on(60, 100)
-    out.note_on(81, 127, GBAudio.CANALE_CLICK)
-    out.note_off(60)
-    out.note_off(81, GBAudio.CANALE_CLICK)
-    out.control_change(GBAudio.CC_PAN, GBAudio.PAN_CENTRO, GBAudio.CANALE_CLICK)
-    out.program_change(GBAudio.PROGRAMMA_WOODBLOCK, GBAudio.CANALE_CLICK)
-    out.select_instrument(24)
-    out.select_instrument(24)   # lo stesso strumento non si rimanda
-    assert inviati == [(100 << 16) | (60 << 8) | 0x90, (127 << 16) | (81 << 8) | 0x91, (60 << 8) | 0x80, (81 << 8) | 0x81,
-                       (64 << 16) | (10 << 8) | 0xB1, (115 << 8) | 0xC1, (24 << 8) | 0xC0]
-    out.h_midi = None
-    out.note_on(60)
-    out.control_change(GBAudio.CC_CHORUS, 0)
-    out.program_change(0)
-    assert len(inviati) == 7
-
-
-def test_la_nota_a_tempo_spegne_sul_canale_giusto(monkeypatch):
-    messaggi = []
-    finto = SimpleNamespace(h_midi=1,
-                            note_on=lambda nota, velocity=127, canale=0: messaggi.append(("on", nota, velocity, canale)),
-                            note_off=lambda nota, canale=0: messaggi.append(("off", nota, canale)))
-    monkeypatch.setattr(GBAudio, "_midi_out", finto)
-    GBAudio.play_midi_note_temp(81, 0.01, 100, canale=GBAudio.CANALE_CLICK)
-    time.sleep(0.1)
-    assert messaggi == [("on", 81, 100, GBAudio.CANALE_CLICK), ("off", 81, GBAudio.CANALE_CLICK)]
-
-
-def test_con_l_armonica_le_note_midi_vanno_sul_suo_canale(esercizio):
-    """Issue 58: in MIDI l'armonica suona con il programma Harmonica su un
-    canale suo, e lo strumento delle impostazioni resta sul primo."""
-    esercizio.s.canale_midi = GBAudio.CANALE_ARMONICA
-    esercizio.suono = 'midi'
+def test_il_click_e_sempre_il_beep_del_preset(esercizio):
+    """Dalla 10.0.0 non c'e' piu' il wood block del MIDI di Windows: con
+    qualunque suono il battito e' il beep del preset, sul mixer con le note."""
+    esercizio.suono = 'suono_2'
     esercizio._configura_renderer()
+    esercizio.metronomo = True
     esercizio._suona_sequenza(False)
-    assert ("pc", GBAudio.PROGRAMMA_ARMONICA, GBAudio.CANALE_ARMONICA) in esercizio.controlli
-    note = [m for m in esercizio.midi if m[3] == GBAudio.CANALE_ARMONICA]
-    assert [m[0] for m in note] == [60, 62, 64, 65, 67]
-    assert [m for m in esercizio.midi if m[3] == 0] == []
+    assert [n for v, n, _ in esercizio.poly.pizzichi if v == VOCE_CLICK] == [70, 40, 40, 40, 70, 40, 40, 40]
 
 
-def test_il_programma_dell_armonica_e_harmonica():
-    assert GBAudio.MIDI_INSTRUMENTS[GBAudio.PROGRAMMA_ARMONICA] == "Harmonica"
-    assert GBAudio.CANALE_ARMONICA not in (0, GBAudio.CANALE_CLICK, 9)
+def test_i_tasti_delle_note_suonano_finche_sono_giu(esercizio, monkeypatch, capsys):
+    """Collaudo di Gabriele del 7 ottobre 2026: come nella Tastiera, la nota
+    di un tasto dura finche' il tasto e' giu', e lasciarlo la chiude. Il loop
+    della scala tiene le sue durate."""
+    monkeypatch.setattr(esercizio_scale.Esercizio, "_riga_stato", lambda self, in_loop: None)
+    esercizio.tastiera.copione = {1: [("1", "giu")], 2: [("3", "giu"), ("1", "su")], 3: [("3", "su")]}
+    esercizio.avvia()
+    assert esercizio.poly.tenute == [(0, 300), (2, 300)]
+    assert esercizio.poly.lasciate == [0, 2]
+    assert esercizio.poly.pizzichi == []
+    assert esercizio.tastiera.chiusa and esercizio.poly.fermato
 
 
-def test_il_click_midi_prende_il_volume_dal_preset():
-    """Collaudo del 7 ottobre 2026: il wood block al massimo copriva
-    l'armonica. Il volume del preset, da 0 a 100, diventa la velocita'."""
-    assert esercizio_scale.velocita_del_click({"volume_perc": 100}) == 127
-    assert esercizio_scale.velocita_del_click({"volume_perc": 35}) == 44
-    assert esercizio_scale.velocita_del_click({"volume_perc": 0}) == 1
+def test_le_note_tenute_si_chiudono_prima_dell_ascolto_e_dei_bpm(esercizio, monkeypatch):
+    """Durante l'ascolto a tempo i rilasci non si guardano, e i BPM chiudono
+    la tastiera con i suoi rilasci in attesa: la nota di un tasto restava
+    accesa sotto la scala, o per sempre."""
+    monkeypatch.setattr(esercizio_scale.Esercizio, "_riga_stato", lambda self, in_loop: None)
+    esercizio.tastiera.copione = {1: [("1", "giu")], 2: [("d", "giu")]}
+    esercizio.avvia()
+    assert esercizio.poly.lasciate == [0]
+    assert esercizio.poly.voci_note() == [4, 3, 2, 1, 0]
 
 
-def test_il_volume_midi_delle_impostazioni(monkeypatch):
-    monkeypatch.setattr(config, "impostazioni", {"midi_volume": 50})
-    assert GBAudio.volume_midi(50) == 64
-    assert GBAudio.volume_midi("rotto") == 127
-    assert GBAudio.volume_midi(150) == 127
-    controlli = []
-    porta = SimpleNamespace(h_midi=1, control_change=lambda cc, v, canale=0: controlli.append((cc, v, canale)),
-                            program_change=lambda programma, canale=0: controlli.append(("pc", programma, canale)))
-    monkeypatch.setattr(GBAudio, "get_midi_out", lambda: porta)
-    suoni.applica_volume_midi()
-    assert controlli == [(GBAudio.CC_VOLUME, 64, 0), (GBAudio.CC_VOLUME, 64, GBAudio.CANALE_ARMONICA)]
-    controlli.clear()
-    assert suoni.prepara_canale_armonica() == GBAudio.CANALE_ARMONICA
-    assert (GBAudio.CC_VOLUME, 64, GBAudio.CANALE_ARMONICA) in controlli
+def test_i_bpm_chiudono_le_note_tenute(esercizio, monkeypatch):
+    monkeypatch.setattr(esercizio_scale.Esercizio, "_riga_stato", lambda self, in_loop: None)
+    monkeypatch.setattr(esercizio_scale, "dgt", lambda *_a, **_k: 90)
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    prima = esercizio.tastiera
+    prima.copione = {1: [("2", "giu")], 2: [("b", "giu")]}
+    # La tastiera riaperta dopo la domanda non ha copione: Esc
+    dopo = TastieraMuta(esercizio.orologio)
+    monkeypatch.setattr(player, "apri_tastiera", lambda: prima if not prima.chiamate else dopo)
+    esercizio.avvia()
+    assert esercizio.poly.lasciate == [1]
+    assert esercizio.bpm == 90 and prima.chiusa
+
+
+def test_i_bpm_si_chiedono_a_tastiera_chiusa(esercizio, monkeypatch):
+    """dgt legge la console: la tastiera a eventi si chiude prima della
+    domanda e se ne apre una nuova dopo."""
+    aperte = []
+    monkeypatch.setattr(player, "apri_tastiera", lambda: aperte.append(TastieraMuta(esercizio.orologio)) or aperte[-1])
+    monkeypatch.setattr(esercizio_scale, "dgt", lambda *_a, **_k: 120)
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    esercizio._imposta_bpm()
+    assert esercizio.tastiera.chiusa
+    assert esercizio.tasti is aperte[0]
+    assert esercizio.bpm == 120

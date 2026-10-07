@@ -328,9 +328,10 @@ def Accordatore():
     input_devices = _dispositivi_di_ingresso()
     if not input_devices:
         print("Errore: Nessun dispositivo di input audio (microfono) trovato.")
-        key("Premi un tasto per continuare...")
+        key("\rPremi un tasto per continuare...\r")
+        print()
         return
-    if enter_escape("Desideri il rilevamento automatico della periferica di input attiva? (INVIO per si', ESC per no): "):
+    if enter_escape("\rDesideri il rilevamento automatico della periferica di input attiva? (INVIO per si', ESC per no): \r"):
         filtered_devices = _rileva_dispositivi_attivi(input_devices)
         proposta = "il primo, il piu' forte"
     else:
@@ -384,7 +385,8 @@ def Accordatore():
         stream.start()
     except ERRORI_AUDIO as e:
         print(f"Errore apertura audio: {e}")
-        key("Premi un tasto...")
+        key("\rPremi un tasto...\r")
+        print()
         return
     last_print_time = 0
     last_nota = ""
