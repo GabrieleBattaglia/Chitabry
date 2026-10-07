@@ -3250,7 +3250,8 @@
                 "E4"
             ],
             "tasti": 21,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 24
         },
         "Ukulele soprano": {
             "accordatura": [
@@ -3260,7 +3261,8 @@
                 "A4"
             ],
             "tasti": 12,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": null
         },
         "Ukulele Concerto": {
             "accordatura": [
@@ -3270,7 +3272,8 @@
                 "A4"
             ],
             "tasti": 15,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": null
         },
         "Ukulele Tenore": {
             "accordatura": [
@@ -3280,7 +3283,8 @@
                 "A4"
             ],
             "tasti": 18,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": null
         },
         "Basso 4 corde": {
             "accordatura": [
@@ -3290,7 +3294,8 @@
                 "G2"
             ],
             "tasti": 24,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 32
         },
         "Basso 5 corde": {
             "accordatura": [
@@ -3301,7 +3306,8 @@
                 "G2"
             ],
             "tasti": 24,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 32
         },
         "Mandolino": {
             "accordatura": [
@@ -3311,7 +3317,8 @@
                 "E5"
             ],
             "tasti": 20,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 90
         },
         "Banjo Bluegrass": {
             "accordatura": [
@@ -3322,7 +3329,8 @@
                 "D4"
             ],
             "tasti": 22,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 105
         },
         "Chitarra 7 corde": {
             "accordatura": [
@@ -3335,7 +3343,8 @@
                 "E4"
             ],
             "tasti": 24,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 24
         },
         "Guitalele": {
             "accordatura": [
@@ -3347,14 +3356,16 @@
                 "A4"
             ],
             "tasti": 18,
-            "tipo": "corde"
+            "tipo": "corde",
+            "programma_gm": 24
         },
         "Hohner Special 20 C": {
             "tipo": "armonica",
             "famiglia": "diatonica",
             "tonalita": "C",
             "accordatura": "richter",
-            "fori": 10
+            "fori": 10,
+            "programma_gm": 22
         },
         "JDR-Trochilus C": {
             "tipo": "armonica",
@@ -3363,7 +3374,8 @@
             "accordatura": "solo",
             "fori": 10,
             "valvole": false,
-            "registro": "normale"
+            "registro": "normale",
+            "programma_gm": 22
         }
     },
     "strumento_attivo": "Hohner Special 20 C",
@@ -3428,11 +3440,10 @@
         }
     ],
     "ultimo_controllo_pulizia_midi": "2026-09-10",
-    "tipo_suono": "midi",
+    "tipo_suono": "banco",
     "midi_strumento": 12,
     "midi_in_dispositivo": "",
-    "versione_formato": 3,
-    "midi_volume": 100,
+    "versione_formato": 4,
     "banco": {
         "percorso": "E:\\git\\tmp\\player-accessibile\\ascolti_midi\\scaricati\\GeneralUser-GS.sf2",
         "volume": 0.8,
