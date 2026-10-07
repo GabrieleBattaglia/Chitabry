@@ -1,55 +1,36 @@
 Prove a mano dalla 8.1.2 alla 9.6.18: metronomo (issue 57), armonica (issue 58), cromatiche a dieci fori come la Trochilus, scale comuni, posizioni e capitolo su music21. Da sorgente. Una riga per voce: cancellate quelle che vanno, commentate dopo i due punti quelle che no.
-Prima: Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento, Armonica a bocca, Diatonica, DO, Richter, Invio sul nome proposto, e rendetela attiva.
 Passo 1: Manico dello strumento.
 Domanda 1: lo schema dei fori si legge bene sulla barra braille, con le colonne allineate e le righe dei bending e degli overbend comprensibili?
-Passo 2: Nota sul manico con SOL, poi di nuovo con SOL4.
-Domanda 2: righe come "SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato)." sono comode, o preferite solo i simboli?
+GB: caspita, questa tabella che hai fatto è fantastica!!! Complimenti, la soluzione è perfetta e con la barra Braille si legge meravigliosamente. Puoi segnare in memoria che questo tipo di rappresentazioni mi sono congeniali.
+
 Passo 3: Trova Posizione con -3//, +6*, -5/, +5/, +3/, poi Invio a vuoto.
-Domanda 3: le note suonano giuste, e le spiegazioni dei simboli impossibili si capiscono?
-Passo 4: Costruttore Accordi, SOL settima di dominante, che sta in un gruppo solo e suona una volta; poi LA minore, e ascoltate il gruppo 1.
-Domanda 4: i gruppi di fori, e la nota che manca quando l'accordo non sta intero, sono utili cosi'?
+GB: tutto bene però chiedi: "Scrivete". Questo è in disaccordo di forma. Usa Scrivi o scrivere.
+
 Passo 5: Scale, SOL, gruppo 1, scrivete bl e Invio per la blues, Invio sull'ottava proposta, poi A, D e L.
 Domanda 5: posizione, tabella delle dodici posizioni, tablatura, gradi e note critiche tutti insieme sono troppi, o vanno bene?
+GB: vanno bene ma fatico a capirle a causa della mia scarsa conoscenza della teoria musicale. Se confermi che sono formalmente assolutamente corrette, possono rimanere così. Eventualmente fai un nuovo controllo su diversi esempi ed assicurati dell'accuratezza delle informazioni fornite da chitabry.
+
 Domanda 6: durante l'ascolto la riga di stato con la tablatura al posto dei nomi si segue?
+GB: sì, molto bene. Ho notato che se attivo il metronomo, il suono dell'armonica si abbassa di volume. Se è un effetto voluto va bene, ma l'armonica dovrebbe rimanere al suo volume che si dovrebbe impostare nella sezione impostazioni, mentre il metronomo usato, col relativo volume, dovrebbe essere quello attivo nella sezione metronomo. Verifica che sia così ed applica le correzioni, se non lo fosse.
+
 Passo 6: ripetete l'esercizio con il suono MIDI, barra spaziatrice fino a MID.
 Domanda 7: si sente l'armonica del General MIDI, e poi nella Tastiera torna lo strumento MIDI di prima?
-Passo 7: aggiungete una cromatica Solo a 12 fori in DO, con le valvole, rendetela attiva, ripetete Manico dello strumento e Trova Posizione con +4< e -4/.
-Domanda 8: le righe con il cursore e il rifiuto del bending sulla cromatica con le valvole sono chiari?
-Passo 8: rimettete attiva la chitarra e controllate che Manico dello strumento, Nota sul manico, Trova Posizione e Costruttore Accordi siano come prima.
-Passo 9: nel Metronomo caricate un preset con ml, cambiate i BPM con b100, caricatene un altro con ml.
-Domanda 9: arriva la domanda Sovrascrivi, Nuovo nome, Carica senza salvare, Annulla, e ogni risposta fa quello che dice?
+GB: sì. Forse dipende dal banco mid scelto ma l'armonica attuale, ha un vibrato su quasi tutte le note. Non è sgradevole ma preferivo una nota senza. Magari verifica quale banco usa chitabry ed offri l'opportunità di listare quelli sul pc e sceglierne uno. Questo codice è presente in meteora, se vuoi rubarglielo.
+
 Passo 10: aggiungete la vostra Trochilus: Armonica a bocca, Cromatica, la sua tonalita', Solo, 10 fori, Senza valvole, Registro normale, e rendetela attiva.
 Passo 11: aprite l'Accordatore e suonate sulla Trochilus una nota per volta, a cursore aperto salvo l'ultima. Dopo i due punti di ogni misura scrivete la riga che legge l'accordatore, per esempio N:DO4 (+2%) Hz:262.0. I valori attesi sono per la Trochilus in DO: se la vostra e' in un'altra tonalita', scrivetelo qui:
-Misura 1: foro 1 soffiato, atteso DO4, 261,6 Hz:
-Misura 2: foro 1 aspirato, atteso RE4, 293,7 Hz:
-Misura 3: foro 2 soffiato, atteso MI4, 329,6 Hz:
-Misura 4: foro 2 aspirato, atteso FA4, 349,2 Hz:
-Misura 5: foro 3 soffiato, atteso SOL4, 392,0 Hz:
-Misura 6: foro 3 aspirato, atteso LA4, 440,0 Hz:
-Misura 7: foro 4 soffiato, atteso DO5, 523,3 Hz:
-Misura 8: foro 4 aspirato, atteso SI4, 493,9 Hz:
-Misura 9: foro 5 soffiato, atteso DO5, 523,3 Hz:
-Misura 10: foro 5 aspirato, atteso RE5, 587,3 Hz:
-Misura 11: foro 6 soffiato, atteso MI5, 659,3 Hz:
-Misura 12: foro 6 aspirato, atteso FA5, 698,5 Hz:
-Misura 13: foro 7 soffiato, atteso SOL5, 784,0 Hz:
-Misura 14: foro 7 aspirato, atteso LA5, 880,0 Hz:
-Misura 15: foro 8 soffiato, atteso DO6, 1046,5 Hz:
-Misura 16: foro 8 aspirato, atteso SI5, 987,8 Hz:
-Misura 17: foro 9 soffiato, atteso DO6, 1046,5 Hz:
-Misura 18: foro 9 aspirato, atteso RE6, 1174,7 Hz:
-Misura 19: foro 10 soffiato, atteso MI6, 1318,5 Hz:
-Misura 20: foro 10 aspirato, atteso FA6, 1396,9 Hz:
-Misura 21: foro 10 aspirato con il cursore premuto, atteso FA#6, 1480,0 Hz:
-Domanda 10: dove le note lette sono diverse da quelle attese, la disposizione della vostra Trochilus non e' quella standard, e la correggo su quello che avete misurato. In particolare, il foro 5 soffiato e' un secondo DO5, e il foro 10 arriva a MI6 e FA6, come nella Solo standard?
-Passo 12: Manico dello strumento, poi Trova Posizione con -3/<, -1/ e +4*, poi Invio a vuoto.
-Domanda 11: le righe a cursore premuto, dopo quelle a cursore aperto, si seguono? I bending con il cursore suonano come sullo strumento?
-Passo 13: con la diatonica in DO attiva, Scale, SOL, gruppo 1, blues, e leggete la tabella delle dodici posizioni.
-Domanda 12: ogni riga dice la scala su questa armonica e l'armonica per il SOL blues: serve cosi'? La classifica mette quarta e terza davanti alla seconda, perche' chiedono un bending solo: vi torna, o va pesata diversamente?
-Passo 14: Scale, DO, gruppo 3, cercate pentatonic, poi pentatonic japanese, poi blues.
-Domanda 13: con le descrizioni dell'archivio, in inglese, si capisce cosa si sta scegliendo?
-Passo 15: Costruttore Accordi con la chitarra attiva, DO, scrivete m9 e Invio; poi DO, un punto solo, e half.
-Domanda 14: m9 da' il DO minore nona, DO MIb SOL SIb RE, e la ricerca per nome trova i cinque semidiminuiti?
-Passo 16: Guida, capitolo 16, music21: scale e accordi.
-Domanda 15: il capitolo vi orienta fra gruppi, scale e sigle, o manca qualcosa?
-Esito:
+Misura 1: foro 1 soffiato, atteso DO4, 261,6 Hz: c4
+Misura 2: foro 1 aspirato, atteso RE4, 293,7 Hz: d4
+Misura 3: foro 2 soffiato, atteso MI4, 329,6 Hz: e4
+Misura 4: foro 2 aspirato, atteso FA4, 349,2 Hz: f4
+Misura 5: foro 3 soffiato, atteso SOL4, 392,0 Hz: g4
+Misura 6: foro 3 aspirato, atteso LA4, 440,0 Hz: a4
+Misura 7: foro 4 soffiato, atteso DO5, 523,3 Hz: c5
+Misura 8: foro 4 aspirato, atteso SI4, 493,9 Hz: b4
+altri tutti coincidenti...
+Nota: mentre l'accordatore ascolta i microfoni, prima di avviarsi, non dà alcun feedback. Se le periferiche sono stante, non si capisce cosa stia facnedo. Usando il prompt \r \r, indica Ascolto x/y e volume rilevato.
+Poi, nel menù per scegliere la periferica, proponi già di default quella che ha sentito a volume più alto o con latenza innferiore.
+Verifica anche se l'algoritmo di rilevazione della nota è efficace o può essere ottimizzato. Ci prende abbastanza ma presenta anche un bel margine di incertezza.
+
+Ok anche per il manuale ma ha un grave difetto: mancano i numeri davanti hai titoli dei capitoli e sottocapitoli.
+Trovo 16 music21 nell'indice ma poi non c'è un capitolo 16, c'è solo music21 ed è difficile da trovare con le funzioni di ricerca degli editor.

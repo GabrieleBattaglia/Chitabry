@@ -3238,7 +3238,7 @@
             ]
         ]
     },
-    "default_bpm": 160,
+    "default_bpm": 40,
     "strumenti": {
         "Chitarra Standard": {
             "accordatura": [
@@ -3355,9 +3355,18 @@
             "tonalita": "C",
             "accordatura": "richter",
             "fori": 10
+        },
+        "JDR-Trochilus C": {
+            "tipo": "armonica",
+            "famiglia": "cromatica",
+            "tonalita": "C",
+            "accordatura": "solo",
+            "fori": 10,
+            "valvole": false,
+            "registro": "normale"
         }
     },
-    "strumento_attivo": "Hohner Special 20 C",
+    "strumento_attivo": "JDR-Trochilus C",
     "classifica_note": [
         {
             "nome": "Riprovo",
@@ -3420,7 +3429,7 @@
     ],
     "ultimo_controllo_pulizia_midi": "2026-09-10",
     "tipo_suono": "midi",
-    "midi_strumento": 71,
+    "midi_strumento": 12,
     "midi_in_dispositivo": "",
     "versione_formato": 3
 }
