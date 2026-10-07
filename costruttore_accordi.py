@@ -6,6 +6,7 @@ from GBUtils import dgt, key, menu
 from music21 import harmony
 from music21.exceptions21 import Music21Exception
 
+import armonica_vista
 import config
 import scale_catalog
 from generatore_accordi import AccordoSolver
@@ -90,7 +91,9 @@ def _diteggiature(model, solver, sols):
 
 def CostruttoreAccordi():
     """Costruisce un accordo con harmony.ChordSymbol di music21, ne mostra le
-    note e calcola le migliori diteggiature con il motore CSP."""
+    note e calcola le migliori diteggiature con il motore CSP.
+    Con un'armonica attiva, al posto delle diteggiature cerca i gruppi di
+    fori vicini che suonano l'accordo."""
     print("Costruttore di accordi teorico.")
     print("Scopri quali note compongono qualsiasi accordo.")
     scelta = _scegli_accordo()
@@ -113,6 +116,12 @@ def CostruttoreAccordi():
     print("Risultato dell'analisi.")
     print(f"Accordo: {nome_accordo}")
     print(f"Note componenti: {' - '.join(note_formattate)}")
+    if config.ARMONICA is not None:
+        nomi_classi = {}
+        for p_note in accordo.pitches:
+            nomi_classi.setdefault(p_note.pitchClass, get_nota(p_note.name.replace('-', 'b')))
+        armonica_vista.accordi(set(nomi_classi), nomi_classi, nome_accordo)
+        return
     print("Calcolo delle migliori diteggiature in corso...")
     model = _strumento_attivo()
     if model is None:

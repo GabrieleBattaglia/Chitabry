@@ -7,7 +7,8 @@
 # una griglia di scadenze assolute, le note sintetizzate in anticipo durante
 # il battito precedente, e il click in MIDI quando il suono e' MIDI, perche'
 # passando da due sintetizzatori diversi nota e battito arrivavano in tempi
-# diversi.
+# diversi. Dalla 9.0.0, issue 58, con un'armonica attiva al posto del manico
+# ci sono la posizione, la tablatura e la scelta dell'ottava da esercitare.
 
 from time import monotonic as orologio
 
@@ -16,6 +17,8 @@ from GBUtils import dgt, enter_escape, key, menu
 from music21 import pitch, scale
 from music21.exceptions21 import Music21Exception
 
+import armonica
+import armonica_vista
 import clitronomo
 import config
 import GBAudio
@@ -48,11 +51,31 @@ DURATA_CLICK_MIDI = 0.1   # secondi prima del note off: il wood block e' un colp
 # due battiti hanno la stessa nota, altrimenti spegnerebbe quella appena partita.
 ANTICIPO_NOTE_OFF = 0.03
 DURATA_MINIMA_NOTA_MIDI = 0.05
+# Quanto una nota puo' scostarsi dal temperamento, in semitoni, e contare
+# ancora come quella nota sull'armonica: trenta centesimi tengono dentro le
+# intonazioni naturali, anche la settima a 969, e fuori i quarti di tono.
+SCARTO_TEMPERATO = 0.3
+
+
+def midi_temperato(p):
+    """Il numero MIDI della nota temperata piu' vicina, se lo scarto resta
+    entro SCARTO_TEMPERATO; None per una nota piu' lontana, come un quarto
+    di tono, o per cio' che non e' un'altezza. Le scale dell'archivio Scala
+    sono quasi tutte in intonazione naturale, con la quinta a 702 centesimi
+    invece di 700: senza tolleranza, sull'armonica non ci starebbe niente."""
+    if not isinstance(p, pitch.Pitch):
+        return None
+    ps = float(p.ps)
+    vicino = round(ps)
+    return vicino if abs(ps - vicino) <= SCARTO_TEMPERATO else None
 
 
 class Scala:
     """Una scala pronta per l'esercizio: nome, note per il manico, note da
     mostrare in salita e in discesa, frequenze da suonare."""
+    # Le note MIDI escono sul primo canale, con lo strumento delle impostazioni
+    canale_midi = 0
+
     def __init__(self, tonica_std, nome_base, scala_m21):
         self.tonica_std = tonica_std
         self.nome = f"{get_nota(tonica_std)} {nome_base}"
@@ -67,6 +90,7 @@ class Scala:
         else:
             print("Attenzione: tipo di scala non riconosciuto per l'estrazione delle note.")
             pitches_asc = []
+        self.pitches = pitches_asc
         for p in pitches_asc:
             nota_manico, nota_display, freq = self._analizza(p)
             if nota_manico and nota_manico not in self.note_manico:
@@ -96,19 +120,48 @@ class Scala:
             print(f"Attenzione: impossibile calcolare la frequenza per {p.nameWithOctave}")
         return nota_manico, nota_display, frequenza
 
-    def testo_note(self, direzione):
+    def nomi_note(self, direzione):
         note = self.note_asc if direzione == 'a' else self.note_desc
         return " ".join(note)
 
+    def testo_note(self, direzione):
+        """Le note come le mostra la riga di stato dell'esercizio."""
+        return self.nomi_note(direzione)
+
     def stampa_riepilogo(self):
-        asc = self.testo_note('a')
-        desc = self.testo_note('d')
+        asc = self.nomi_note('a')
+        desc = self.nomi_note('d')
         print(f"Scala: {self.nome}")
         print(f"Note (Asc): {asc if asc else '(Nessuna nota trovata)'}")
         if self.microtonale:
             print("INFO: scala microtonale rilevata. L'audio usera' le frequenze esatte, se calcolabili.")
         if desc and asc != desc:
             print(f"Note (Desc): {desc}")
+
+
+class ScalaArmonica(Scala):
+    """La scala su un tratto dell'armonica attiva: per ogni nota anche il
+    modo meno faticoso di suonarla, che la riga di stato dell'esercizio
+    mostra al posto del nome. In MIDI le note escono con il programma
+    Harmonica, sul canale dell'armonica."""
+    canale_midi = GBAudio.CANALE_ARMONICA
+
+    def __init__(self, tonica_std, nome_base, scala_m21, modello):
+        super().__init__(tonica_std, nome_base, scala_m21)
+        self.tecniche = []
+        for p in self.pitches:
+            midi = midi_temperato(p)
+            self.tecniche.append(None if midi is None else modello.migliore(midi))
+
+    def testo_note(self, direzione):
+        simboli = [t.simbolo if t is not None else "x" for t in self.tecniche]
+        if direzione != 'a':
+            simboli.reverse()
+        return " ".join(simboli)
+
+    def estremi(self):
+        """Il nome della prima e dell'ultima nota, per dire il tratto."""
+        return self.note_asc[0], self.note_asc[-1]
 
 
 def _scegli_scala():
@@ -132,16 +185,19 @@ def _scegli_scala():
     return tonica_std, selected_key
 
 
-def _costruisci_scala(tonica_std, selected_key):
-    """La scala di music21 per la chiave scelta, con tonica alla quarta ottava.
-    Solleva ValueError se la chiave e' malformata, ScaleException o
-    Music21Exception se music21 non la istanzia."""
+def _costruisci_scala(tonica_std, selected_key, ottava=4, modello=None):
+    """La scala di music21 per la chiave scelta, con la tonica nell'ottava
+    indicata, la quarta se non si dice; con il modello di un'armonica e' una
+    ScalaArmonica. Solleva ValueError se la chiave e' malformata,
+    ScaleException o Music21Exception se music21 non la istanzia."""
     try:
         paradigm, scale_id = selected_key.split(':', 1)
     except ValueError:
         raise ValueError(f"chiave di selezione '{selected_key}' malformata") from None
     nome_base = scale_catalog.SCALE_TYPES_DICT.get(selected_key, scale_id)
-    scala_m21 = scale_catalog.get_scale_from_usi(f"{paradigm}:{tonica_std}4:{scale_id}")
+    scala_m21 = scale_catalog.get_scale_from_usi(f"{paradigm}:{tonica_std}{ottava}:{scale_id}")
+    if modello is not None:
+        return ScalaArmonica(tonica_std, nome_base, scala_m21, modello)
     return Scala(tonica_std, nome_base, scala_m21)
 
 
@@ -229,6 +285,119 @@ def _mostra_manico(s):
     visualizza_note_su_manico(s.note_manico, maninf, mansup)
 
 
+def _nome_nella_scala(nome_m21, midi):
+    """Il nome di una nota con la grafia della scala e l'ottava che suona:
+    un SIb resta SIb, e un DOb si numera con l'ottava del SI che suona."""
+    p = pitch.Pitch(nome_m21)
+    p.octave = midi // 12 - 1
+    while p.midi > midi:
+        p.octave -= 1
+    while p.midi < midi:
+        p.octave += 1
+    return get_nota(p.nameWithOctave.replace('-', 'b'))
+
+
+def _riassunto(tecniche):
+    """Le tecniche di un tratto di scala in una frase corta."""
+    conteggi = armonica.conta_tecniche(tecniche)
+    if list(conteggi) == ["naturale"]:
+        return "tutte naturali"
+    return ", ".join(f"{categoria} {quante}" for categoria, quante in conteggi.items())
+
+
+def _tablatura_completa(s, modello):
+    """La scala su tutta l'estensione dell'armonica: una riga per nota con il
+    modo piu' comodo e gli altri, le due sequenze compatte, i gradi, il
+    conteggio delle tecniche e le note critiche."""
+    nomi = {}       # classe di altezza -> nome music21, nell'ordine dei gradi
+    for p in s.pitches:
+        midi = midi_temperato(p)
+        if midi is not None:
+            # Una nota presa per vicinanza si chiama come la nota che suona
+            esatta = float(p.ps) == midi
+            nomi.setdefault(midi % 12, p.name if esatta else config.NOTE_STD[midi % 12])
+    if not nomi:
+        print("La scala non ha note temperate: sull'armonica non si suona.")
+        return
+    if s.microtonale:
+        print("Sull'armonica le note si prendono temperate: quelle a meno di trenta centesimi diventano la nota vicina, quelle piu' lontane, come i quarti di tono, restano fuori.")
+    grave, acuta = modello.estensione()
+    note = [m for m in range(grave, acuta + 1) if m % 12 in nomi]
+    tecniche = [modello.migliore(m) for m in note]
+    print(f"Tablatura su tutta l'estensione, da {_nome_nella_scala(nomi[note[0] % 12], note[0])} "
+          f"a {_nome_nella_scala(nomi[note[-1] % 12], note[-1])}, {len(note)} note:")
+    for midi, tecnica in zip(note, tecniche, strict=True):
+        if tecnica is None:
+            print(f"{_nome_nella_scala(nomi[midi % 12], midi)}: non c'e' su questa armonica")
+            continue
+        altre = modello.tecniche_per_nota(midi)[1:]
+        riga = f"{_nome_nella_scala(nomi[midi % 12], midi)}: {tecnica.simbolo}"
+        if altre:
+            riga += f" (anche {' '.join(a.simbolo for a in altre)})"
+        print(riga)
+    simboli = [t.simbolo if t is not None else "x" for t in tecniche]
+    print(f"In salita: {' '.join(simboli)}")
+    print(f"In discesa: {' '.join(reversed(simboli))}")
+    print("Gradi della scala, in tutte le ottave:")
+    for grado, (classe, nome) in enumerate(nomi.items(), start=1):
+        dove = [t.simbolo for m, t in zip(note, tecniche, strict=True) if m % 12 == classe and t is not None]
+        testo = " ".join(dove) if dove else "non c'e' su questa armonica"
+        print(f"Grado {grado}, {get_nota(nome.replace('-', 'b'))}: {testo}")
+    print(f"Tecniche su tutta l'estensione: {_riassunto(tecniche)}.")
+    critiche = [(m, t) for m, t in zip(note, tecniche, strict=True) if t is not None and t.livello >= 2]
+    if critiche:
+        print("Note critiche, che chiedono un bending profondo o un overbend:")
+        for midi, tecnica in critiche:
+            print(f"{_nome_nella_scala(nomi[midi % 12], midi)}: {tecnica.simbolo}, {tecnica.descrizione().lower()}")
+
+
+def _scegli_ottava(tonica_std, selected_key, modello):
+    """Le ottave in cui la scala comincia sull'armonica, con le tecniche che
+    chiede ciascuna, e la scelta di quella da esercitare: Invio prende la
+    piu' comoda, a parita' la piu' grave. None se non ce n'e' nessuna."""
+    grave, acuta = modello.estensione()
+    candidate = []
+    for ottava in range(0, 9):
+        if not grave <= pitch.Pitch(f"{tonica_std}{ottava}").midi <= acuta:
+            continue
+        try:
+            sa = _costruisci_scala(tonica_std, selected_key, ottava, modello)
+        except (scale_catalog.ScaleException, Music21Exception, ValueError):
+            continue
+        if sum(1 for t in sa.tecniche if t is not None) >= 2:
+            candidate.append(sa)
+    if not candidate:
+        print("Su questa armonica la scala non ha un tratto da esercitare.")
+        return None
+    comoda = min(range(len(candidate)), key=lambda i: (armonica.fatica(candidate[i].tecniche), i))
+    if len(candidate) == 1:
+        return candidate[0]
+    print("Ottave in cui si puo' fare l'esercizio:")
+    for numero, sa in enumerate(candidate, start=1):
+        primo, ultimo = sa.estremi()
+        print(f"{numero}: da {primo} a {ultimo}, {_riassunto(sa.tecniche)}")
+    scelta = dgt(f"Quale ottava (Invio per la {comoda + 1}, la piu' comoda): ", kind='i', imin=1, imax=len(candidate), default=comoda + 1)
+    return candidate[scelta - 1]
+
+
+def _mostra_armonica(s, tonica_std, selected_key):
+    """Con un'armonica attiva, al posto del manico: l'armonica e la posizione,
+    la tablatura su tutta l'estensione e la scelta dell'ottava. Restituisce
+    la scala da esercitare, o None se non ce n'e'."""
+    modello = config.ARMONICA
+    print(f"Armonica attiva: {armonica_vista.nome_attivo()}, {armonica_vista.descrivi(modello)}.")
+    numero = armonica.posizione(modello.tonalita, pitch.Pitch(tonica_std).pitchClass)
+    print(f"Scala richiesta: {s.nome}, in {armonica.descrivi_posizione(numero)}.")
+    if modello.chiave_accordatura == "richter" and numero in armonica.USI_RICHTER:
+        print(f"Sulla Richter questa posizione si usa per {armonica.USI_RICHTER[numero]}.")
+    _tablatura_completa(s, modello)
+    scelta = _scegli_ottava(tonica_std, selected_key, modello)
+    if scelta is not None:
+        primo, ultimo = scelta.estremi()
+        print(f"Esercizio da {primo} a {ultimo}: {scelta.testo_note('a')}")
+    return scelta
+
+
 class Esercizio:
     """L'ascolto della scala a tempo, con loop, metronomo e cambio di suono.
     Le note stanno su un mixer polifonico, una voce per nota piu' una per il
@@ -273,6 +442,8 @@ class Esercizio:
         self.note_pronte.clear()
         if self.suono == 'midi':
             self._prepara_midi()
+            if self.s.canale_midi != 0:
+                suoni.prepara_canale_armonica()
             return
         parametri = suoni.parametri_suono(self.suono)
         for i in range(self.num_notes):
@@ -324,7 +495,8 @@ class Esercizio:
         if freq is None or freq <= 0:
             return False
         if self.suono == 'midi':
-            GBAudio.play_midi_note_temp(GBAudio.freq_to_midi(freq), max(DURATA_MINIMA_NOTA_MIDI, dur - ANTICIPO_NOTE_OFF))
+            GBAudio.play_midi_note_temp(GBAudio.freq_to_midi(freq), max(DURATA_MINIMA_NOTA_MIDI, dur - ANTICIPO_NOTE_OFF),
+                                        canale=self.s.canale_midi)
             return False
         mono = self._mono(idx)
         if mono is None:
@@ -485,7 +657,13 @@ def VisualizzaEsercitatiScala():
         key("Premi un tasto...")
         return
     s.stampa_riepilogo()
-    _mostra_manico(s)
+    if config.ARMONICA is not None:
+        s = _mostra_armonica(s, tonica_std, selected_key)
+        if s is None:
+            key("Premi un tasto per tornare al menu...")
+            return
+    else:
+        _mostra_manico(s)
     if not s.frequenze:
         print("Nessuna nota audio generata per l'esercizio.")
         key("Premi un tasto per tornare al menu...")

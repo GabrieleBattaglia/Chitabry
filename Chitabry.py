@@ -35,6 +35,24 @@ MAINMENU = {
     VOCE_MANICO: "Mostra lo schema del manico dello strumento attivo",
     "Guida": "Mostra la guida di Chitabry",
 }
+# Con un'armonica attiva le voci del manico interrogano i fori: le voci
+# restano le stesse, cosi' si trovano con le stesse lettere, e cambia la
+# descrizione.
+DESCRIZIONI_CORDE = {voce: MAINMENU[voce] for voce in ("Nota sul manico", "Trova Posizione")}
+DESCRIZIONI_ARMONICA = {
+    "Nota sul manico": "Trova i fori e le tecniche di una nota sull'armonica",
+    "Trova Posizione": "Indica un foro con la sua tecnica (es. -3//) e ascolta la nota",
+}
+
+
+def aggiorna_descrizioni(strum_attivo):
+    """Le descrizioni delle voci del manico per lo strumento attivo."""
+    if config.ARMONICA is None:
+        MAINMENU.update(DESCRIZIONI_CORDE)
+        MAINMENU[VOCE_MANICO] = f"Mostra lo schema del manico per {strum_attivo}"
+    else:
+        MAINMENU.update(DESCRIZIONI_ARMONICA)
+        MAINMENU[VOCE_MANICO] = f"Mostra lo schema dei fori per {strum_attivo}"
 
 
 def mostra_guida():
@@ -116,7 +134,7 @@ def main():
     print("Premere '?' per visualizzare il menu delle opzioni.")
     while True:
         strum_attivo = config.impostazioni.get("strumento_attivo", config.STRUMENTO_PREDEFINITO)
-        MAINMENU[VOCE_MANICO] = f"Mostra lo schema del manico per {strum_attivo}"
+        aggiorna_descrizioni(strum_attivo)
         scelta = menu(d=MAINMENU, keyslist=True, show=False, show_on_filter=False, ntf="Scelta non valida")
         if scelta is None:
             break

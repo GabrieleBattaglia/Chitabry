@@ -30,6 +30,16 @@ def get_nota(nota_std_music21):
     return mappa.get(base_name_std, base_name_std) + micro_suffix + ottava
 
 
+def nota_std_da_midi(midi):
+    """Da numero MIDI al nome standard con i diesis e l'ottava, per esempio C#4."""
+    return f"{config.NOTE_STD[midi % 12]}{midi // 12 - 1}"
+
+
+def nome_da_midi(midi):
+    """Il numero MIDI detto nella nomenclatura dell'utente, con l'ottava."""
+    return get_nota(nota_std_da_midi(midi))
+
+
 def mappa_toniche():
     """Le dodici note nella nomenclatura scelta, associate al nome standard:
     e' il dizionario che menu mostra quando chiede una tonica."""

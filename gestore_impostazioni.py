@@ -6,9 +6,11 @@
 import numpy as np
 from GBUtils import dgt, key, menu
 
+import armonica
+import armonica_vista
 import config
 import GBAudio
-from nomenclatura import nome_utente_in_std
+from nomenclatura import get_nota, nome_utente_in_std
 
 
 def ModificaSuono(suono_key):
@@ -82,11 +84,106 @@ def _chiedi_accordatura(num_corde):
 
 
 def _descrivi_strumenti(strumenti):
-    return {k: f"{k} ({v.get('tasti')} tasti, {len(v.get('accordatura', []))} corde)" for k, v in strumenti.items()}
+    descrizioni = {}
+    for nome, conf in strumenti.items():
+        if config.e_armonica(conf):
+            try:
+                descrizioni[nome] = f"{nome} (armonica {armonica_vista.descrivi(config.modello_armonica(conf))})"
+            except ValueError:
+                descrizioni[nome] = f"{nome} (armonica con dati da correggere)"
+        else:
+            descrizioni[nome] = f"{nome} ({conf.get('tasti')} tasti, {len(conf.get('accordatura', []))} corde)"
+    return descrizioni
+
+
+def _nuovo_strumento_a_corda(strumenti):
+    """Nome, corde, accordatura e tasti. Restituisce la coppia (nome, voce)
+    o (None, None) se l'utente rinuncia."""
+    nome = dgt("Nome strumento: ", kind="s").strip()
+    if not nome:
+        return None, None
+    if nome in strumenti:
+        print("Esiste gia' uno strumento con questo nome.")
+        return None, None
+    num_corde = dgt("Numero di corde (es. 4 per Ukulele): ", kind="i", imin=1, imax=12)
+    accordatura = _chiedi_accordatura(num_corde)
+    if accordatura is None:
+        return None, None
+    tasti = dgt("Numero di tasti: ", kind="i", imin=1, imax=50)
+    return nome, {"tipo": config.TIPO_CORDE, "accordatura": accordatura, "tasti": tasti}
+
+
+def _nuova_armonica(strumenti):
+    """Famiglia, fori per la cromatica, tonalita', accordatura e nome, con il
+    nome suggerito che si accetta con Invio. Restituisce la coppia
+    (nome, voce) o (None, None) se l'utente rinuncia con Esc."""
+    print("Famiglia dell'armonica:")
+    scelta = menu(d={"1": "Diatonica, 10 fori", "2": "Cromatica, con il cursore"}, keyslist=True, show=True,
+                  show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    if scelta is None:
+        return None, None
+    famiglia = "diatonica" if scelta == "1" else "cromatica"
+    fori = armonica.FORI_DIATONICA
+    if famiglia == "cromatica":
+        print("Quanti fori:")
+        scelta = menu(d={"12": "12 fori, tre ottave", "16": "16 fori, quattro ottave"}, keyslist=True, show=True,
+                      show_on_filter=False, ordered=False, ntf="Scelta non valida")
+        if scelta is None:
+            return None, None
+        fori = int(scelta)
+    # Non quella stampata sopra: le Natural Minor e le Melody Maker portano
+    # scritta la tonalita' della seconda posizione, una quinta piu' su.
+    print("Tonalita' dell'armonica, cioe' la nota del foro 1 soffiato:")
+    toniche = {get_nota(t): t for t in armonica.TONALITA}
+    scelta = menu(d=toniche, keyslist=True, show=True, pager=12, ordered=False, ntf="Tonalita' non valida")
+    if scelta is None:
+        return None, None
+    tonalita = toniche[scelta]
+    chiavi = armonica.accordature_per_famiglia(famiglia)
+    voci = {str(i): f"{armonica.ACCORDATURE[k].nome}, {armonica.ACCORDATURE[k].descrizione}" for i, k in enumerate(chiavi, start=1)}
+    print("Accordatura:")
+    scelta = menu(d=voci, keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    if scelta is None:
+        return None, None
+    accordatura = chiavi[int(scelta) - 1]
+    suggerito = f"Armonica {famiglia} {get_nota(tonalita)} {armonica.ACCORDATURE[accordatura].nome}"
+    if famiglia == "cromatica":
+        suggerito += f" {fori} fori"
+    nome = dgt(f"Nome strumento (Invio per {suggerito}): ", kind="s", default=suggerito).strip()
+    if not nome:
+        return None, None
+    if nome in strumenti:
+        print("Esiste gia' uno strumento con questo nome.")
+        return None, None
+    return nome, {"tipo": config.TIPO_ARMONICA, "famiglia": famiglia, "tonalita": tonalita,
+                  "accordatura": accordatura, "fori": fori}
+
+
+def _aggiungi_strumento(strumenti):
+    """Prima la categoria, poi le domande di quella categoria."""
+    print("Aggiungi nuovo strumento. Di che tipo?")
+    categoria = menu(d={"1": "Strumento a corda (chitarra, basso, ukulele...)", "2": "Armonica a bocca"},
+                     keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    if categoria is None:
+        return
+    if categoria == "1":
+        nome, voce = _nuovo_strumento_a_corda(strumenti)
+    else:
+        nome, voce = _nuova_armonica(strumenti)
+    if voce is None:
+        return
+    strumenti[nome] = voce
+    config.impostazioni['strumenti'] = strumenti
+    ans = dgt(f"Vuoi impostare {nome} come strumento attivo? (S/N): ", kind="s")
+    if ans.strip().lower() == 's':
+        config.impostazioni['strumento_attivo'] = nome
+    config.salva_modifiche()
+    config.aggiorna_manico()
+    print(f"Strumento {nome} aggiunto con successo!")
 
 
 def GestoreStrumenti():
-    """Scelta, aggiunta ed eliminazione degli strumenti."""
+    """Scelta, aggiunta ed eliminazione degli strumenti, a corda e armoniche."""
     print("Gestore strumenti.")
     while True:
         strumenti = config.impostazioni.get('strumenti', {})
@@ -108,26 +205,7 @@ def GestoreStrumenti():
                 config.aggiorna_manico()
                 print(f"Strumento attivo impostato su: {scelto}.")
         elif scelta == 'a':
-            print("Aggiungi nuovo strumento.")
-            nome = dgt("Nome strumento: ", kind="s").strip()
-            if not nome:
-                continue
-            if nome in strumenti:
-                print("Esiste gia' uno strumento con questo nome.")
-                continue
-            num_corde = dgt("Numero di corde (es. 4 per Ukulele): ", kind="i", imin=1, imax=12)
-            accordatura = _chiedi_accordatura(num_corde)
-            if accordatura is None:
-                continue
-            tasti = dgt("Numero di tasti: ", kind="i", imin=1, imax=50)
-            strumenti[nome] = {"accordatura": accordatura, "tasti": tasti}
-            config.impostazioni['strumenti'] = strumenti
-            ans = dgt(f"Vuoi impostare {nome} come strumento attivo? (S/N): ", kind="s")
-            if ans.strip().lower() == 's':
-                config.impostazioni['strumento_attivo'] = nome
-            config.salva_modifiche()
-            config.aggiorna_manico()
-            print(f"Strumento {nome} aggiunto con successo!")
+            _aggiungi_strumento(strumenti)
         elif scelta == 'e':
             print("Seleziona lo strumento da eliminare:")
             eliminabili = {k: v for k, v in strumenti.items() if k != strum_attivo}

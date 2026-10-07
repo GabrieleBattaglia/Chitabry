@@ -2,6 +2,35 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.0.0 (7 ottobre 2026)
+Arriva l'armonica a bocca, diatonica e cromatica, come strumento a tutti gli effetti (issue 58).
+*   Strumenti:
+    *   Nel Gestore Strumenti, aggiungendo uno strumento, Chitabry chiede prima di che tipo e': a corda, come finora, oppure armonica a bocca. Per l'armonica chiede la famiglia, diatonica a dieci fori o cromatica a dodici o sedici, la tonalita', cioe' la nota del foro 1 soffiato, e l'accordatura, e propone un nome che si accetta con Invio.
+    *   Le accordature delle diatoniche sono Richter, Country, Paddy Richter, Natural Minor, Harmonic Minor e Melody Maker; quelle delle cromatiche sono Solo e Bebop.
+    *   Le armoniche suonano nell'ottava in cui le fanno i costruttori: quella in DO comincia dal DO centrale, quelle da SOL a SI cominciano sotto, e la cromatica a sedici fori ha un'ottava in piu' in basso.
+    *   Bending e overbend si calcolano dalle due ance di ogni foro, come succede nello strumento: sulla Richter in DO, per esempio, il foro 3 aspirato si piega fino a un tono e mezzo, il foro 5 non si piega, e con gli overbend l'armonica copre tutte le note da DO4 a DO#7. Sulla cromatica le note in piu' le da' il cursore.
+    *   L'archivio delle impostazioni passa al formato 3: ogni strumento dice di che tipo e', e quelli che avevate gia' vengono segnati da soli come strumenti a corda alla prima apertura. Un'armonica con dati ritoccati male nel file non ferma il programma: Chitabry lo dice, suona con una diatonica in DO e lascia la voce com'e', da correggere.
+*   La notazione:
+    *   Ogni nota dell'armonica ha un simbolo corto, senza lettere: + soffiato, - aspirato, il numero del foro, una barra per ogni semitono di bending, l'asterisco per l'overbend, il segno minore per il cursore. -3// e' il foro 3 aspirato piegato di un tono, +6* l'overblow del foro 6, +4< il foro 4 soffiato con il cursore.
+    *   Dove serve, accanto al simbolo c'e' la stessa cosa detta a parole, per la sintesi vocale: foro 3 aspirato, bending di un tono.
+*   Con un'armonica attiva:
+    *   Manico dello strumento mostra lo schema dei fori, una griglia con un foro per colonna e una tecnica per riga, allineata per la barra braille.
+    *   Nota sul manico dice in quali fori e con quale tecnica si suona una nota, in tutte le ottave o in quella che scrivete.
+    *   Trova Posizione prende un simbolo, dice che nota suona e la fa sentire, un simbolo dopo l'altro. Se su quell'armonica il simbolo non esiste, dice perche': il foro 5 non si piega perche' le sue ance sono a un semitono, il foro 3 si piega aspirando e non soffiando.
+    *   Costruttore Accordi, dopo le note, cerca i gruppi di fori vicini che suonano l'accordo nello stesso verso, e li fa ascoltare: il SOL7 su un'armonica in DO e' -2 -3 -4 -5. Quando nessun gruppo lo suona per intero, mostra quelli che ne suonano di piu' e la nota che manca.
+    *   Le descrizioni delle tre voci nel menu principale parlano di fori invece che di manico; le voci restano le stesse, e si trovano con le stesse lettere.
+    *   Con il suono MIDI le note dell'armonica escono con lo strumento Harmonica, su un canale MIDI tutto loro: lo strumento scelto nelle impostazioni resta quello per tutto il resto.
+*   Le scale sull'armonica:
+    *   Al posto del manico, Chitabry calcola la posizione in cui si suona la scala, dalla prima alla dodicesima: SOL blues su un'armonica in DO e' la seconda, la cross harp. Sulla Richter dice anche a cosa servono di solito le posizioni piu' usate.
+    *   Poi mostra la tablatura su tutta l'estensione, una nota per riga con il modo piu' comodo e gli altri, la stessa in una riga in salita e in discesa, i gradi della scala con tutti i loro fori, il conteggio delle tecniche e le note critiche, quelle che vogliono un bending di un tono o piu' o un overbend.
+    *   Prima dell'esercizio si sceglie l'ottava, fra quelle in cui la scala comincia sull'armonica, ciascuna con le tecniche che chiede; Invio prende la piu' comoda. Per il DO maggiore su un'armonica in DO e' quella centrale, da +4 a +7, tutta senza tecniche.
+    *   Nell'esercizio la riga di stato mostra la tablatura al posto dei nomi delle note.
+    *   Le scale dell'archivio Scala, quasi tutte in intonazione naturale, sull'armonica si prendono temperate: una nota a meno di trenta centesimi dal temperamento conta come la nota vicina, un quarto di tono resta fuori.
+*   Guida:
+    *   Un capitolo nuovo, Armonica a bocca, con la notazione, le accordature, come aggiungere un'armonica e cosa cambia nelle voci del menu. La guida passa alla revisione 15.
+*   Codice:
+    *   Il modello dell'armonica sta in armonica.py e lavora solo con i numeri MIDI, senza music21; cio' che si vede a schermo sta in armonica_vista.py. Venticinque prove nuove, 115 in tutto.
+
 Versione 8.1.2 (7 ottobre 2026)
 Il metronomo non perde piu' le modifiche quando caricate un altro preset.
 *   Se avevate cambiato qualcosa in un metronomo e ne caricavate un altro con ml, le modifiche sparivano senza una parola (issue 57). Adesso ml fa come gia' facevano x e q: se ci sono modifiche non salvate vi chiede se sovrascrivere il preset, salvarle con un nome nuovo, caricare lo stesso senza salvare oppure annullare. La domanda arriva solo dopo che il preset da caricare e' stato trovato, quindi un nome sbagliato non vi fa rispondere a niente.

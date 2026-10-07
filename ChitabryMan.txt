@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 14, di mercoledi' 7 ottobre 2026, per la versione 8.1.2.
+L'ultima revisione di questo documento e' la numero 15, di mercoledi' 7 ottobre 2026, per la versione 9.0.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -47,14 +47,20 @@ Indice Dettagliato degli Argomenti:
     - 11.3. Calcolo del Punteggio.
     - 11.4. Classifica (Hall of Fame).
 12. Impostazioni.
-    - 12.1. Gestione Strumenti (Corde/Tasti personalizzati).
+    - 12.1. Gestione Strumenti (strumenti a corda e armoniche).
     - 12.2. Cambia nomenclatura (Latina / Anglosassone).
     - 12.3. Configurazione Parametri Suoni (Sintesi e MIDI).
 13. Nota sul manico (Ricerca posizioni note).
 14. Trova Posizione (Corda.Tasto).
-15. Guida.
-16. Esci.
-17. Ringraziamenti.
+15. Armonica a bocca.
+    - 15.1. La notazione.
+    - 15.2. Le armoniche che Chitabry conosce.
+    - 15.3. Aggiungere un'armonica.
+    - 15.4. Con un'armonica attiva.
+    - 15.5. Le scale sull'armonica.
+16. Guida.
+17. Esci.
+18. Ringraziamenti.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 3.5 Flash, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
@@ -117,6 +123,8 @@ Durante l'ascolto di una forma:
    - Q: Pennata in giù (Strum "battere", dal grave all'acuto).
    - A: Pennata in su (Strum "levare", dall'acuto al grave).
    - SPAZIO: Alterna i suoni Chitarra, Sintetico e MIDI.
+
+Se lo strumento attivo e' un'armonica, al posto delle diteggiature Chitabry cerca i gruppi di fori vicini che suonano l'accordo: lo trovate nel capitolo Armonica a bocca.
 
   Flauto
 
@@ -292,6 +300,8 @@ Menu Esercizio Scala:
    - ?: Mostra l'aiuto.
    - ESC: durante un ascolto singolo lo interrompe e si resta nell'esercizio; dal menu dell'esercizio, o mentre il loop gira, esce dall'esercizio e torna al menu principale.
 
+Se lo strumento attivo e' un'armonica, al posto del manico Chitabry mostra la posizione, la tablatura su tutta l'estensione e la scelta dell'ottava per l'esercizio: lo trovate nel capitolo Armonica a bocca.
+
  Tastiera (Player Generico)
 
 Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 voci e supporta la riproduzione tramite tastiere MIDI esterne (fisiche o Bluetooth).
@@ -337,7 +347,7 @@ Selezionando questa voce potrete mettere alla prova la vostra capacità di ricon
 
 Qui potete configurare alcuni parametri di Chitabry:
 
-   Gestisci Strumenti: Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino). Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento (specificando numero di corde, nota di ogni corda vuota e numero di tasti) oppure eliminare strumenti non più usati.
+   Gestisci Strumenti: Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo Armonica a bocca.
    Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
    Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
    Modifica suono 2 (Sintetico): Permette di configurare i parametri del sintetizzatore ad onda semplice: la forma d'onda e l'inviluppo, cioe' come la nota nasce, si assesta e si spegne. L'inviluppo ha quattro valori. Attacco, decadimento e rilascio sono tempi in millesimi di secondo: l'attacco e' quanto la nota ci mette a raggiungere il volume pieno, il decadimento quanto ci mette a scendere dal picco al livello di mantenimento, il rilascio quanto ci mette a spegnersi quando lasciate il tasto. Il mantenimento invece non e' un tempo ma un livello, in percentuale del volume: e' il volume a cui la nota resta finche' la tenete. Con i valori di serie, dieci millesimi di attacco, sessanta di decadimento, settanta per cento di mantenimento e centoventi millesimi di rilascio, la nota parte subito, fa un gradino udibile e si chiude senza strascicare. Un attacco lungo fa sentire la nota in ritardo rispetto a quando avete premuto: fino alla versione 8.1.0 questi valori erano percentuali della durata della nota, e i valori di serie facevano un attacco di centottanta millesimi.
@@ -359,6 +369,7 @@ Corda 3, tasti: 12
 ...etc...
 
 A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non anche "RE#"). Per cercare un diesis, digitate "RE#".
+Con un'armonica attiva la stessa voce dice in quali fori, e con quale tecnica, si suona la nota: vedete il capitolo Armonica a bocca.
 
  Trova Posizione
 
@@ -373,6 +384,55 @@ Ad esempio, scrivendo 6.3 (terzo tasto della sesta corda), Chitabry risponderà:
 Sulla corda 6, tasto 3, si trova la nota: SOL2
 
 Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato!
+Con un'armonica attiva la posizione si scrive con il simbolo del foro, per esempio -3//: vedete il capitolo Armonica a bocca.
+
+ Armonica a bocca
+
+Dalla versione 9.0.0 Chitabry conosce anche l'armonica a bocca, diatonica a dieci fori e cromatica a dodici o sedici. Si aggiunge come uno strumento qualunque, dal Gestore Strumenti nelle Impostazioni, e quando e' lo strumento attivo le voci che per una chitarra guardano il manico guardano i fori.
+
+La notazione.
+Ogni nota dell'armonica si scrive con un simbolo corto, fatto di segni e numeri e senza lettere, che sulla barra braille si legge in un colpo:
+   + seguito dal numero del foro e' il foro soffiato, per esempio +4.
+   - seguito dal numero del foro e' il foro aspirato, per esempio -3.
+   Ogni barra dopo il numero e' un semitono di bending: -4/ e' il foro 4 aspirato piegato di mezzo tono, -2// di un tono, -3/// di un tono e mezzo. Sui fori bassi si piega aspirando, sui fori alti soffiando, per esempio +10//.
+   L'asterisco e' l'overbend: con il piu' e' un overblow, come +6*, con il meno un overdraw, come -7*.
+   Sulla cromatica il segno minore e' il cursore premuto: +4< e' il foro 4 soffiato con il cursore. Scrivendo potete usare anche l'accento circonflesso o la tilde al posto del segno minore.
+Accanto al simbolo, dove serve, Chitabry scrive la stessa cosa a parole, per esempio: -3//, foro 3 aspirato, bending di un tono.
+
+Le armoniche che Chitabry conosce.
+La tonalita' di un'armonica, per Chitabry, e' la nota del foro 1 soffiato. Le armoniche da DO a FA# cominciano dal DO centrale in su, quelle da SOL a SI sotto, come le fanno i costruttori: l'armonica in DO va da DO4 a DO7, quella in SOL da SOL3 a SOL6. La cromatica a sedici fori aggiunge un'ottava sotto.
+Attenzione alle Lee Oskar Natural Minor e Melody Maker: sopra portano scritta la tonalita' della seconda posizione, che sta una quinta piu' su. Una Natural Minor con scritto SOL minore, per Chitabry, e' un'armonica in DO.
+Le accordature delle diatoniche:
+   Richter, la standard di blues, folk e rock.
+   Country, la Richter con il foro 5 aspirato alzato di un semitono.
+   Paddy Richter, la Richter con il foro 3 soffiato alzato di un tono, per la musica irlandese.
+   Natural Minor, minore naturale in seconda posizione.
+   Harmonic Minor, minore armonica in prima posizione.
+   Melody Maker, melodie maggiori in seconda posizione.
+Le accordature delle cromatiche:
+   Solo, la standard: ogni quattro fori un'ottava, con la tonica ripetuta.
+   Bebop, la Solo con le due ance dei fori 4, 8 e 12 scambiate, cosi' la nota piu' grave sta sempre sul soffio.
+Bending e overbend si calcolano dalla fisica delle due ance che stanno nello stesso foro: si piega l'ancia piu' acuta, verso la piu' grave, di tutti i semitoni che stanno fra le due, e l'overbend fa suonare un semitono sopra la piu' acuta. Per questo il foro 5 della Richter non si piega: le sue due ance sono a un semitono. Sulla cromatica le valvole tengono separate le due ance, e Chitabry non calcola bending ne' overbend: le note in piu' le da' il cursore.
+
+Aggiungere un'armonica.
+Nelle Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento: scegliete Armonica a bocca, poi la famiglia, il numero di fori se e' una cromatica, la tonalita' e l'accordatura. Chitabry propone un nome, per esempio Armonica diatonica DO Richter, che accettate con Invio o cambiate scrivendone un altro.
+
+Con un'armonica attiva.
+   Manico dello strumento mostra lo schema dei fori: una griglia con un foro per colonna e una tecnica per riga, la riga + per i soffiati, - per gli aspirati, poi i bending e gli overbend, e sulla cromatica le righe con il cursore. In fondo, l'estensione.
+   Nota sul manico vi chiede una nota e vi dice in quali fori e con quale tecnica si suona, dalla piu' comoda, in tutte le ottave; aggiungendo l'ottava, per esempio SOL4, solo in quella. Per esempio: SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato).
+   Trova Posizione vi chiede un simbolo, vi dice che nota suona e ve la fa sentire. Se il simbolo su quell'armonica non esiste, Chitabry vi spiega perche': per esempio che il foro 3 si piega aspirando e non soffiando. Si continua un simbolo dopo l'altro, finche' non premete Invio a vuoto.
+   Costruttore Accordi, dopo le note, cerca i gruppi di fori vicini che suonano l'accordo, nello stesso verso e senza tecniche, larghi quanto le note dell'accordo e al massimo quattro: per esempio SOL7, su un'armonica in DO, e' -2 -3 -4 -5. Se nessun gruppo lo suona per intero, Chitabry mostra quelli che ne suonano di piu' e dice quale nota manca. Scegliendo il numero di un gruppo lo sentite.
+   Con il suono MIDI le note dell'armonica escono con lo strumento Harmonica del General MIDI, su un canale tutto loro: lo strumento MIDI scelto nelle impostazioni resta quello per tutto il resto.
+
+Le scale sull'armonica.
+Scelta la scala, al posto del manico Chitabry mostra:
+   La posizione, cioe' quante quinte separano la tonica della scala dalla tonalita' dell'armonica: SOL su un'armonica in DO e' la seconda posizione, la cross harp del blues. Sulla Richter, per le posizioni piu' usate, dice anche a cosa servono di solito.
+   La tablatura della scala su tutta l'estensione, una nota per riga, con il modo piu' comodo e, fra parentesi, gli altri. Per esempio: SOL4: -2 (anche +3).
+   La stessa tablatura in una riga, in salita e in discesa.
+   I gradi della scala, ciascuno con tutti i fori in cui si trova.
+   Il conteggio delle tecniche che la scala chiede, e le note critiche, quelle che vogliono un bending di un tono o piu', o un overbend.
+Poi viene la scelta dell'ottava per l'esercizio: Chitabry elenca le ottave in cui la scala comincia sull'armonica, con le tecniche che chiede ciascuna, e Invio prende la piu' comoda. L'esercizio funziona come per la chitarra, ma la riga di stato mostra la tablatura al posto dei nomi delle note, con una x dove la nota sull'armonica non c'e'.
+Le scale dell'archivio Scala sono quasi tutte in intonazione naturale, con le note spostate di qualche centesimo rispetto al temperamento: sull'armonica una nota che si scosta meno di trenta centesimi conta come la nota temperata vicina, una piu' lontana, come un quarto di tono, resta fuori.
 
  Guida
 

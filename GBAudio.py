@@ -628,6 +628,11 @@ MIDI_INSTRUMENTS = [
 # il pan del canale non li sposta; su un canale melodico il pan comanda.
 CANALE_CLICK = 1
 PROGRAMMA_WOODBLOCK = 115
+# Con un'armonica attiva le sue note, in MIDI, suonano con il programma
+# Harmonica su un canale loro: lo strumento MIDI scelto nelle impostazioni
+# resta sul canale 1 per tutto il resto, senza doverlo rimettere a posto.
+CANALE_ARMONICA = 2
+PROGRAMMA_ARMONICA = 22
 # Controlli continui: pan al centro, e riverbero e chorus a zero, perche' il
 # sintetizzatore GS li mette di suo su ogni canale e un click li vuole secchi.
 CC_PAN = 10

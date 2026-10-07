@@ -13,6 +13,7 @@ import sys
 from GBUtils import cartella_applicazione
 from GBUtils import percorso_risorsa as percorso_risorsa_condivisa
 
+import armonica
 import strumento
 
 
@@ -38,7 +39,12 @@ CARTELLA_MIDI = os.path.join(BASE_DIR, "midi")
 # Numero di versione del formato dell'archivio. Si alza quando una chiave
 # cambia nome o significato; l'aggiunta di una chiave nuova non lo richiede,
 # perche' le chiavi mancanti si completano da sole dai valori predefiniti.
-VERSIONE_FORMATO = 2
+VERSIONE_FORMATO = 3
+# Dal formato 3, cioe' dalla 9.0.0, ogni strumento dice di che tipo e': a
+# corda, con accordatura e tasti, o armonica, con famiglia, tonalita',
+# accordatura e fori.
+TIPO_CORDE = "corde"
+TIPO_ARMONICA = "armonica"
 # L'inviluppo del suono sintetico: attacco, decadimento, mantenimento,
 # rilascio. I tre tempi sono millesimi di secondo, il mantenimento e' il
 # livello di volume in percentuale a cui la nota si assesta.
@@ -64,6 +70,8 @@ TASTI_PREDEFINITI = 21
 
 SCALACROMATICA_STD, CAPOTASTI, CORDE = {}, {}, {}
 NUM_CORDE, NUM_TASTI = 0, 0
+# Il modello dell'armonica attiva, o None quando lo strumento attivo e' a corda
+ARMONICA = None
 archivio_modificato = False
 impostazioni = {}
 
@@ -80,6 +88,7 @@ def get_impostazioni_default():
         "strumento_attivo": STRUMENTO_PREDEFINITO,
         "strumenti": {
             STRUMENTO_PREDEFINITO: {
+                "tipo": TIPO_CORDE,
                 "accordatura": list(ACCORDATURA_CHITARRA),
                 "tasti": TASTI_PREDEFINITI,
             }
@@ -152,6 +161,17 @@ def _migra(dati):
                                  round(vecchio[3] / 100.0 * durata * 1000, 1)]
                 cambiamenti.append(
                     f"Inviluppo del suono 2 convertito in millesimi di secondo: {suono['adsr']}.")
+    if formato < 3:
+        # Fino alla 8 gli strumenti erano tutti a corda, e non lo dicevano
+        strumenti = dati.get("strumenti")
+        segnati = 0
+        if isinstance(strumenti, dict):
+            for conf in strumenti.values():
+                if isinstance(conf, dict) and "tipo" not in conf:
+                    conf["tipo"] = TIPO_CORDE
+                    segnati += 1
+        if segnati:
+            cambiamenti.append(f"Strumenti segnati come strumenti a corda: {segnati}.")
     predefiniti = get_impostazioni_default()
     for chiave, valore in predefiniti.items():
         if chiave == "versione_formato":
@@ -206,16 +226,30 @@ def carica_impostazioni():
         salva_modifiche()
 
 
+def e_armonica(conf):
+    """Vero se la voce di un elenco di strumenti descrive un'armonica."""
+    return isinstance(conf, dict) and conf.get("tipo") == TIPO_ARMONICA
+
+
+def modello_armonica(conf):
+    """Il modello dell'armonica descritta da una voce dell'elenco.
+    Solleva ValueError se tonalita', accordatura o fori non tornano."""
+    return armonica.HarmonicaModel(conf.get("tonalita", "C"), conf.get("accordatura", "richter"), conf.get("fori"))
+
+
 def aggiorna_manico():
-    """Ricostruisce le tabelle del manico per lo strumento attivo.
+    """Ricostruisce il modello dello strumento attivo: le tabelle del manico
+    per uno strumento a corda, il modello dei fori per un'armonica, e in quel
+    caso il manico resta vuoto.
     Se lo strumento attivo non esiste piu' nell'elenco, ripiega sul primo
     disponibile o sulla chitarra standard, e lo scrive nell'archivio."""
-    global SCALACROMATICA_STD, CAPOTASTI, CORDE, NUM_CORDE, NUM_TASTI
+    global SCALACROMATICA_STD, CAPOTASTI, CORDE, NUM_CORDE, NUM_TASTI, ARMONICA
     strumenti = impostazioni.setdefault('strumenti', {})
     strum_attivo = impostazioni.get('strumento_attivo')
     if not strum_attivo or strum_attivo not in strumenti:
         if not strumenti:
             strumenti[STRUMENTO_PREDEFINITO] = {
+                "tipo": TIPO_CORDE,
                 "accordatura": list(ACCORDATURA_CHITARRA),
                 "tasti": TASTI_PREDEFINITI,
             }
@@ -223,6 +257,19 @@ def aggiorna_manico():
         impostazioni['strumento_attivo'] = strum_attivo
         salva_modifiche()
     strum_conf = strumenti[strum_attivo]
+    if e_armonica(strum_conf):
+        try:
+            ARMONICA = modello_armonica(strum_conf)
+        except ValueError as e:
+            # Un archivio ritoccato a mano: si avvisa e si suona comunque,
+            # senza riscrivere niente, cosi' la voce si puo' correggere.
+            print(f"L'armonica {strum_attivo} ha dati che non tornano: {e}.")
+            print("Fino a quando non la correggete, Chitabry usa una diatonica in DO, accordatura Richter.")
+            ARMONICA = armonica.HarmonicaModel()
+        NUM_CORDE, NUM_TASTI = 0, 0
+        SCALACROMATICA_STD, CAPOTASTI, CORDE = {}, {}, {}
+        return
+    ARMONICA = None
     accordatura = strum_conf.get('accordatura', ACCORDATURA_CHITARRA)
     num_tasti = strum_conf.get('tasti', TASTI_PREDEFINITI)
     NUM_CORDE = len(accordatura)

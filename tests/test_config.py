@@ -113,7 +113,7 @@ def test_inviluppo_convertito_in_millesimi(archivio):
     })
     config.carica_impostazioni()
     assert config.impostazioni["suono_2"]["adsr"] == [18.0, 8982.0, 0.0, 0.0]
-    assert config.impostazioni["versione_formato"] == 2
+    assert config.impostazioni["versione_formato"] == config.VERSIONE_FORMATO
 
 
 def test_chi_non_aveva_toccato_niente_prende_i_valori_nuovi(archivio):

@@ -4,6 +4,7 @@
 
 from GBUtils import dgt, key
 
+import armonica_vista
 import config
 import suoni
 from nomenclatura import get_nota, nome_utente_in_std, nomi_note_utente
@@ -86,7 +87,11 @@ def visualizza_note_su_manico(lista_note, maninf=0, mansup=None):
 
 
 def TrovaNota():
-    """Trova le posizioni di una nota, senza ottava, sul manico, chiedendo i limiti."""
+    """Trova le posizioni di una nota, senza ottava, sul manico, chiedendo i limiti.
+    Con un'armonica attiva cerca invece i fori e le tecniche."""
+    if config.ARMONICA is not None:
+        armonica_vista.trova_nota()
+        return
     print(f"Trova nota sul manico. Nomenclatura attuale: {config.impostazioni['nomenclatura']}.")
     print(f"Note valide (senza ottava): {', '.join(nomi_note_utente())}")
     s_nota = dgt("Inserisci il nome della nota (Invio per annullare): ", smax=5).strip().upper()
@@ -109,7 +114,11 @@ def TrovaNota():
 
 
 def TrovaPosizione():
-    """Trova la nota data una posizione corda.tasto e la suona con il suono attivo."""
+    """Trova la nota data una posizione corda.tasto e la suona con il suono attivo.
+    Con un'armonica attiva la posizione e' un foro con la sua tecnica, come -3//."""
+    if config.ARMONICA is not None:
+        armonica_vista.trova_posizione()
+        return
     print("Trova posizione (corda.tasto).")
     s = dgt("Inserisci Corda.Tasto (es. 6.3): ", smax=5).strip()
     if s == "":
@@ -128,7 +137,11 @@ def TrovaPosizione():
 
 def VisualizzaManico():
     """Mostra lo schema del manico dello strumento attivo come griglia di
-    caratteri con le colonne allineate, pensata per la barra braille."""
+    caratteri con le colonne allineate, pensata per la barra braille.
+    Con un'armonica attiva lo schema e' quello dei fori."""
+    if config.ARMONICA is not None:
+        armonica_vista.schema()
+        return
     strum_attivo = config.impostazioni.get("strumento_attivo", config.STRUMENTO_PREDEFINITO)
     num_tasti = config.NUM_TASTI
     num_corde = config.NUM_CORDE

@@ -104,6 +104,48 @@ def pan_per_voce(indice, numero_voci):
     return -0.8 + indice * (1.6 / (numero_voci - 1))
 
 
+def prepara_canale_armonica():
+    """Mette il programma Harmonica sul canale dell'armonica. Restituisce il
+    canale su cui suonare: quello dell'armonica, o il primo se la porta MIDI
+    non si e' aperta, dove comunque non suonera' niente."""
+    porta = GBAudio.get_midi_out()
+    if porta.h_midi is None:
+        return 0
+    porta.program_change(GBAudio.PROGRAMMA_ARMONICA, GBAudio.CANALE_ARMONICA)
+    return GBAudio.CANALE_ARMONICA
+
+
+def suona_note(numeri_midi, armonica=False):
+    """Suona subito una o piu' note insieme con il suono attivo, al centro e
+    senza mixer: una nota trovata sull'armonica, o un gruppo di fori.
+    Con armonica vero e il suono MIDI, le note escono con il programma
+    Harmonica sul suo canale."""
+    chiave = suono_attivo()
+    parametri = parametri_suono(chiave)
+    if chiave == 'midi':
+        canale = prepara_canale_armonica() if armonica else 0
+        for numero in numeri_midi:
+            GBAudio.play_midi_note_temp(numero, parametri['dur'], canale=canale)
+        return
+    pezzi = []
+    for numero in numeri_midi:
+        renderer = GBAudio.NoteRenderer(fs=GBAudio.FS)
+        configura_renderer(renderer, GBAudio.midi_to_freq(numero), parametri)
+        audio = renderer.render()
+        if audio.size > 0:
+            pezzi.append(audio)
+    if not pezzi:
+        return
+    mix = np.zeros((max(len(p) for p in pezzi), 2), dtype=np.float32)
+    for pezzo in pezzi:
+        mix[:len(pezzo)] += pezzo
+    # Piu' note insieme sommano il volume: oltre il pieno si riporta giu'
+    picco = float(np.abs(mix).max())
+    if picco > 1.0:
+        mix /= picco
+    sd.play(mix, samplerate=GBAudio.FS, blocking=False)
+
+
 def suona_una_nota(nota_std, pan=0.0):
     """Suona subito una nota con il suono attivo, senza mixer: per le prove
     isolate come Trova Posizione."""

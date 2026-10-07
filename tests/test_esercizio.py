@@ -100,7 +100,7 @@ def esercizio(monkeypatch):
     monkeypatch.setattr(GBAudio, "get_midi_out", lambda: porta)
     tastiera = TastieraMuta(orologio)
     monkeypatch.setattr(esercizio_scale, "key", tastiera)
-    scala = SimpleNamespace(frequenze=list(FREQUENZE), testo_note=lambda direzione: "Do Re Mi Fa Sol")
+    scala = SimpleNamespace(frequenze=list(FREQUENZE), testo_note=lambda direzione: "Do Re Mi Fa Sol", canale_midi=0)
     e = esercizio_scale.Esercizio(scala)
     e._configura_renderer()
     e.bpm = 600   # un decimo di secondo a battito
@@ -292,3 +292,21 @@ def test_la_nota_a_tempo_spegne_sul_canale_giusto(monkeypatch):
     GBAudio.play_midi_note_temp(81, 0.01, 100, canale=GBAudio.CANALE_CLICK)
     time.sleep(0.1)
     assert messaggi == [("on", 81, 100, GBAudio.CANALE_CLICK), ("off", 81, GBAudio.CANALE_CLICK)]
+
+
+def test_con_l_armonica_le_note_midi_vanno_sul_suo_canale(esercizio):
+    """Issue 58: in MIDI l'armonica suona con il programma Harmonica su un
+    canale suo, e lo strumento delle impostazioni resta sul primo."""
+    esercizio.s.canale_midi = GBAudio.CANALE_ARMONICA
+    esercizio.suono = 'midi'
+    esercizio._configura_renderer()
+    esercizio._suona_sequenza(False)
+    assert ("pc", GBAudio.PROGRAMMA_ARMONICA, GBAudio.CANALE_ARMONICA) in esercizio.controlli
+    note = [m for m in esercizio.midi if m[3] == GBAudio.CANALE_ARMONICA]
+    assert [m[0] for m in note] == [60, 62, 64, 65, 67]
+    assert [m for m in esercizio.midi if m[3] == 0] == []
+
+
+def test_il_programma_dell_armonica_e_harmonica():
+    assert GBAudio.MIDI_INSTRUMENTS[GBAudio.PROGRAMMA_ARMONICA] == "Harmonica"
+    assert GBAudio.CANALE_ARMONICA not in (0, GBAudio.CANALE_CLICK, 9)
