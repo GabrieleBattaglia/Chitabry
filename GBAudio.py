@@ -636,6 +636,10 @@ PROGRAMMA_ARMONICA = 22
 # Controlli continui: pan al centro, e riverbero e chorus a zero, perche' il
 # sintetizzatore GS li mette di suo su ogni canale e un click li vuole secchi.
 CC_PAN = 10
+# Il volume del canale, che Chitabry regola dalle impostazioni per le note
+# degli strumenti MIDI e dell'armonica; il click resta al pieno, e il suo
+# volume lo danno le velocita' prese dal preset del metronomo.
+CC_VOLUME = 7
 CC_RIVERBERO = 91
 CC_CHORUS = 93
 PAN_CENTRO = 64
@@ -722,7 +726,17 @@ def get_midi_out():
         except ImportError:
             return _midi_out
         _midi_out.select_instrument(config.impostazioni.get("midi_strumento", 0))
+        _midi_out.control_change(CC_VOLUME, volume_midi(config.impostazioni.get("midi_volume", 100)))
     return _midi_out
+
+
+def volume_midi(percentuale):
+    """Da percentuale, come la scrive chi usa Chitabry, al valore MIDI da 0 a 127."""
+    try:
+        valore = float(percentuale)
+    except (TypeError, ValueError):
+        valore = 100.0
+    return max(0, min(127, round(127 * valore / 100)))
 
 @atexit.register
 def cleanup_midi():

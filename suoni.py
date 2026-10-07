@@ -112,7 +112,23 @@ def prepara_canale_armonica():
     if porta.h_midi is None:
         return 0
     porta.program_change(GBAudio.PROGRAMMA_ARMONICA, GBAudio.CANALE_ARMONICA)
+    porta.control_change(GBAudio.CC_VOLUME, volume_midi_attuale(), GBAudio.CANALE_ARMONICA)
     return GBAudio.CANALE_ARMONICA
+
+
+def volume_midi_attuale():
+    """Il volume delle note MIDI scelto nelle impostazioni, da 0 a 127."""
+    return GBAudio.volume_midi(config.impostazioni.get('midi_volume', 100))
+
+
+def applica_volume_midi():
+    """Manda il volume delle impostazioni ai canali delle note: quello degli
+    strumenti e quello dell'armonica. Si chiama quando il volume cambia."""
+    porta = GBAudio.get_midi_out()
+    if porta.h_midi is None:
+        return
+    for canale in (0, GBAudio.CANALE_ARMONICA):
+        porta.control_change(GBAudio.CC_VOLUME, volume_midi_attuale(), canale)
 
 
 def suona_note(numeri_midi, armonica=False):

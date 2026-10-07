@@ -2,6 +2,12 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.9.1 (7 ottobre 2026)
+Il volume MIDI si regola, e il metronomo delle scale prende il suo dal preset.
+*   Nelle Impostazioni c'e' il Volume MIDI, da 0 a 100: vale per le note dello strumento MIDI scelto e per quelle dell'armonica. Prima le note MIDI uscivano sempre al volume pieno del sintetizzatore.
+*   Nell'esercizio delle scale, con il suono MIDI, il battito del metronomo era un wood block a volume fisso, il massimo sull'accento, e copriva le note: l'armonica sembrava abbassarsi quando si accendeva il metronomo (collaudo di Gabriele del 7 ottobre 2026). Adesso il wood block prende il volume di accento e battito dal preset attivo del metronomo, come gia' faceva il beep con gli altri suoni; resta un wood block MIDI perche' nota e battito escano insieme dallo stesso sintetizzatore.
+*   La guida passa alla revisione 22, con il sottocapitolo 12.7. Due prove nuove, 169 in tutto.
+
 Versione 9.8.9 (7 ottobre 2026)
 Sei correzioni, da una verifica indipendente della teoria su 6863 esempi e dal collaudo.
 *   I gradi della scala sull'armonica erano numerati con la posizione della nota nella scala, giusta solo per le scale di sette note: nel SOL blues il REb risultava grado 4, mentre e' la quinta diminuita, e il DO, che e' il quarto grado, risultava il terzo. Adesso il grado si conta dalla tonica e si scrive come nelle formule delle scale comuni: Grado b3, SIb; Grado 4, DO; Grado b5, REb.

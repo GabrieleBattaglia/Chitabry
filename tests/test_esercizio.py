@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+import clitronomo
 import config
 import esercizio_scale
 import GBAudio
@@ -76,7 +77,9 @@ def esercizio(monkeypatch):
     monkeypatch.setattr(esercizio_scale, "orologio", orologio)
     monkeypatch.setattr(config, "impostazioni", config.get_impostazioni_default())
     beep = (np.ones(70, dtype=np.float32), np.ones(40, dtype=np.float32))
-    monkeypatch.setattr(esercizio_scale.Esercizio, "_beep_metronomo", staticmethod(lambda: beep))
+    monkeypatch.setattr(esercizio_scale.Esercizio, "_preset_metronomo",
+                        staticmethod(lambda: (clitronomo.CONFIG_ACCENTO, clitronomo.CONFIG_TICK)))
+    monkeypatch.setattr(esercizio_scale.Esercizio, "_beep_metronomo", staticmethod(lambda accento, tick: beep))
     mixer = MixerFinto(orologio)
     monkeypatch.setattr(GBAudio, "PolyphonicPlayer", lambda **kwargs: mixer)
     resi = []
@@ -219,8 +222,9 @@ def test_con_il_suono_midi_anche_il_click_e_midi(esercizio):
     battuta = [esercizio_scale.NOTA_ACCENTO] + [esercizio_scale.NOTA_TICK] * 3
     assert [m[0] for m in click] == battuta * 2
     assert all(m[1] == esercizio_scale.DURATA_CLICK_MIDI for m in click)
-    assert click[0][2] == esercizio_scale.VELOCITA_ACCENTO
-    assert click[1][2] == esercizio_scale.VELOCITA_TICK
+    # Il volume del click e' quello del preset: accento al 50, battito al 35
+    assert click[0][2] == esercizio_scale.velocita_del_click(clitronomo.CONFIG_ACCENTO) == 64
+    assert click[1][2] == esercizio_scale.velocita_del_click(clitronomo.CONFIG_TICK) == 44
     assert [m[4] for m in click] == pytest.approx([k * 0.1 for k in range(8)])
     assert [m[4] for m in note] == pytest.approx([k * 0.1 for k in range(5)])
     canale = GBAudio.CANALE_CLICK
@@ -310,3 +314,27 @@ def test_con_l_armonica_le_note_midi_vanno_sul_suo_canale(esercizio):
 def test_il_programma_dell_armonica_e_harmonica():
     assert GBAudio.MIDI_INSTRUMENTS[GBAudio.PROGRAMMA_ARMONICA] == "Harmonica"
     assert GBAudio.CANALE_ARMONICA not in (0, GBAudio.CANALE_CLICK, 9)
+
+
+def test_il_click_midi_prende_il_volume_dal_preset():
+    """Collaudo del 7 ottobre 2026: il wood block al massimo copriva
+    l'armonica. Il volume del preset, da 0 a 100, diventa la velocita'."""
+    assert esercizio_scale.velocita_del_click({"volume_perc": 100}) == 127
+    assert esercizio_scale.velocita_del_click({"volume_perc": 35}) == 44
+    assert esercizio_scale.velocita_del_click({"volume_perc": 0}) == 1
+
+
+def test_il_volume_midi_delle_impostazioni(monkeypatch):
+    monkeypatch.setattr(config, "impostazioni", {"midi_volume": 50})
+    assert GBAudio.volume_midi(50) == 64
+    assert GBAudio.volume_midi("rotto") == 127
+    assert GBAudio.volume_midi(150) == 127
+    controlli = []
+    porta = SimpleNamespace(h_midi=1, control_change=lambda cc, v, canale=0: controlli.append((cc, v, canale)),
+                            program_change=lambda programma, canale=0: controlli.append(("pc", programma, canale)))
+    monkeypatch.setattr(GBAudio, "get_midi_out", lambda: porta)
+    suoni.applica_volume_midi()
+    assert controlli == [(GBAudio.CC_VOLUME, 64, 0), (GBAudio.CC_VOLUME, 64, GBAudio.CANALE_ARMONICA)]
+    controlli.clear()
+    assert suoni.prepara_canale_armonica() == GBAudio.CANALE_ARMONICA
+    assert (GBAudio.CC_VOLUME, 64, GBAudio.CANALE_ARMONICA) in controlli

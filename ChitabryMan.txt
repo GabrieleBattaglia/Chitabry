@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 21, di mercoledi' 7 ottobre 2026, per la versione 9.8.9.
+L'ultima revisione di questo documento e' la numero 22, di mercoledi' 7 ottobre 2026, per la versione 9.9.1.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -52,6 +52,7 @@ Indice Dettagliato degli Argomenti:
    - 12.4. Modifica suono 2 (Sintetico).
    - 12.5. Seleziona Strumento MIDI.
    - 12.6. Connetti Tastiera MIDI.
+   - 12.7. Volume MIDI.
 13. Nota sul manico.
 14. Trova Posizione.
 15. Armonica a bocca.
@@ -307,7 +308,7 @@ Chitabry vi mostrerà:
    - L: Attiva il loop; premuto durante il loop lo ferma.
    - M: Attiva o disattiva il metronomo dell'esercizio. Se le note non riempiono la battuta di 4/4, la completano battiti senza nota.
    - B: Cambia i BPM per l'esercizio.
-   - SPAZIO: Alterna i suoni Chitarra (S1), Sintetico (S2) e MIDI (MID), con la sigla che compare nella riga di stato, anche mentre il loop gira. Con il suono MIDI anche il battito del metronomo e' un wood block MIDI, al centro, piu' alto e piu' forte sull'accento, cosi' nota e battito escono dallo stesso sintetizzatore e arrivano insieme; con gli altri suoni il battito e' il beep del metronomo.
+   - SPAZIO: Alterna i suoni Chitarra (S1), Sintetico (S2) e MIDI (MID), con la sigla che compare nella riga di stato, anche mentre il loop gira. Con il suono MIDI anche il battito del metronomo e' un wood block MIDI, al centro, piu' alto sull'accento, cosi' nota e battito escono dallo stesso sintetizzatore e arrivano insieme; il suo volume e' quello di accento e battito del preset attivo del metronomo, mentre le note hanno il volume MIDI delle impostazioni; con gli altri suoni il battito e' il beep del metronomo.
    - ?: Mostra l'aiuto.
    - ESC: durante un ascolto singolo lo interrompe e si resta nell'esercizio; dal menu dell'esercizio, o mentre il loop gira, esce dall'esercizio e torna al menu principale.
 
@@ -372,6 +373,8 @@ Permette di configurare i parametri del sintetizzatore ad onda semplice: la form
 Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome.
 12.6. Connetti Tastiera MIDI.
 Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
+12.7. Volume MIDI.
+Il volume delle note suonate con il suono MIDI, da 0 a 100: vale per lo strumento MIDI scelto e per l'armonica, che suona sul suo canale. Non tocca il battito del metronomo nell'esercizio delle scale, che prende il volume dal preset attivo del metronomo, accento e battito ciascuno con il suo.
 
 13. Nota sul manico.
 

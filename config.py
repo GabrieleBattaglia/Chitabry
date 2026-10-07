@@ -84,6 +84,8 @@ def get_impostazioni_default():
         "default_bpm": 60,
         "tipo_suono": "suono_1",
         "midi_strumento": 0,
+        # Il volume delle note MIDI, in percentuale: dalla 9.9.0
+        "midi_volume": 100,
         "midi_in_dispositivo": "",
         "strumento_attivo": STRUMENTO_PREDEFINITO,
         "strumenti": {

@@ -44,8 +44,6 @@ PASSO_ASCOLTO = 0.02
 # due altezze vicine ai beep di fabbrica, forte l'accento e piu' piano il battito.
 NOTA_ACCENTO = 81   # La5, 880 Hz, accanto ai 915 Hz dell'accento di fabbrica
 NOTA_TICK = 72      # Do5, 523 Hz, accanto ai 550 Hz del battito di fabbrica
-VELOCITA_ACCENTO = 127
-VELOCITA_TICK = 90
 DURATA_CLICK_MIDI = 0.1   # secondi prima del note off: il wood block e' un colpo secco
 # Il note off di una nota MIDI arriva un po' prima del battito seguente: se
 # due battiti hanno la stessa nota, altrimenti spegnerebbe quella appena partita.
@@ -74,6 +72,12 @@ def midi_temperato(p):
     ps = float(p.ps)
     vicino = round(ps)
     return vicino if abs(ps - vicino) <= SCARTO_TEMPERATO else None
+
+
+def velocita_del_click(config_suono):
+    """La velocita' MIDI del wood block da un suono del metronomo: il suo
+    volume in percentuale, sui 127 della velocita', almeno 1."""
+    return max(1, min(127, round(127 * config_suono.get('volume_perc', 100) / 100)))
 
 
 class Scala:
@@ -558,7 +562,13 @@ class Esercizio:
         self.poly = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=self.num_notes + 1)
         self.poly.set_pan(self.num_notes, 0.0)  # Il metronomo al centro
         self.renderers = [GBAudio.NoteRenderer(fs=GBAudio.FS) for _ in range(self.num_notes)]
-        self.accent_beep, self.tick_beep = self._beep_metronomo()
+        config_accento, config_tick = self._preset_metronomo()
+        self.accent_beep, self.tick_beep = self._beep_metronomo(config_accento, config_tick)
+        # Col suono MIDI il click e' un wood block, ma il volume e' quello del
+        # preset: fino alla 9.8 era fisso, al massimo sull'accento, e copriva
+        # le note (collaudo di Gabriele del 7 ottobre 2026)
+        self.velocita_accento = velocita_del_click(config_accento)
+        self.velocita_tick = velocita_del_click(config_tick)
         self.key_map = {str(i + 1): i for i in range(min(self.num_notes, 9))}
         if self.num_notes >= 10:
             self.key_map['0'] = 9
@@ -566,12 +576,17 @@ class Esercizio:
         self.griglia = None     # istante del prossimo battito, quando il loop continua
 
     @staticmethod
-    def _beep_metronomo():
-        """Accento e beat dell'ultimo preset del metronomo, o quelli di fabbrica."""
+    def _preset_metronomo():
+        """Le configurazioni di accento e battito dell'ultimo preset del
+        metronomo, cioe' quello attivo, o quelle di fabbrica."""
         _, last_state = clitronomo.PresetManager(silenzioso=True).get_last_used_preset()
         stato = last_state or {}
-        config_accento = stato.get('config_accento') or clitronomo.CONFIG_ACCENTO
-        config_tick = stato.get('config_tick') or clitronomo.CONFIG_TICK
+        return (stato.get('config_accento') or clitronomo.CONFIG_ACCENTO,
+                stato.get('config_tick') or clitronomo.CONFIG_TICK)
+
+    @staticmethod
+    def _beep_metronomo(config_accento, config_tick):
+        """Accento e battito del preset, come campioni per il mixer."""
         accent = clitronomo.genera_suono_mono_int16(config_accento).astype(np.float32) / 32767.0
         tick = clitronomo.genera_suono_mono_int16(config_tick).astype(np.float32) / 32767.0
         return accent, tick
@@ -648,7 +663,7 @@ class Esercizio:
         Se la porta MIDI non si e' aperta, il beep resta l'unico click."""
         if self.suono == 'midi' and GBAudio.get_midi_out().h_midi is not None:
             nota = NOTA_ACCENTO if accento else NOTA_TICK
-            velocita = VELOCITA_ACCENTO if accento else VELOCITA_TICK
+            velocita = self.velocita_accento if accento else self.velocita_tick
             GBAudio.play_midi_note_temp(nota, DURATA_CLICK_MIDI, velocita, canale=GBAudio.CANALE_CLICK)
             return
         click = self.accent_beep if accento else self.tick_beep

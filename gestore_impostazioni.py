@@ -10,6 +10,7 @@ import armonica
 import armonica_vista
 import config
 import GBAudio
+import suoni
 from nomenclatura import get_nota, nome_da_midi, nome_utente_in_std
 
 
@@ -307,6 +308,18 @@ def _scegli_tastiera_midi():
     key("Premi un tasto...")
 
 
+def _scegli_volume_midi():
+    """Il volume delle note MIDI, strumenti e armonica, in percentuale. Il
+    click del metronomo non c'entra: il suo volume e' quello del preset."""
+    attuale = config.impostazioni.get('midi_volume', 100)
+    nuovo = dgt(f"Volume MIDI, da 0 a 100 (attuale: {attuale}): ", kind='i', imin=0, imax=100, default=attuale)
+    config.impostazioni['midi_volume'] = nuovo
+    config.salva_modifiche()
+    suoni.applica_volume_midi()
+    print(f"Volume MIDI impostato a {nuovo}%.")
+    key("Premi un tasto...")
+
+
 def GestoreImpostazioni():
     """Il menu delle impostazioni dell'applicazione."""
     print("Gestore impostazioni.")
@@ -319,7 +332,8 @@ def GestoreImpostazioni():
             '1': f"Modifica {config.impostazioni['suono_1']['descrizione']}",
             '2': f"Modifica {config.impostazioni['suono_2']['descrizione']}",
             '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})",
-            '4': f"Connetti Tastiera MIDI (Attivo: {midi_in_attivo if midi_in_attivo else 'Nessuno'})"
+            '4': f"Connetti Tastiera MIDI (Attivo: {midi_in_attivo if midi_in_attivo else 'Nessuno'})",
+            '5': f"Volume MIDI (attuale: {config.impostazioni.get('midi_volume', 100)}%)",
         }
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
         if scelta is None:
@@ -345,3 +359,5 @@ def GestoreImpostazioni():
             _scegli_strumento_midi()
         elif scelta == '4':
             _scegli_tastiera_midi()
+        elif scelta == '5':
+            _scegli_volume_midi()
