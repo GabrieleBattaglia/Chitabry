@@ -2,7 +2,14 @@
 # Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 # Nato con la revisione 1 del 2026-09-09 dallo spezzettamento di views.py.
 
+import re
+
 import config
+
+# Le lettere della nomenclatura latina: servono per le note che la tabella
+# di config non ha, come MI#, DOb o SIbb, che le scale producono sulle
+# toniche con le alterazioni e che fino alla 9.6 restavano in inglese.
+_LETTERE_LATINE = {'C': 'DO', 'D': 'RE', 'E': 'MI', 'F': 'FA', 'G': 'SOL', 'A': 'LA', 'B': 'SI'}
 
 
 def get_nota(nota_std_music21):
@@ -27,7 +34,13 @@ def get_nota(nota_std_music21):
             micro_suffix = micro
             base_name_std = base_name_std[:-len(micro)]
             break
-    return mappa.get(base_name_std, base_name_std) + micro_suffix + ottava
+    nome = mappa.get(base_name_std)
+    if nome is None:
+        nome = base_name_std
+        trovato = re.fullmatch(r"([A-G])([#b-]*)", base_name_std)
+        if trovato and config.impostazioni['nomenclatura'] == 'latino':
+            nome = _LETTERE_LATINE[trovato.group(1)] + trovato.group(2).replace('-', 'b')
+    return nome + micro_suffix + ottava
 
 
 def nota_std_da_midi(midi):

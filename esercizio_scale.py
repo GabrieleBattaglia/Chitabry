@@ -26,7 +26,7 @@ import scale_catalog
 import suoni
 from generatore_scale import ScalePathfinder
 from manico import Manlimiti, visualizza_note_su_manico
-from nomenclatura import get_nota, mappa_toniche
+from nomenclatura import get_nota, mappa_toniche, nome_da_midi
 from ricerca import fuzzy_search_and_select
 from strumento import InstrumentModel
 
@@ -52,9 +52,15 @@ DURATA_CLICK_MIDI = 0.1   # secondi prima del note off: il wood block e' un colp
 ANTICIPO_NOTE_OFF = 0.03
 DURATA_MINIMA_NOTA_MIDI = 0.05
 # Quanto una nota puo' scostarsi dal temperamento, in semitoni, e contare
-# ancora come quella nota sull'armonica: trenta centesimi tengono dentro le
-# intonazioni naturali, anche la settima a 969, e fuori i quarti di tono.
-SCARTO_TEMPERATO = 0.3
+# ancora come quella nota sull'armonica: trentadue centesimi tengono dentro
+# le intonazioni naturali, anche la settima naturale 7/4, a 969 centesimi, cioe'
+# 31 sotto il SIb temperato, e lasciano fuori le note gia' vicine al quarto di
+# tono, come quelle della Bohlen-Pierce a 33. Fino alla 9.6.0 erano trenta, e
+# la settima naturale restava fuori.
+SCARTO_TEMPERATO = 0.32
+# Quanti risultati mostra la ricerca nell'archivio Scala prima di chiedere
+# un'altra parola: cinquanta tengono dentro pentatonic, che ne trova 43.
+RISULTATI_ARCHIVIO = 50
 
 
 def midi_temperato(p):
@@ -188,7 +194,8 @@ def _scegli_tipo(tonica_std):
         return None
     if gruppo == "3":
         voci = {f"scala:{v['programmatic_id']}": f"{v['friendly_name']} ({v['programmatic_id']})" for v in per_gruppo["scala"]}
-        return fuzzy_search_and_select(voci, f"Cerca nell'archivio Scala per {nota}, per esempio blues, pentatonic o raga: ", "scala")
+        return fuzzy_search_and_select(voci, f"Cerca nell'archivio Scala per {nota}, una o piu' parole inglesi, per esempio blues, raga o pentatonic japanese: ",
+                                       "scala", massimo=RISULTATI_ARCHIVIO)
     if gruppo == "1":
         # Nell'ordine in cui sono scritte: le maggiori e le minori, i modi, le altre
         voci_gruppo = sorted(per_gruppo["comune"], key=lambda v: [c[0] for c in scale_catalog.SCALE_COMUNI].index(v["programmatic_id"]))
@@ -198,7 +205,7 @@ def _scegli_tipo(tonica_std):
         paradigma = "concrete"
     voci = {v["friendly_name"]: v.get("descrizione", "") for v in voci_gruppo}
     chiavi = {v["friendly_name"]: f"{paradigma}:{v['programmatic_id']}" for v in voci_gruppo}
-    print(f"Tipo di scala per {nota}: scrivete l'inizio del nome.")
+    print(f"Tipo di scala per {nota}: scrivete le prime lettere, il menu completa da solo il resto, e Invio sceglie il nome completo.")
     scelto = menu(d=voci, keyslist=True, show=True, pager=25, ordered=False, ntf="Tipo non valido")
     return None if scelto is None else chiavi[scelto]
 
@@ -337,50 +344,95 @@ def _riassunto(tecniche):
     return ", ".join(f"{categoria} {quante}" for categoria, quante in conteggi.items())
 
 
+def _si_ripete_all_ottava(s):
+    """Vero se la scala torna uguale un'ottava sopra, come tutte quelle di
+    music21, le comuni e quasi tutte quelle dell'archivio Scala. Per queste
+    ultime music21 risponde sempre di no, quindi lo dice il file: l'ultima
+    nota e' il periodo, che per la Bohlen-Pierce, per esempio, e' una
+    dodicesima. Le scale che non si ripetono all'ottava cambiano note da
+    un'ottava all'altra, e ridurle a dodici classi ne inventa di false."""
+    if not isinstance(s.scala_m21, scale.ScalaScale):
+        return True
+    altezze = [p for p in s.pitches if isinstance(p, pitch.Pitch)]
+    if len(altezze) < 2:
+        return True
+    return abs(float(altezze[-1].ps) - float(altezze[0].ps) - 12) < 0.01
+
+
+def _note_su_estensione(s, modello):
+    """Le note temperate della scala che cadono nell'estensione dell'armonica,
+    come coppie (numero MIDI, nome da mostrare) dal basso, e i gradi, cioe'
+    classe di altezza e nome music21 dalla tonica in su: vuoti se la scala non
+    si ripete all'ottava, perche' allora i gradi non tornano a ogni ottava."""
+    grave, acuta = modello.estensione()
+    if _si_ripete_all_ottava(s):
+        ordine, nomi = [], {}
+        for p in s.pitches:
+            midi = midi_temperato(p)
+            if midi is not None and midi % 12 not in nomi:
+                # Una nota presa per vicinanza si chiama come la nota che suona
+                esatta = float(p.ps) == midi
+                nomi[midi % 12] = p.name if esatta else config.NOTE_STD[midi % 12]
+                ordine.append(midi % 12)
+        # I gradi si contano dalla tonica: gli ipomodi cominciano una quarta sotto
+        tonica = pitch.Pitch(s.tonica_std).pitchClass
+        if tonica in ordine:
+            ordine = ordine[ordine.index(tonica):] + ordine[:ordine.index(tonica)]
+        gradi = {classe: nomi[classe] for classe in ordine}
+        note = [(m, _nome_nella_scala(nomi[m % 12], m)) for m in range(grave, acuta + 1) if m % 12 in nomi]
+        return note, gradi
+    try:
+        altezze = s.scala_m21.getPitches(pitch.Pitch(midi=grave), pitch.Pitch(midi=acuta))
+    except Music21Exception:
+        altezze = s.pitches
+    note = {}
+    for p in altezze:
+        midi = midi_temperato(p)
+        if midi is not None and grave <= midi <= acuta and midi not in note:
+            esatta = float(p.ps) == midi
+            note[midi] = get_nota(p.nameWithOctave.replace('-', 'b')) if esatta else nome_da_midi(midi)
+    return sorted(note.items()), {}
+
+
 def _tablatura_completa(s, modello):
     """La scala su tutta l'estensione dell'armonica: una riga per nota con il
-    modo piu' comodo e gli altri, le due sequenze compatte, i gradi, il
-    conteggio delle tecniche e le note critiche."""
-    nomi = {}       # classe di altezza -> nome music21, nell'ordine dei gradi
-    for p in s.pitches:
-        midi = midi_temperato(p)
-        if midi is not None:
-            # Una nota presa per vicinanza si chiama come la nota che suona
-            esatta = float(p.ps) == midi
-            nomi.setdefault(midi % 12, p.name if esatta else config.NOTE_STD[midi % 12])
-    if not nomi:
-        print("La scala non ha note temperate: sull'armonica non si suona.")
+    modo piu' comodo e gli altri, le due sequenze compatte, i gradi con il
+    modo piu' comodo in ogni ottava, il conteggio delle tecniche e le note
+    critiche."""
+    note, gradi = _note_su_estensione(s, modello)
+    if not note:
+        print("La scala non ha note temperate nell'estensione dell'armonica: sull'armonica non si suona.")
         return
     if s.microtonale:
-        print("Sull'armonica le note si prendono temperate: quelle a meno di trenta centesimi diventano la nota vicina, quelle piu' lontane, come i quarti di tono, restano fuori.")
-    grave, acuta = modello.estensione()
-    note = [m for m in range(grave, acuta + 1) if m % 12 in nomi]
-    tecniche = [modello.migliore(m) for m in note]
-    print(f"Tablatura su tutta l'estensione, da {_nome_nella_scala(nomi[note[0] % 12], note[0])} "
-          f"a {_nome_nella_scala(nomi[note[-1] % 12], note[-1])}, {len(note)} note:")
-    for midi, tecnica in zip(note, tecniche, strict=True):
+        print("Sull'armonica le note si prendono temperate: quelle a non piu' di trentadue centesimi diventano la nota vicina, quelle piu' lontane, come i quarti di tono, restano fuori.")
+    if not gradi:
+        print("Questa scala non si ripete all'ottava: la tablatura mostra le sue note vere ottava per ottava, e i gradi non si contano.")
+    tecniche = [modello.migliore(m) for m, _ in note]
+    print(f"Tablatura su tutta l'estensione, da {note[0][1]} a {note[-1][1]}, {len(note)} note:")
+    for (midi, nome), tecnica in zip(note, tecniche, strict=True):
         if tecnica is None:
-            print(f"{_nome_nella_scala(nomi[midi % 12], midi)}: non c'e' su questa armonica")
+            print(f"{nome}: non c'e' su questa armonica")
             continue
         altre = modello.tecniche_per_nota(midi)[1:]
-        riga = f"{_nome_nella_scala(nomi[midi % 12], midi)}: {tecnica.simbolo}"
+        riga = f"{nome}: {tecnica.simbolo}"
         if altre:
             riga += f" (anche {' '.join(a.simbolo for a in altre)})"
         print(riga)
     simboli = [t.simbolo if t is not None else "x" for t in tecniche]
     print(f"In salita: {' '.join(simboli)}")
     print(f"In discesa: {' '.join(reversed(simboli))}")
-    print("Gradi della scala, in tutte le ottave:")
-    for grado, (classe, nome) in enumerate(nomi.items(), start=1):
-        dove = [t.simbolo for m, t in zip(note, tecniche, strict=True) if m % 12 == classe and t is not None]
-        testo = " ".join(dove) if dove else "non c'e' su questa armonica"
-        print(f"Grado {grado}, {get_nota(nome.replace('-', 'b'))}: {testo}")
+    if gradi:
+        print("Gradi della scala, con il modo piu' comodo in ogni ottava:")
+        for grado, (classe, nome) in enumerate(gradi.items(), start=1):
+            dove = [t.simbolo for (m, _), t in zip(note, tecniche, strict=True) if m % 12 == classe and t is not None]
+            testo = " ".join(dove) if dove else "non c'e' su questa armonica"
+            print(f"Grado {grado}, {get_nota(nome.replace('-', 'b'))}: {testo}")
     print(f"Tecniche su tutta l'estensione: {_riassunto(tecniche)}.")
-    critiche = [(m, t) for m, t in zip(note, tecniche, strict=True) if t is not None and t.livello >= 2]
+    critiche = [(nome, t) for (_, nome), t in zip(note, tecniche, strict=True) if t is not None and t.livello >= 2]
     if critiche:
         print("Note critiche, che chiedono un bending profondo o un overbend:")
-        for midi, tecnica in critiche:
-            print(f"{_nome_nella_scala(nomi[midi % 12], midi)}: {tecnica.simbolo}, {tecnica.descrizione().lower()}")
+        for nome, tecnica in critiche:
+            print(f"{nome}: {tecnica.simbolo}, {tecnica.descrizione().lower()}")
 
 
 def _tabella_posizioni(s, modello, scelta):
@@ -390,6 +442,9 @@ def _tabella_posizioni(s, modello, scelta):
     le tre piu' comode. Per un'armonica sola le domande sono due, quale
     tonica in quale posizione e quale armonica per questa tonica, e la
     tabella risponde a tutte e due."""
+    if not _si_ripete_all_ottava(s):
+        print("Le posizioni si contano in quinte e valgono per le scale che si ripetono all'ottava: per questa la tabella non si fa.")
+        return
     tonica = pitch.Pitch(s.tonica_std).pitchClass
     intervalli = {(m - tonica) % 12 for m in (midi_temperato(p) for p in s.pitches) if m is not None}
     if not intervalli:
@@ -429,7 +484,9 @@ def _scegli_ottava(tonica_std, selected_key, modello):
             sa = _costruisci_scala(tonica_std, selected_key, ottava, modello)
         except (scale_catalog.ScaleException, Music21Exception, ValueError):
             continue
-        if sum(1 for t in sa.tecniche if t is not None) >= 2:
+        # La scala deve cominciare sull'armonica: un ipomodo parte una quarta
+        # sotto la tonica, e la tonica dentro l'estensione non basta
+        if sa.tecniche and sa.tecniche[0] is not None and sum(1 for t in sa.tecniche if t is not None) >= 2:
             candidate.append(sa)
     if not candidate:
         print("Su questa armonica la scala non ha un tratto da esercitare.")

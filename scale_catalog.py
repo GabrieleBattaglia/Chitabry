@@ -56,14 +56,14 @@ DESCRIZIONI_MUSIC21 = {
     "LocrianScale": "locria",
     "LydianScale": "lidia",
     "MajorScale": "maggiore",
-    "MelodicMinorScale": "minore melodica: sale con la sesta e la settima maggiori, scende come la naturale",
+    "MelodicMinorScale": "minore melodica, nella forma che sale, con la sesta e la settima maggiori: Chitabry la suona uguale anche in discesa",
     "MinorScale": "minore naturale",
     "MixolydianScale": "misolidia",
     "OctatonicScale": "ottatonica, la diminuita tono semitono",
     "PhrygianScale": "frigia",
-    "RagAsawari": "raga Asawari, indiano, con la salita e la discesa diverse",
-    "RagMarwa": "raga Marwa, indiano, con la salita e la discesa diverse",
-    "WeightedHexatonicBlues": "blues probabilistica: a ogni esecuzione music21 decide se mettere la quinta diminuita",
+    "RagAsawari": "raga Asawari, indiano, nella forma che sale, ripetuta all'inverso in discesa",
+    "RagMarwa": "raga Marwa, indiano, nella forma che sale, ripetuta all'inverso in discesa",
+    "WeightedHexatonicBlues": "blues probabilistica: ogni volta che la si costruisce, music21 tira a sorte se mettere la quinta diminuita",
     "WholeToneScale": "toni interi, l'esatonale",
 }
 # Le classi di music21 che non sono scale ma basi per costruirne: istanziate
@@ -136,7 +136,15 @@ def scala_comune(tonica, chiave):
     if voce is None:
         raise UnknownScaleError("comune", chiave)
     altezze = [tonica.transpose(intervallo) for intervallo in voce[2]] + [tonica.transpose("P8")]
-    return scale.ConcreteScale(tonic=tonica, pitches=altezze)
+    scala = scale.ConcreteScale(tonic=tonica, pitches=altezze)
+    # music21 rifa' i nomi dalla rete degli intervalli a ogni lettura, e per
+    # predefinito semplifica le alterazioni proseguendo dalla lettera sbagliata:
+    # il LA# maggiore usciva con RE e MIb al posto di DO## e RE#. La rete e' un
+    # attributo interno, lo stesso che music21 regola per le sue scale.
+    rete = getattr(scala.abstract, "_net", None)
+    if rete is not None:
+        rete.pitchSimplification = None
+    return scala
 
 
 def descrizione_scl(percorso) -> str:

@@ -214,7 +214,10 @@ class HarmonicaModel:
     aperto e con il cursore premuto."""
 
     def __init__(self, tonalita="C", accordatura="richter", fori=None, famiglia=None, valvole=None, registro="normale"):
-        if accordatura not in ACCORDATURE:
+        # Un archivio ritoccato a mano puo' avere i tipi sbagliati, come una
+        # lista al posto del nome dell'accordatura o 10.0 al posto di 10: tutto
+        # deve diventare ValueError, che chi chiama sa gestire, e non un crash.
+        if not isinstance(accordatura, str) or accordatura not in ACCORDATURE:
             raise ValueError(f"accordatura '{accordatura}' sconosciuta: quelle conosciute sono {', '.join(ACCORDATURE)}")
         self.tonalita = normalizza_tonalita(tonalita)
         self.chiave_accordatura = accordatura
@@ -224,7 +227,7 @@ class HarmonicaModel:
             raise ValueError(f"l'accordatura {self.accordatura.nome} non c'e' sulla {self.famiglia}")
         if fori is None:
             fori = 12 if 12 in self.accordatura.fori else self.accordatura.fori[0]
-        if fori not in self.accordatura.fori:
+        if isinstance(fori, bool) or not isinstance(fori, int) or fori not in self.accordatura.fori:
             possibili = " o ".join(str(f) for f in self.accordatura.fori)
             raise ValueError(f"la {self.accordatura.nome} ha {possibili} fori, non {fori}")
         self.fori = fori
@@ -336,12 +339,15 @@ class HarmonicaModel:
         if overbend:
             giusto = "+" if piega == "-" else "-"
             return f"sul foro {foro} l'overbend si fa {'soffiando' if giusto == '+' else 'aspirando'}: {giusto}{foro}*{coda}"
-        if verso != piega:
-            return f"il foro {foro} si piega {nome_piega}, perche' e' l'ancia piu' acuta a scendere: {piega}{foro}/{coda}"
+        # Prima il semitono solo: su quei fori non si piega in nessun verso, e
+        # suggerire l'altro verso proporrebbe un simbolo che non esiste
         if salto <= 1:
             return f"il foro {foro} non si piega: fra le sue due ance c'e' un semitono solo"
+        if verso != piega:
+            return f"il foro {foro} si piega {nome_piega}, perche' e' l'ancia piu' acuta a scendere: {piega}{foro}/{coda}"
         massimo = salto - 1
-        return f"il foro {foro} {nome_piega} si piega al massimo di {massimo} semitoni, {piega}{foro}{'/' * massimo}{coda}"
+        quanto = "un semitono" if massimo == 1 else f"{massimo} semitoni"
+        return f"il foro {foro} {nome_piega} si piega al massimo di {quanto}, {piega}{foro}{'/' * massimo}{coda}"
 
     def accordi(self, classi):
         """I gruppi di fori vicini, stesso verso e senza tecniche, le cui note
@@ -476,7 +482,14 @@ def conta_tecniche(tecniche):
     return conteggi
 
 
+# Quanto pesa una nota presa con il cursore: meno di un bending, ma non
+# niente. Senza peso, su una cromatica ogni posizione aveva fatica zero e la
+# classifica delle posizioni non misurava niente.
+FATICA_CURSORE = 0.5
+
+
 def fatica(tecniche):
     """Un numero per confrontare due tratti di scala: la somma dei livelli,
-    con le note che mancano che pesano piu' di qualunque tecnica."""
-    return sum(10 if t is None else t.livello for t in tecniche)
+    mezzo punto per ogni nota con il cursore, e le note che mancano che
+    pesano piu' di qualunque tecnica."""
+    return sum(10 if t is None else t.livello + (FATICA_CURSORE if t.cursore else 0) for t in tecniche)

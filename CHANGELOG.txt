@@ -2,11 +2,33 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.6.18 (7 ottobre 2026)
+Diciotto correzioni, trovate da una revisione a piu' voci del lavoro sull'armonica e sulle scale e verificate una per una.
+*   Nel Costruttore Accordi, con un'armonica attiva, un accordo che sta in un solo gruppo di fori, come il SOL7 su un'armonica in DO, ripartiva all'infinito e non si poteva fermare nemmeno con Esc. Adesso si sente una volta, e un tasto riporta al menu.
+*   Le sigle m9, m11 e m13 sceglievano gli accordi maggiori: il menu non distingue le maiuscole, e per lui M9 e m9 erano la stessa sigla. Adesso nel menu i maggiori si chiamano maj9, maj11 e maj13, e m9 da' davvero il minore nona.
+*   Le scale comuni sulle toniche con il diesis avevano la grafia sbagliata: il LA# maggiore usciva con RE e MIb al posto di DO## e RE#, perche' music21 ricalcolava i nomi semplificandoli. Le note suonavano giuste, ma si leggevano male. Adesso la grafia e' quella degli intervalli su tutte le toniche.
+*   In nomenclatura latina MI#, SI#, DOb, FAb e le doppie alterazioni, come DO## o SIbb, restavano scritte all'inglese. Adesso si leggono in italiano.
+*   Sul manico, le scale con MI#, SI#, DOb, FAb o le doppie alterazioni perdevano quelle note: il DO# maggiore mostrava cinque note su sette. Adesso ogni nota si ritrova dal suo semitono.
+*   Un'armonica ritoccata a mano nel file delle impostazioni con un tipo di dato sbagliato, per esempio un elenco di note come accordatura o 10.0 come numero di fori, fermava Chitabry all'avvio. Adesso succede quello che la 9.0.0 prometteva: Chitabry lo dice e suona con una diatonica in DO.
+*   Chiedendo un bending nel verso sbagliato su un foro con le ance a un semitono, come +5/ sulla Richter, Chitabry suggeriva l'altro verso, cioe' un simbolo che poi rifiutava. Adesso dice che quel foro non si piega.
+*   Il messaggio diceva "al massimo di 1 semitoni". Adesso dice "al massimo di un semitono".
+*   Lo schema dei fori della Harmonic Minor perdeva il bending soffiato di un tono e mezzo del foro 10: mancava la riga +///.
+*   Sulle cromatiche la classifica delle posizioni piu' comode non misurava niente, perche' il cursore non pesava e ogni posizione valeva zero. Adesso una nota con il cursore pesa mezzo bending, e vince la posizione che ne usa meno.
+*   Nei modi plagali, come la Hypodorian, il grado 1 della tablatura era la nota piu' grave della scala e non la tonica. Adesso i gradi si contano dalla tonica.
+*   L'esercizio poteva proporre un'ottava che cominciava sotto l'armonica, sempre nei modi plagali, che partono una quarta sotto la tonica. Adesso propone solo ottave che cominciano sull'armonica.
+*   Le scale dell'archivio Scala che non si ripetono all'ottava, come la Bohlen-Pierce, comparivano sull'armonica con note che non hanno. Adesso Chitabry mostra le loro note vere ottava per ottava, senza gradi e senza tabella delle posizioni, che valgono solo per le scale che tornano uguali all'ottava.
+*   La tolleranza per prendere temperata una nota dell'archivio Scala passa da trenta a trentadue centesimi: entra la settima naturale, che sta a trentuno, e restano fuori le note a trentatre, gia' vicine al quarto di tono.
+*   Nell'archivio Scala si cerca con una o piu' parole, che devono esserci tutte, e si vedono fino a cinquanta risultati invece di venti. Prima pentatonic, che ne trova 43, veniva sempre rifiutata; adesso si vede, e pentatonic japanese trova le tre giapponesi.
+*   Le descrizioni di Melodic Minor, Rag Asawari e Rag Marwa promettevano una discesa diversa dalla salita, che Chitabry non fa: adesso dicono che si suona la forma che sale, ripetuta al contrario. Quella della Weighted Hexatonic Blues dice che il sorteggio avviene ogni volta che la scala si costruisce.
+*   Guida: il menu non distingue le maiuscole, al contrario di quanto diceva, e completa da solo le lettere comuni, quindi le parole intere non funzionano. Adesso lo spiega, con gli esempi giusti: bl per la blues, s per sus, un punto solo per la ricerca degli accordi per nome.
+*   Guida: l'esempio -3//< valeva solo per la Trochilus Blues e diventa -3/< della Trochilus Solo; i gradi della scala hanno il modo piu' comodo in ogni ottava, non tutti i fori; la classifica della blues lascia fuori la seconda posizione dalle prime tre, e la guida adesso lo dice. La guida passa alla revisione 19.
+*   Tredici prove nuove, 146 in tutto.
+
 Versione 9.6.0 (7 ottobre 2026)
 Le dodici posizioni in cui si suona una scala sull'armonica.
 *   Scelta una scala con un'armonica attiva, prima della tablatura Chitabry elenca le dodici posizioni, dalla prima alla dodicesima, una per riga. Ogni riga dice quale scala esce su questa armonica in quella posizione e quale armonica serve per suonarci la tonica che avete scelto: con il SOL blues e un'armonica in DO, la terza posizione e' il RE blues su questa armonica, oppure il SOL blues sull'armonica in FA.
 *   Per ogni posizione c'e' l'ottava piu' comoda, con la nota da cui parte e le tecniche che chiede, e in fondo le tre posizioni piu' comode. Su un'armonica in DO la piu' comoda e' la prima posizione per il DO maggiore, la seconda per il SOL misolidio, la terza per il RE dorico e la quarta per la pentatonica minore di LA, che li' non chiede nessuna tecnica.
-*   La classifica guarda l'ottava che si suona e non tutta l'estensione: sommando tutta l'estensione, gli overblow e gli overdraw dell'ottava acuta, che per il blues in seconda nessuno usa, la spingevano in fondo. Conta soltanto le tecniche e non lo stile: per la blues mette la terza e la quarta davanti alla seconda, perche' nella loro ottava migliore chiedono un bending solo invece di due.
+*   La classifica guarda l'ottava che si suona e non tutta l'estensione: sommando tutta l'estensione, gli overblow e gli overdraw dell'ottava acuta, che per il blues in seconda nessuno usa, la spingevano in fondo. Conta soltanto le tecniche e non lo stile: per la blues mette in testa la quarta e la terza, che nella loro ottava migliore chiedono un bending solo, e la seconda, che ne chiede due, resta fuori dalle prime tre.
 *   La guida passa alla revisione 18. Quattro prove nuove, 133 in tutto.
 
 Versione 9.5.0 (7 ottobre 2026)
@@ -28,7 +50,7 @@ Il catalogo delle scale dice cosa sono le scale dell'archivio Scala, e non conti
 Versione 9.3.0 (7 ottobre 2026)
 Arrivano le cromatiche a dieci fori, come la JDR Trochilus, le cromatiche senza valvole e le armoniche del registro basso.
 *   La cromatica Solo si puo' avere anche a dieci fori, da DO4 a FA6 per quella in DO, e la Richter e la Paddy Richter si possono avere anche come cromatiche a dieci fori con il cursore: sono la Trochilus Blues e la Trochilus Pop, che a cursore premuto diventano la stessa armonica un semitono sopra.
-*   Le cromatiche possono essere con o senza valvole. Su quelle senza, come la Trochilus o una bebop, Chitabry calcola bending e overbend come su una diatonica, sia a cursore aperto sia a cursore premuto: il simbolo li mette insieme, e -3//< e' il foro 3 aspirato, con il cursore premuto, piegato di un tono. Su quelle con le valvole, come le Hohner 270, resta come prima.
+*   Le cromatiche possono essere con o senza valvole. Su quelle senza, come la Trochilus o una bebop, Chitabry calcola bending e overbend come su una diatonica, sia a cursore aperto sia a cursore premuto: il simbolo li mette insieme, e sulla Trochilus Blues -3//< e' il foro 3 aspirato, con il cursore premuto, piegato di un tono. Su quelle con le valvole, come le Hohner 270, resta come prima.
 *   Le armoniche del registro basso, quelle che i costruttori chiamano Low, come la Low F, suonano un'ottava sotto le altre.
 *   Aggiungendo un'armonica, Chitabry chiede il numero di fori solo se l'accordatura ne ha piu' d'uno, le valvole solo per le cromatiche, proponendo per prima la scelta piu' comune per quell'accordatura, e il registro dicendo su che nota cade il foro 1 soffiato. Il nome suggerito dice anche il registro basso e le valvole, quando non sono quelle di solito.
 *   Le armoniche gia' salvate restano come erano. Fa eccezione la bebop, che adesso si piega: e' fatta per suonare senza valvole, e la 9.0.0 la trattava come se le avesse.

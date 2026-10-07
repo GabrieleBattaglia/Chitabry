@@ -9,12 +9,18 @@ import config
 import suoni
 from nomenclatura import get_nota, nome_utente_in_std, nomi_note_utente
 
-# Le note bemolli e quelle scritte con il trattino di music21, riportate al
-# diesis con cui config.CORDE nomina le posizioni del manico.
-_BEMOLLI_IN_DIESIS = {
-    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
-    'C-': 'B', 'D-': 'C#', 'E-': 'D#', 'F-': 'E', 'G-': 'F#', 'A-': 'G#', 'B-': 'A#',
-}
+# I semitoni delle sette lettere sopra il DO: da qui si ritrova il nome con
+# il diesis con cui config.CORDE nomina le posizioni del manico.
+_SEMITONI_LETTERE = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+
+
+def nome_sul_manico(nota):
+    """Il nome con cui il manico conosce una nota senza ottava: SIb e B- sono
+    A#, MI# e' F, DOb e' B, DO## e' D. Fino alla 9.6 si convertivano solo i
+    bemolli semplici, e MI#, SI#, DOb, FAb e le doppie alterazioni sparivano
+    dal manico, anche se le scale sulle toniche con il diesis le contengono."""
+    semitono = _SEMITONI_LETTERE[nota[0]] + nota.count('#') - nota[1:].count('b') - nota.count('-')
+    return config.NOTE_STD[semitono % 12]
 
 
 def Manlimiti(s):
@@ -79,8 +85,7 @@ def visualizza_note_su_manico(lista_note, maninf=0, mansup=None):
         mansup = config.NUM_TASTI
     note_da_cercare = set()
     for n in lista_note:
-        n_clean = n.replace('-', 'b')
-        note_da_cercare.add(_BEMOLLI_IN_DIESIS.get(n_clean, n_clean))
+        note_da_cercare.add(nome_sul_manico(n))
     print(f"Posizioni sul manico (tasti {maninf}-{mansup}):")
     trovate = _posizioni_manico(lambda nota: nota[:-1] in note_da_cercare, maninf, mansup)
     _stampa_posizioni(trovate)

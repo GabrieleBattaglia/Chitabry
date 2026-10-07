@@ -57,6 +57,10 @@ def test_ogni_scala_comune_si_costruisce_su_ogni_tonica():
         for chiave, _nome, intervalli, _formula in scale_catalog.SCALE_COMUNI:
             altezze = scale_catalog.scala_comune(pitch.Pitch(tonica + "4"), chiave).pitches
             assert len(altezze) == len(intervalli) + 1, (tonica, chiave)
+            # La grafia e' quella degli intervalli, anche sulle toniche con il diesis
+            attese = [pitch.Pitch(tonica + "4").transpose(i).nameWithOctave for i in intervalli]
+            assert [p.nameWithOctave for p in altezze[:-1]] == attese, (tonica, chiave)
+            assert altezze[-1].name == altezze[0].name, (tonica, chiave)
             semitoni = [round(p.ps - altezze[0].ps) for p in altezze]
             assert semitoni == sorted(semitoni) and semitoni[-1] == 12, (tonica, chiave)
             assert len({s % 12 for s in semitoni}) == len(intervalli), (tonica, chiave)
@@ -85,7 +89,7 @@ def test_la_scelta_del_tipo_in_tre_gruppi(catalogo, monkeypatch):
     monkeypatch.setattr(esercizio_scale, "menu", menu_finto)
     cercate = []
 
-    def ricerca_finta(voci, prompt, tipo):
+    def ricerca_finta(voci, prompt, tipo, **_opzioni):
         cercate.append(voci)
         return next(chiave for chiave, testo in voci.items() if "breed-blues1" in testo)
 
@@ -95,3 +99,22 @@ def test_la_scelta_del_tipo_in_tre_gruppi(catalogo, monkeypatch):
     assert esercizio_scale._scegli_tipo("G") == "concrete:MajorScale"
     assert esercizio_scale._scegli_tipo("G") == "scala:breed-blues1"
     assert len(cercate[0]) > 3900
+
+
+def test_la_ricerca_con_piu_parole(monkeypatch):
+    import ricerca
+    voci = {"a": "Observed Japanese pentatonic koto scale", "b": "Chinese pentatonic", "c": "Japanese ritsu"}
+    risposte = iter(["pentatonic japanese", "1"])
+    monkeypatch.setattr(ricerca, "dgt", lambda *_a, **_k: next(risposte))
+    assert ricerca.fuzzy_search_and_select(voci, "Cerca: ", "scala") == "a"
+
+
+def test_la_ricerca_rispetta_il_massimo(monkeypatch, capsys):
+    import ricerca
+    voci = {str(i): f"scala pentatonic {i}" for i in range(30)}
+    risposte = iter(["pentatonic", ""])
+    monkeypatch.setattr(ricerca, "dgt", lambda *_a, **_k: next(risposte))
+    assert ricerca.fuzzy_search_and_select(voci, "Cerca: ", "scala") is None
+    assert "troppi risultati (30, il massimo e' 20)" in capsys.readouterr().out
+    risposte = iter(["pentatonic", "3"])
+    assert ricerca.fuzzy_search_and_select(voci, "Cerca: ", "scala", massimo=50) == "2"

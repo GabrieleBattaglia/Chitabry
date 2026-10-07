@@ -17,6 +17,11 @@ from strumento import InstrumentModel
 
 # Quando la sigla breve non basta a music21, si riprova con il nome esteso
 _RIPIEGHI = {"": " major", "m": " minor", "dim": " diminished", "aug": " augmented"}
+# Il menu non distingue le maiuscole: M9 e m9 per lui sono la stessa sigla, e
+# Invio sceglieva il maggiore anche a chi aveva scritto m9. Nel menu i
+# maggiori prendono una sigla loro, che poi torna quella di music21.
+_SIGLE_DEL_MENU = {"M9": "maj9", "M11": "maj11", "M13": "maj13"}
+_SIGLE_DI_MUSIC21 = {menu_: m21 for m21, menu_ in _SIGLE_DEL_MENU.items()}
 
 
 def _scegli_accordo():
@@ -27,8 +32,10 @@ def _scegli_accordo():
         print("Costruzione annullata.")
         return None
     tonica_std = toniche[scelta]
-    sigla = menu(d=scale_catalog.USER_CHORD_DICT, keyslist=True, show=False, pager=15, ntf="Tipo non valido",
+    voci = {_SIGLE_DEL_MENU.get(s, s): nome for s, nome in scale_catalog.USER_CHORD_DICT.items()}
+    sigla = menu(d=voci, keyslist=True, show=False, pager=15, ntf="Tipo non valido",
                  p=f"Filtra TIPO accordo per {get_nota(tonica_std)} (o '...'): ")
+    sigla = _SIGLE_DI_MUSIC21.get(sigla, sigla)
     if sigla is None:
         print("Costruzione annullata.")
         return None

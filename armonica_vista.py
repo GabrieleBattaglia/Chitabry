@@ -11,8 +11,9 @@ from nomenclatura import get_nota, nome_da_midi, nome_utente_in_std, nomi_note_u
 
 # Le righe dello schema, nell'ordine in cui si leggono: prima le note
 # naturali, poi i bending aspirati dei fori bassi, quelli soffiati dei fori
-# alti, e gli overbend. Sulla cromatica soffiato e aspirato, con e senza cursore.
-RIGHE_DIATONICA = ("+", "-", "-/", "-//", "-///", "+/", "+//", "+*", "-*")
+# alti, e gli overbend. Il bending soffiato di un tono e mezzo c'e' sul foro
+# 10 della Harmonic Minor, dove le ance distano quattro semitoni. Sulla cromatica soffiato e aspirato, con e senza cursore.
+RIGHE_DIATONICA = ("+", "-", "-/", "-//", "-///", "+/", "+//", "+///", "+*", "-*")
 RIGHE_CROMATICA = ("+", "+<", "-", "-<")
 LEGENDA = ("Una riga per tecnica: + soffiato, - aspirato, ogni barra un semitono di bending, "
            "l'asterisco l'overbend, il segno minore il cursore premuto.")
@@ -158,6 +159,14 @@ def accordi(classi, nomi_classi, nome_accordo):
         if finestra.mancanti:
             testo += f", manca {', '.join(nomi_classi.get(c, '?') for c in sorted(finestra.mancanti))}"
         voci[str(numero)] = testo
+    if len(finestre) == 1:
+        # Con una voce sola menu la restituisce subito senza leggere un tasto:
+        # dentro il ciclo l'accordo ripartiva all'infinito
+        print(f"{voci['1']}.")
+        print(f"Ascolto di {finestre[0].simboli}.")
+        suoni.suona_note(finestre[0].note, armonica=True)
+        key("Premi un tasto per tornare al menu...")
+        return
     print("Scegliete il numero del gruppo da ascoltare, Esc per uscire.")
     mostra = True
     while True:

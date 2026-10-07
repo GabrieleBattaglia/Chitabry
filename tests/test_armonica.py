@@ -152,7 +152,12 @@ def test_i_simboli_sbagliati_si_spiegano(richter):
         "+7/": "un semitono solo",
         "+3/": "si piega aspirando",
         "-9/": "si piega soffiando",
-        "-4//": "al massimo di 1 semitoni",
+        "-4//": "al massimo di un semitono, -4/",
+        "-2///": "al massimo di 2 semitoni",
+        # Le ance a un semitono non si piegano in nessun verso: prima si
+        # suggeriva l'altro verso, con un simbolo che non esiste
+        "+5/": "un semitono solo",
+        "-7/": "un semitono solo",
         "-2*": "+2*",
         "+8*": "-8*",
         "+11": "da 1 a 10",
@@ -294,6 +299,12 @@ def test_le_note_vicine_al_temperamento_contano(monkeypatch):
     quasi = pitch.Pitch("A4")
     quasi.microtone = 4      # la terza naturale e simili: pochi centesimi
     assert esercizio_scale.midi_temperato(quasi) == 69
+    settima = pitch.Pitch("B-4")
+    settima.microtone = -31   # la settima naturale 7/4 sopra il DO, 969 centesimi
+    assert esercizio_scale.midi_temperato(settima) == 70
+    lontana = pitch.Pitch("C#4")
+    lontana.microtone = 33    # come il DO#~ della Bohlen-Pierce
+    assert esercizio_scale.midi_temperato(lontana) is None
     quarto = pitch.Pitch("A4")
     quarto.microtone = 50
     assert esercizio_scale.midi_temperato(quarto) is None
@@ -391,8 +402,8 @@ def test_l_armonica_che_serve_per_una_tonica():
 
 
 def test_la_tabella_delle_posizioni(richter):
-    """La stessa scala nelle dodici posizioni: le posizioni dei modi della
-    scala maggiore di DO non chiedono tecniche nell'ottava migliore."""
+    """La scala maggiore nelle dodici posizioni dell'armonica in DO: in prima
+    non chiede tecniche, e la fatica cresce allontanandosi sul circolo."""
     maggiore = (0, 2, 4, 5, 7, 9, 11)
     righe = armonica.tabella_posizioni(richter, maggiore)
     assert [r[0] for r in righe] == list(range(1, 13))
@@ -415,8 +426,8 @@ def test_l_ottava_comoda_del_sol_blues(richter):
     # un'ottava senza fatica, con il FA# preso dal cursore
     cromatica = armonica.HarmonicaModel("C", "solo", 10)
     tonica, tecniche = armonica.ottava_comoda(cromatica, NOMI.index("G"), (0, 2, 4, 5, 7, 9, 11))
-    assert armonica.fatica(tecniche) == 0
-    assert any(t.cursore for t in tecniche)
+    assert armonica.fatica(tecniche) == armonica.FATICA_CURSORE
+    assert [t.cursore for t in tecniche].count(True) == 1
 
 
 def test_la_tabella_a_schermo(monkeypatch, capsys, richter):
@@ -430,3 +441,80 @@ def test_la_tabella_a_schermo(monkeypatch, capsys, richter):
     assert righe[3].startswith("Terza posizione (slant harp): RE blues su questa armonica, oppure SOL blues sull'armonica in FA.")
     assert righe[-1].startswith("Le piu' comode")
     assert len(righe) == 14
+
+
+def test_tipi_sbagliati_nell_archivio_diventano_valueerror(archivio, capsys):
+    """Un'armonica ritoccata a mano con i tipi sbagliati: prima era un crash
+    all'avvio, adesso e' il ripiego sulla diatonica in DO."""
+    for voce in ({"tipo": "armonica", "accordatura": ["E2", "A2"], "tasti": 21},
+                 {"tipo": "armonica", "famiglia": "cromatica", "accordatura": "solo", "fori": 12.0},
+                 {"tipo": "armonica", "accordatura": "richter", "fori": 10.0}):
+        with pytest.raises(ValueError):
+            config.modello_armonica(voce)
+        config.impostazioni = config.get_impostazioni_default()
+        config.impostazioni["strumenti"]["Rotta"] = voce
+        config.impostazioni["strumento_attivo"] = "Rotta"
+        config.aggiorna_manico()
+        assert config.ARMONICA.descrizione() == "diatonica, accordatura Richter, 10 fori"
+    assert "non tornano" in capsys.readouterr().out
+
+
+def test_sulla_cromatica_la_classifica_conta_il_cursore():
+    """Senza peso per il cursore ogni posizione di una cromatica valeva zero."""
+    solo = armonica.HarmonicaModel("C", "solo", 12)
+    righe = armonica.tabella_posizioni(solo, (0, 2, 4, 5, 7, 9, 11))
+    assert armonica.piu_comode(righe)[0] == 1
+    assert armonica.fatica(righe[0][3][1]) == 0
+    assert armonica.fatica(righe[1][3][1]) == armonica.FATICA_CURSORE
+
+
+def test_lo_schema_della_harmonic_minor_ha_il_foro_10_piegato_di_un_tono_e_mezzo(monkeypatch):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    minore = armonica.HarmonicaModel("C", "harmonic_minor")
+    assert simboli(minore)["+10///"] == "A6"
+    etichette = [r.split("|")[0].strip() for r in armonica_vista.righe_schema(minore)[1:]]
+    assert "+///" in etichette
+
+
+def test_un_solo_gruppo_di_fori_suona_una_volta(monkeypatch, capsys, richter):
+    """Con un gruppo solo menu non aspetta un tasto: il SOL7 ripartiva all'infinito."""
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
+    monkeypatch.setattr(config, "ARMONICA", richter)
+    suonate = []
+    monkeypatch.setattr(armonica_vista.suoni, "suona_note", lambda note, armonica=False: suonate.append(tuple(note)))
+    monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: "")
+    monkeypatch.setattr(armonica_vista, "menu", lambda **_k: pytest.fail("con un gruppo solo il menu non serve"))
+    armonica_vista.accordi({7, 11, 2, 5}, {7: "SOL", 11: "SI", 2: "RE", 5: "FA"}, "SOL7")
+    assert suonate == [(67, 71, 74, 77)]
+    assert "-2 -3 -4 -5: SOL4 SI4 RE5 FA5." in capsys.readouterr().out
+
+
+def test_i_gradi_dei_modi_plagali_partono_dalla_tonica(monkeypatch, capsys, richter):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    s = esercizio_scale._costruisci_scala("D", "concrete:HypodorianScale", 4, richter)
+    esercizio_scale._tablatura_completa(s, richter)
+    righe = capsys.readouterr().out.splitlines()
+    assert next(r for r in righe if r.startswith("Grado 1")).startswith("Grado 1, RE:")
+
+
+def test_l_ottava_dell_esercizio_comincia_sull_armonica(monkeypatch, richter):
+    """La Hypodorian di RE comincia dal LA3, sotto il DO4 dell'armonica."""
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    monkeypatch.setattr(esercizio_scale, "dgt", lambda _p="", **k: k["default"])
+    scelta = esercizio_scale._scegli_ottava("D", "concrete:HypodorianScale", richter)
+    assert scelta.tecniche[0] is not None
+
+
+def test_le_scale_che_non_si_ripetono_all_ottava(monkeypatch, capsys, richter):
+    """La Bohlen-Pierce si ripete alla dodicesima: niente classi inventate."""
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    s = esercizio_scale._costruisci_scala("C", "scala:bohlen-p", 4, richter)
+    assert not esercizio_scale._si_ripete_all_ottava(s)
+    note, gradi = esercizio_scale._note_su_estensione(s, richter)
+    assert gradi == {}
+    numeri = [m for m, _ in note]
+    assert 61 not in numeri and 64 not in numeri and 67 not in numeri
+    assert 73 in numeri and 76 in numeri
+    esercizio_scale._tabella_posizioni(s, richter, 1)
+    assert "la tabella non si fa" in capsys.readouterr().out
+    assert esercizio_scale._si_ripete_all_ottava(esercizio_scale._costruisci_scala("C", "comune:blues", 4, richter))
