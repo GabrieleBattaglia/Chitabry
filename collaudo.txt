@@ -1,1 +1,0 @@
-Collaudo del pacchetto compilato della 10.0.0, prima della pubblicazione, insieme alla issue 56. La copia da provare e' E:\git\tmp\Chitabry-10.0.0\Chitabry.exe: parte con le impostazioni nuove, senza strumenti tuoi e senza banco. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no.
