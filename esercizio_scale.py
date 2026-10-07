@@ -164,24 +164,55 @@ class ScalaArmonica(Scala):
         return self.note_asc[0], self.note_asc[-1]
 
 
+def _scegli_tipo(tonica_std):
+    """Il tipo di scala in due passi: il gruppo, poi la scala dentro il
+    gruppo. Le scale comuni e le classi di music21 sono poche, e si scelgono
+    scrivendo l'inizio del nome; l'archivio Scala ne ha quasi quattromila, e
+    si cerca per parola dentro le descrizioni. Restituisce la chiave
+    paradigma:id, o None se si rinuncia.
+    Fino alla 9.3 c'era un menu unico, che filtrava l'inizio di chiavi come
+    concrete:MajorScale o scala:05-19: scrivendo blues non usciva niente."""
+    nota = get_nota(tonica_std)
+    per_gruppo = {"comune": [], "concrete": [], "scala": []}
+    for voce in scale_catalog.SCALE_CATALOG:
+        per_gruppo.setdefault(voce["paradigm"], []).append(voce)
+    gruppi = {
+        "1": f"Scale comuni, {len(per_gruppo['comune'])}, con i nomi italiani: maggiore, minori, modi, pentatoniche, blues, bebop",
+        "2": f"Le classi di music21, {len(per_gruppo['concrete'])}, con i nomi inglesi: modi, ipomodi, raga, ottatonica",
+        "3": f"L'archivio Scala, {len(per_gruppo['scala'])} scale storiche, etniche e microtonali, da cercare per parola inglese",
+    }
+    print(f"Gruppo di scale per {nota}:")
+    gruppo = menu(d=gruppi, keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    if gruppo is None:
+        return None
+    if gruppo == "3":
+        voci = {f"scala:{v['programmatic_id']}": f"{v['friendly_name']} ({v['programmatic_id']})" for v in per_gruppo["scala"]}
+        return fuzzy_search_and_select(voci, f"Cerca nell'archivio Scala per {nota}, per esempio blues, pentatonic o raga: ", "scala")
+    if gruppo == "1":
+        # Nell'ordine in cui sono scritte: le maggiori e le minori, i modi, le altre
+        voci_gruppo = sorted(per_gruppo["comune"], key=lambda v: [c[0] for c in scale_catalog.SCALE_COMUNI].index(v["programmatic_id"]))
+        paradigma = "comune"
+    else:
+        voci_gruppo = sorted(per_gruppo["concrete"], key=lambda v: v["friendly_name"].lower())
+        paradigma = "concrete"
+    voci = {v["friendly_name"]: v.get("descrizione", "") for v in voci_gruppo}
+    chiavi = {v["friendly_name"]: f"{paradigma}:{v['programmatic_id']}" for v in voci_gruppo}
+    print(f"Tipo di scala per {nota}: scrivete l'inizio del nome.")
+    scelto = menu(d=voci, keyslist=True, show=True, pager=25, ordered=False, ntf="Tipo non valido")
+    return None if scelto is None else chiavi[scelto]
+
+
 def _scegli_scala():
-    """Tonica e tipo dal catalogo. Restituisce la coppia (tonica standard, chiave paradigma:id) o None."""
+    """Tonica e tipo. Restituisce la coppia (tonica standard, chiave paradigma:id) o None."""
     toniche = mappa_toniche()
     scelta = menu(d=toniche, keyslist=True, show=True, pager=12, ntf="Nota non valida", p="Scegli la TONICA della scala: ")
     if scelta is None:
         return None
     tonica_std = toniche[scelta]
-    selected_key = menu(d=scale_catalog.SCALE_TYPES_DICT, keyslist=True, show=False, pager=20, ntf="Tipo non valido",
-                        p=f"Filtra TIPO scala per {get_nota(tonica_std)} (o '...'): ")
+    selected_key = _scegli_tipo(tonica_std)
     if selected_key is None:
+        print("Annullato.")
         return None
-    if selected_key == "...":
-        selected_key = fuzzy_search_and_select(scale_catalog.SCALE_TYPES_DICT,
-                                               f"Cerca TIPO scala per {get_nota(tonica_std)} (testo parziale): ",
-                                               "tipo di scala")
-        if selected_key is None or selected_key == "...":
-            print("Annullato.")
-            return None
     return tonica_std, selected_key
 
 

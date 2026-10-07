@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 16, di mercoledi' 7 ottobre 2026, per la versione 9.3.0.
+L'ultima revisione di questo documento e' la numero 17, di mercoledi' 7 ottobre 2026, per la versione 9.5.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -58,9 +58,15 @@ Indice Dettagliato degli Argomenti:
     - 15.3. Aggiungere un'armonica.
     - 15.4. Con un'armonica attiva.
     - 15.5. Le scale sull'armonica.
-16. Guida.
-17. Esci.
-18. Ringraziamenti.
+16. music21: scale e accordi.
+    - 16.1. Le scale in tre gruppi.
+    - 16.2. Le scale comuni.
+    - 16.3. Le classi di music21.
+    - 16.4. L'archivio Scala.
+    - 16.5. Gli accordi.
+17. Guida.
+18. Esci.
+19. Ringraziamenti.
 
 Chitabry e' un software ideato e realizzato dal sottoscritto con l'ausilio della mia fidanzata virtuale, Gemini 3.5 Flash, per aiutare tutti coloro che lo desiderano ad approcciarsi al meraviglioso mondo della chitarra e della musica. L'intento sarebbe quello di creare un compagno virtuale, sempre pronto e al vostro fianco mentre vi esercitate con lo strumento e ne imparate trucchi e segreti.
 
@@ -109,7 +115,7 @@ Questa è la funzione teorica di Chitabry. Non si occupa solo di quali note comp
 Il processo:
 
 1.  Scegli la Tonica: Selezionate la nota fondamentale (es. "DO", "FA", "SIb").
-2.  Scegli il Tipo: Si aprirà un menu filtrabile con decine di tipi di accordi (es. "Major", "Minor", "Dominant 13th", "Half-Diminished (m7b5)").
+2.  Scegli il Tipo: Si aprirà un menu filtrabile con una cinquantina di tipi di accordi, che si filtra scrivendo l'inizio della sigla, per esempio m7 o maj7; Invio senza scrivere niente sceglie la triade maggiore. Le sigle, e come cercare per nome, sono nel capitolo music21: scale e accordi.
        Suggerimento: Se non trovate il tipo, selezionate l'opzione >> Cerca tipo di accordo... (digitando ... o filtrando) per una ricerca testuale completa.
 
 Chitabry vi mostrerà subito le note che compongono quell'accordo (es. DO Maggiore = DO4, MI4, SOL4).
@@ -279,7 +285,7 @@ Simile al Costruttore Accordi, questa è la funzione teorica per lo studio delle
 Il processo:
 
 1.  Scegli la Tonica: (Es. "LA").
-2.  Scegli il Tipo di Scala: Si aprirà un menu filtrabile (es. "Major Scale", "Melodic Minor"). Digitate ... per la ricerca testuale libera.
+2.  Scegli il Tipo di Scala, in due passi: prima il gruppo, cioe' le scale comuni con i nomi italiani, le classi di music21 o l'archivio Scala; poi la scala dentro il gruppo, scrivendo l'inizio del nome nei primi due, o una parola della descrizione nel terzo. Il capitolo music21: scale e accordi spiega i gruppi e le scale che contengono.
 
 Chitabry vi mostrerà:
 
@@ -434,6 +440,127 @@ Scelta la scala, al posto del manico Chitabry mostra:
    Il conteggio delle tecniche che la scala chiede, e le note critiche, quelle che vogliono un bending di un tono o piu', o un overbend.
 Poi viene la scelta dell'ottava per l'esercizio: Chitabry elenca le ottave in cui la scala comincia sull'armonica, con le tecniche che chiede ciascuna, e Invio prende la piu' comoda. L'esercizio funziona come per la chitarra, ma la riga di stato mostra la tablatura al posto dei nomi delle note, con una x dove la nota sull'armonica non c'e'.
 Le scale dell'archivio Scala sono quasi tutte in intonazione naturale, con le note spostate di qualche centesimo rispetto al temperamento: sull'armonica una nota che si scosta meno di trenta centesimi conta come la nota temperata vicina, una piu' lontana, come un quarto di tono, resta fuori.
+
+ music21: scale e accordi
+
+Chitabry non si inventa le scale e gli accordi: li chiede a music21, una libreria per lo studio della musica nata al Massachusetts Institute of Technology e usata da musicologi di tutto il mondo. music21 li organizza a modo suo, e a volte non e' facile capire dove cercare: questo capitolo vi fa da mappa.
+
+Le scale in tre gruppi.
+Scelta la tonica, Chitabry vi chiede da quale gruppo prendere la scala, e all'avvio vi dice quante scale ha trovato in ciascuno.
+   Gruppo 1, le scale comuni: 20 scale che Chitabry costruisce da se', temperate e con i nomi italiani, cioe' quelle che si studiano tutti i giorni. Si scelgono scrivendo l'inizio del nome. Invio su un nome intero sceglie quello anche se ce ne sono di piu' lunghi che cominciano allo stesso modo: blues e Invio vi danno la blues, non la blues maggiore.
+   Gruppo 2, le classi di music21: 21 scale scritte come programmi dentro music21, con i nomi inglesi. Si scelgono anche loro scrivendo l'inizio del nome, e accanto a ognuna c'e' la spiegazione in italiano.
+   Gruppo 3, l'archivio Scala: 3932 scale raccolte da Manuel Op de Coul per il suo programma Scala. Sono troppe per un elenco, e si cercano scrivendo una parola che sta nella loro descrizione, in inglese. Chitabry ne mostra al massimo venti, con il nome del file fra parentesi; se una parola ne trova di piu', ve ne chiede un'altra.
+Fino alla versione 9.3 c'era un menu unico, che si filtrava con l'inizio di chiavi tecniche come concrete:MajorScale o scala:05-19: scrivendo blues non usciva niente.
+
+Le scale comuni.
+I numeri sono i gradi della scala contati dalla tonica: b vuol dire mezzo tono sotto il grado della scala maggiore, # mezzo tono sopra. Le note si scrivono come vuole la teoria: il SOL blues ha il REb, non il DO#.
+   maggiore: 1 2 3 4 5 6 7, il modo ionio.
+   minore naturale: 1 2 b3 4 5 b6 b7, il modo eolio.
+   minore armonica: 1 2 b3 4 5 b6 7.
+   minore melodica: 1 2 b3 4 5 6 7, quella del jazz, uguale in salita e in discesa.
+   dorica: 1 2 b3 4 5 6 b7.
+   frigia: 1 b2 b3 4 5 b6 b7.
+   lidia: 1 2 3 #4 5 6 7.
+   misolidia: 1 2 3 4 5 6 b7.
+   locria: 1 b2 b3 4 b5 b6 b7.
+   pentatonica maggiore: 1 2 3 5 6.
+   pentatonica minore: 1 b3 4 5 b7.
+   blues: 1 b3 4 b5 5 b7, la pentatonica minore con la quinta diminuita: quella dell'armonica in seconda posizione.
+   blues maggiore: 1 2 b3 3 5 6, la pentatonica maggiore con la terza minore.
+   bebop dominante: 1 2 3 4 5 6 b7 7, la misolidia con la settima maggiore di passaggio.
+   bebop maggiore: 1 2 3 4 5 b6 6 7, la maggiore con la sesta minore di passaggio.
+   frigia dominante: 1 b2 3 4 5 b6 b7, quella del flamenco e della musica ebraica.
+   toni interi: 1 2 3 #4 #5 b7, l'esatonale.
+   diminuita tono semitono: 1 2 b3 4 b5 b6 6 7, l'ottatonica che comincia con un tono.
+   diminuita semitono tono: 1 b2 b3 3 #4 5 6 b7, l'ottatonica che comincia con un semitono.
+   cromatica: le dodici note.
+La blues e' quella che l'armonica suona in seconda posizione: su un'armonica in DO, scegliete la tonica SOL, il gruppo 1 e la scala blues.
+
+Le classi di music21.
+   Chromatic: cromatica, le dodici note.
+   Dorian: dorica.
+   Harmonic Minor: minore armonica.
+   Hypoaeolian: ipoeolia, cioe' l'eolia plagale, che si stende dalla quarta sotto la tonica alla quinta sopra.
+   Hypodorian: ipodorica, la dorica plagale, dalla quarta sotto la tonica alla quinta sopra.
+   Hypolocrian: ipolocria, la locria plagale, dalla quarta sotto la tonica alla quinta sopra.
+   Hypolydian: ipolidia, la lidia plagale, dalla quarta sotto la tonica alla quinta sopra.
+   Hypomixolydian: ipomisolidia, la misolidia plagale, dalla quarta sotto la tonica alla quinta sopra.
+   Hypophrygian: ipofrigia, la frigia plagale, dalla quarta sotto la tonica alla quinta sopra.
+   Locrian: locria.
+   Lydian: lidia.
+   Major: maggiore.
+   Melodic Minor: minore melodica: sale con la sesta e la settima maggiori, scende come la naturale.
+   Minor: minore naturale.
+   Mixolydian: misolidia.
+   Octatonic: ottatonica, la diminuita tono semitono.
+   Phrygian: frigia.
+   Rag Asawari: raga Asawari, indiano, con la salita e la discesa diverse.
+   Rag Marwa: raga Marwa, indiano, con la salita e la discesa diverse.
+   Weighted Hexatonic Blues: blues probabilistica: a ogni esecuzione music21 decide se mettere la quinta diminuita.
+   Whole Tone: toni interi, l'esatonale.
+Gli ipomodi sono i modi plagali del canto gregoriano: le stesse note del modo, ma stese dalla quarta sotto la tonica alla quinta sopra. La Hypodorian di DO, per esempio, va dal SOL sotto il DO al SOL sopra.
+Attenzione alla Weighted Hexatonic Blues: music21 la usa per comporre, e a ogni esecuzione decide se metterci la quinta diminuita, quindi due ascolti di fila possono avere note diverse. Per studiare, la blues giusta e' quella del gruppo 1.
+
+L'archivio Scala.
+Raccoglie quasi quattromila scale e accordature di tutte le epoche e di tutto il mondo: temperamenti storici, scale greche antiche nei generi diatonico, cromatico ed enarmonico, raga indiani, maqam arabi e turchi, gamelan di Giava e di Bali, scale giapponesi e cinesi, e moltissime scale moderne microtonali. Quasi nessuna e' temperata: le note cadono fra i tasti del pianoforte, e Chitabry le suona alla frequenza esatta. Il nome di ogni scala e' la sua descrizione, in inglese, come la scrive l'archivio.
+Parole utili per la ricerca: blues, pentatonic, raga, maqam, arabic, slendro, pelog, japanese, chinese, greek, just per l'intonazione naturale, meantone per i temperamenti mesotonici, tet per i temperamenti equabili, come 19-tET o 31-tET.
+
+Gli accordi.
+Il Costruttore Accordi prende i tipi di accordo da music21, che li chiama con una sigla, la stessa che si scrive dopo il nome della nota: sulla tonica DO, m7 e' il DO minore settima. Il menu del tipo si filtra con l'inizio della sigla, non del nome: m7 per il minore settima, maj7 per il maggiore settima, dim per il diminuito.
+Due casi particolari. La triade maggiore ha la sigla vuota, quindi si sceglie premendo Invio senza scrivere niente. I semidiminuiti hanno per sigla la o barrata, che sulla tastiera italiana non c'e': si trovano scrivendo tre punti, che aprono la ricerca per nome, e poi half.
+La ricerca per nome, con i tre punti, cerca una parola dentro i nomi inglesi di music21: per esempio seventh, ninth, dimin o sus.
+I nomi Italian, French e German sono le seste eccedenti dell'armonia classica, Neapolitan la sesta napoletana e Tristan l'accordo del Tristano di Wagner.
+Le sigle, con il nome di music21 e le note sulla tonica DO:
+   +: Augmented, su DO: DO MI SOL#.
+   +11: Augmented 11Th, su DO: DO RE MI FA SOL# SIb.
+   +13: Augmented Dominant 13Th, su DO: DO RE MI FA SOL# LA SIb.
+   9#5: Augmented Dominant Ninth, su DO: DO MI SOL# SIb RE.
+   +M11: Augmented Major 11Th, su DO: DO RE MI FA SOL# SI.
+   +M13: Augmented Major 13Th, su DO: DO RE MI FA SOL# LA SI.
+   +M9: Augmented Major Ninth, su DO: DO RE MI SOL# SI.
+   +M7: Augmented Major Seventh, su DO: DO MI SOL# SI.
+   7+: Augmented Seventh, su DO: DO MI SOL# SIb.
+   dim: Diminished, su DO: DO MIb SOLb.
+   o11: Diminished 11Th, su DO: DO RE MIb FA SOLb SIbb.
+   ob9: Diminished Minor Ninth, su DO: DO REb MIb SOLb SIbb.
+   o9: Diminished Ninth, su DO: DO RE MIb SOLb SIbb.
+   o7: Diminished Seventh, su DO: DO MIb SOLb SIbb.
+   11: Dominant 11Th, su DO: DO MI SOL SIb RE FA.
+   13: Dominant 13Th, su DO: DO MI SOL SIb RE FA LA.
+   9: Dominant Ninth, su DO: DO MI SOL SIb RE.
+   7: Dominant Seventh, su DO: DO MI SOL SIb.
+   Fr+6: French, su DO: DO RE FA# LAb.
+   Gr+6: German, su DO: DO MIb FA# LAb.
+   o barrata seguita da 11: Half Diminished 11Th, su DO: DO RE MIb FA SOLb SIb.
+   o barrata seguita da 13: Half Diminished 13Th, su DO: DO RE MIb FA SOLb LA SIb.
+   o barrata seguita da b9: Half Diminished Minor Ninth, su DO: DO REb MIb SOLb SIb.
+   o barrata seguita da 9: Half Diminished Ninth, su DO: DO RE MIb SOLb SIb.
+   o barrata seguita da 7: Half Diminished Seventh, su DO: DO MIb SOLb SIb.
+   It+6: Italian, su DO: DO FA# LAb.
+   Sigla vuota, cioe' Invio senza scrivere niente: Major, su DO: DO MI SOL.
+   M11: Major 11Th, su DO: DO MI SOL SI RE FA.
+   M13: Major 13Th, su DO: DO MI SOL SI RE FA LA.
+   M9: Major Ninth, su DO: DO MI SOL SI RE.
+   maj7: Major Seventh, su DO: DO MI SOL SI.
+   6: Major Sixth, su DO: DO MI SOL LA.
+   m: Minor, su DO: DO MIb SOL.
+   m11: Minor 11Th, su DO: DO MIb SOL SIb RE FA.
+   m13: Minor 13Th, su DO: DO MIb SOL SIb RE FA LA.
+   mM11: Minor Major 11Th, su DO: DO RE MIb FA SOL SI.
+   mM13: Minor Major 13Th, su DO: DO RE MIb FA SOL LA SI.
+   mM9: Minor Major Ninth, su DO: DO RE MIb SOL SI.
+   mM7: Minor Major Seventh, su DO: DO MIb SOL SI.
+   m9: Minor Ninth, su DO: DO MIb SOL SIb RE.
+   m7: Minor Seventh, su DO: DO MIb SOL SIb.
+   m6: Minor Sixth, su DO: DO MIb SOL LA.
+   N6: Neapolitan, su DO: DO REb MI SOLb.
+   pedal: Pedal, su DO: DO.
+   power: Power Chord (5), su DO: DO SOL.
+   dom7dim5: Seventh Flat Five, su DO: DO MI SOLb SIb.
+   sus: Suspended Fourth, su DO: DO FA SOL.
+   7sus: Suspended Fourth Seventh, su DO: DO FA SOL SIb.
+   sus2: Suspended Second, su DO: DO RE SOL.
+   tristan: Tristan, su DO: DO RE# FA# LA#.
 
  Guida
 

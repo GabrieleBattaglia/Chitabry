@@ -39,3 +39,59 @@ def test_la_descrizione_salta_i_commenti(tmp_path):
     vecchia.write_bytes("! vecchia\nMaqam Sab\xe1\n".encode("latin-1"))
     assert scale_catalog.descrizione_scl(vecchia) == "Maqam Sabá"
     assert scale_catalog.descrizione_scl(tmp_path / "manca.scl") == ""
+
+
+def test_il_sol_blues_ha_la_grafia_giusta():
+    from music21 import pitch
+    sol_blues = scale_catalog.scala_comune(pitch.Pitch("G4"), "blues")
+    assert [p.nameWithOctave for p in sol_blues.pitches] == ["G4", "B-4", "C5", "D-5", "D5", "F5", "G5"]
+    usi = scale_catalog.get_scale_from_usi("comune:G4:blues")
+    assert [p.name for p in usi.pitches] == ["G", "B-", "C", "D-", "D", "F", "G"]
+    with pytest.raises(scale_catalog.ScaleException):
+        scale_catalog.get_scale_from_usi("comune:G4:inesistente")
+
+
+def test_ogni_scala_comune_si_costruisce_su_ogni_tonica():
+    from music21 import pitch
+    for tonica in ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"):
+        for chiave, _nome, intervalli, _formula in scale_catalog.SCALE_COMUNI:
+            altezze = scale_catalog.scala_comune(pitch.Pitch(tonica + "4"), chiave).pitches
+            assert len(altezze) == len(intervalli) + 1, (tonica, chiave)
+            semitoni = [round(p.ps - altezze[0].ps) for p in altezze]
+            assert semitoni == sorted(semitoni) and semitoni[-1] == 12, (tonica, chiave)
+            assert len({s % 12 for s in semitoni}) == len(intervalli), (tonica, chiave)
+
+
+def test_il_catalogo_ha_i_tre_gruppi(catalogo):
+    comuni = [v for v in catalogo if v["paradigm"] == "comune"]
+    # Il catalogo e' ordinato per nome: conta che ci siano tutte, una volta sola
+    assert sorted(v["programmatic_id"] for v in comuni) == sorted(c[0] for c in scale_catalog.SCALE_COMUNI)
+    assert all(v["descrizione"] for v in comuni)
+    assert all(v["descrizione"] for v in catalogo if v["paradigm"] == "concrete")
+
+
+def test_la_scelta_del_tipo_in_tre_gruppi(catalogo, monkeypatch):
+    import config
+    import esercizio_scale
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    monkeypatch.setattr(scale_catalog, "SCALE_CATALOG", catalogo)
+    risposte = iter(["1", "blues", "2", "Major", "3"])
+    viste = []
+
+    def menu_finto(**opzioni):
+        viste.append(opzioni["d"])
+        return next(risposte)
+
+    monkeypatch.setattr(esercizio_scale, "menu", menu_finto)
+    cercate = []
+
+    def ricerca_finta(voci, prompt, tipo):
+        cercate.append(voci)
+        return next(chiave for chiave, testo in voci.items() if "breed-blues1" in testo)
+
+    monkeypatch.setattr(esercizio_scale, "fuzzy_search_and_select", ricerca_finta)
+    assert esercizio_scale._scegli_tipo("G") == "comune:blues"
+    assert "1 b3 4 b5 5 b7" in viste[1]["blues"]
+    assert esercizio_scale._scegli_tipo("G") == "concrete:MajorScale"
+    assert esercizio_scale._scegli_tipo("G") == "scala:breed-blues1"
+    assert len(cercate[0]) > 3900

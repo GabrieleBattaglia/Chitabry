@@ -83,13 +83,16 @@ def costruisci_cataloghi():
     """Interroga music21 una volta sola per i tipi di scale e di accordi."""
     print("Analisi libreria music21 per scale e accordi...")
     scale_catalog.SCALE_CATALOG = scale_catalog.build_scale_catalog()
-    tipi = {"...": ">> Inserisci USI manualmente..."}
+    tipi = {}
+    quanti = {}
     for scale_info in scale_catalog.SCALE_CATALOG:
         chiave = f"{scale_info['paradigm']}:{scale_info['programmatic_id']}"
         tipi[chiave] = scale_info['friendly_name']
+        quanti[scale_info['paradigm']] = quanti.get(scale_info['paradigm'], 0) + 1
     scale_catalog.SCALE_TYPES_DICT = tipi
     scale_catalog.USER_CHORD_DICT = scale_catalog.get_user_chord_dictionary()
-    print(f"Riconosciuti {len(tipi)} tipi di scale e {len(scale_catalog.USER_CHORD_DICT) - 1} tipi di accordi.")
+    print(f"Riconosciuti {len(tipi)} tipi di scale, {quanti.get('comune', 0)} comuni, {quanti.get('concrete', 0)} di music21 "
+          f"e {quanti.get('scala', 0)} dell'archivio Scala, e {len(scale_catalog.USER_CHORD_DICT) - 1} tipi di accordi.")
 
 
 AZIONI = {

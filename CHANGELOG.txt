@@ -2,6 +2,16 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.5.0 (7 ottobre 2026)
+Le scale di tutti i giorni, con i nomi italiani, e una scelta del tipo di scala che si capisce.
+*   Venti scale comuni, temperate e con i nomi italiani: maggiore, le tre minori, i sette modi, le due pentatoniche, la blues e la blues maggiore, le due bebop, la frigia dominante, i toni interi, le due diminuite e la cromatica. music21 non le aveva, o non in una forma da studiare: la sola blues era la Weighted Hexatonic Blues, che a ogni esecuzione decide da se' se mettere la quinta diminuita, e le pentatoniche normali mancavano. Le note hanno la grafia della teoria: il SOL blues ha il REb, non il DO#.
+*   La blues e' quella dell'armonica in seconda posizione: con la tonica SOL, su un'armonica in DO, la tablatura dell'ottava comoda e' -2 -3/ +4 -4/ -4 -5 +6.
+*   Il tipo di scala si sceglie in due passi: prima il gruppo, cioe' le scale comuni, le classi di music21 o l'archivio Scala, poi la scala nel gruppo. Nei primi due si scrive l'inizio del nome, nel terzo una parola della descrizione. Il menu unico di prima si filtrava con l'inizio di chiavi tecniche come concrete:MajorScale o scala:05-19, e scrivendo blues non usciva niente.
+*   Accanto alle classi di music21, che hanno i nomi inglesi, c'e' la spiegazione in italiano.
+*   All'avvio Chitabry dice quante scale ha trovato in ogni gruppo: 3973, di cui 20 comuni, 21 di music21 e 3932 dell'archivio Scala.
+*   Guida: un capitolo nuovo, music21: scale e accordi, con i tre gruppi, le formule delle scale comuni, le classi di music21 spiegate, le parole utili per cercare nell'archivio Scala, e le cinquanta sigle degli accordi con il nome e le note su DO. Dice anche come scegliere la triade maggiore, che ha la sigla vuota, e i semidiminuiti, che hanno la o barrata. La guida passa alla revisione 17.
+*   Quattro prove nuove, 129 in tutto.
+
 Versione 9.3.2 (7 ottobre 2026)
 Il catalogo delle scale dice cosa sono le scale dell'archivio Scala, e non contiene piu' classi che scale non sono.
 *   Le 3932 scale dell'archivio Scala si chiamavano tutte con il nome del loro file, per esempio 05-19, che non dice niente: Chitabry chiedeva la descrizione a una funzione che music21 non ha piu', e senza dirlo teneva il nome del file. Adesso la descrizione si legge dal file stesso, e quella scala si chiama 5 out of 19-tET. La ricerca per parola trova finalmente le scale per quello che sono: blues ne trova otto, pentatonic quarantatre, raga diciannove. Le descrizioni sono quelle dell'archivio, in inglese. Leggerle tutte all'avvio costa due decimi di secondo.

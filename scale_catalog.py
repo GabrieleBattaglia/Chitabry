@@ -4,6 +4,9 @@
 # e il file system sollevano davvero, e ogni errore rilanciato conserva la causa.
 # Dalla 9.3.2 le scale dell'archivio Scala portano la loro descrizione, letta
 # dal file, e le classi generiche di music21 non stanno piu' nel catalogo.
+# Dalla 9.5.0 il catalogo ha un terzo paradigma, comune: le scale di tutti i
+# giorni, temperate e con i nomi italiani, che music21 non ha, o non ha in
+# una forma che si possa esercitare, come la blues.
 
 import inspect
 import re
@@ -13,6 +16,56 @@ from music21 import harmony, pitch, scale
 from music21.exceptions21 import Music21Exception
 
 SCALE_CATALOG: list[dict] = []
+# Le scale comuni: chiave, nome italiano, intervalli dalla tonica come li
+# scrive music21, e la formula in gradi. Gli intervalli, e non i semitoni,
+# danno la grafia giusta: il SOL blues ha il REb, non il DO#.
+SCALE_COMUNI = (
+    ("maggiore", "maggiore", ("P1", "M2", "M3", "P4", "P5", "M6", "M7"), "1 2 3 4 5 6 7, il modo ionio"),
+    ("minore_naturale", "minore naturale", ("P1", "M2", "m3", "P4", "P5", "m6", "m7"), "1 2 b3 4 5 b6 b7, il modo eolio"),
+    ("minore_armonica", "minore armonica", ("P1", "M2", "m3", "P4", "P5", "m6", "M7"), "1 2 b3 4 5 b6 7"),
+    ("minore_melodica", "minore melodica", ("P1", "M2", "m3", "P4", "P5", "M6", "M7"), "1 2 b3 4 5 6 7, quella del jazz, uguale in salita e in discesa"),
+    ("dorica", "dorica", ("P1", "M2", "m3", "P4", "P5", "M6", "m7"), "1 2 b3 4 5 6 b7"),
+    ("frigia", "frigia", ("P1", "m2", "m3", "P4", "P5", "m6", "m7"), "1 b2 b3 4 5 b6 b7"),
+    ("lidia", "lidia", ("P1", "M2", "M3", "A4", "P5", "M6", "M7"), "1 2 3 #4 5 6 7"),
+    ("misolidia", "misolidia", ("P1", "M2", "M3", "P4", "P5", "M6", "m7"), "1 2 3 4 5 6 b7"),
+    ("locria", "locria", ("P1", "m2", "m3", "P4", "d5", "m6", "m7"), "1 b2 b3 4 b5 b6 b7"),
+    ("pentatonica_maggiore", "pentatonica maggiore", ("P1", "M2", "M3", "P5", "M6"), "1 2 3 5 6"),
+    ("pentatonica_minore", "pentatonica minore", ("P1", "m3", "P4", "P5", "m7"), "1 b3 4 5 b7"),
+    ("blues", "blues", ("P1", "m3", "P4", "d5", "P5", "m7"), "1 b3 4 b5 5 b7, la pentatonica minore con la quinta diminuita: quella dell'armonica in seconda posizione"),
+    ("blues_maggiore", "blues maggiore", ("P1", "M2", "m3", "M3", "P5", "M6"), "1 2 b3 3 5 6, la pentatonica maggiore con la terza minore"),
+    ("bebop_dominante", "bebop dominante", ("P1", "M2", "M3", "P4", "P5", "M6", "m7", "M7"), "1 2 3 4 5 6 b7 7, la misolidia con la settima maggiore di passaggio"),
+    ("bebop_maggiore", "bebop maggiore", ("P1", "M2", "M3", "P4", "P5", "m6", "M6", "M7"), "1 2 3 4 5 b6 6 7, la maggiore con la sesta minore di passaggio"),
+    ("frigia_dominante", "frigia dominante", ("P1", "m2", "M3", "P4", "P5", "m6", "m7"), "1 b2 3 4 5 b6 b7, quella del flamenco e della musica ebraica"),
+    ("toni_interi", "toni interi", ("P1", "M2", "M3", "A4", "A5", "m7"), "1 2 3 #4 #5 b7, l'esatonale"),
+    ("diminuita_tono_semitono", "diminuita tono semitono", ("P1", "M2", "m3", "P4", "d5", "m6", "M6", "M7"), "1 2 b3 4 b5 b6 6 7, l'ottatonica che comincia con un tono"),
+    ("diminuita_semitono_tono", "diminuita semitono tono", ("P1", "m2", "m3", "M3", "A4", "P5", "M6", "m7"), "1 b2 b3 3 #4 5 6 b7, l'ottatonica che comincia con un semitono"),
+    ("cromatica", "cromatica", ("P1", "m2", "M2", "m3", "M3", "P4", "A4", "P5", "m6", "M6", "m7", "M7"), "le dodici note"),
+)
+_COMUNI_PER_CHIAVE = {voce[0]: voce for voce in SCALE_COMUNI}
+# Le classi di music21 dette in italiano, per il menu del secondo gruppo.
+DESCRIZIONI_MUSIC21 = {
+    "ChromaticScale": "cromatica, le dodici note",
+    "DorianScale": "dorica",
+    "HarmonicMinorScale": "minore armonica",
+    "HypoaeolianScale": "ipoeolia, cioe' l'eolia plagale, che si stende dalla quarta sotto la tonica alla quinta sopra",
+    "HypodorianScale": "ipodorica, la dorica plagale, dalla quarta sotto la tonica alla quinta sopra",
+    "HypolocrianScale": "ipolocria, la locria plagale, dalla quarta sotto la tonica alla quinta sopra",
+    "HypolydianScale": "ipolidia, la lidia plagale, dalla quarta sotto la tonica alla quinta sopra",
+    "HypomixolydianScale": "ipomisolidia, la misolidia plagale, dalla quarta sotto la tonica alla quinta sopra",
+    "HypophrygianScale": "ipofrigia, la frigia plagale, dalla quarta sotto la tonica alla quinta sopra",
+    "LocrianScale": "locria",
+    "LydianScale": "lidia",
+    "MajorScale": "maggiore",
+    "MelodicMinorScale": "minore melodica: sale con la sesta e la settima maggiori, scende come la naturale",
+    "MinorScale": "minore naturale",
+    "MixolydianScale": "misolidia",
+    "OctatonicScale": "ottatonica, la diminuita tono semitono",
+    "PhrygianScale": "frigia",
+    "RagAsawari": "raga Asawari, indiano, con la salita e la discesa diverse",
+    "RagMarwa": "raga Marwa, indiano, con la salita e la discesa diverse",
+    "WeightedHexatonicBlues": "blues probabilistica: a ogni esecuzione music21 decide se mettere la quinta diminuita",
+    "WholeToneScale": "toni interi, l'esatonale",
+}
 # Le classi di music21 che non sono scale ma basi per costruirne: istanziate
 # con la sola tonica danno una scala vuota, di due o tre note, o ripetono la
 # cromatica e la maggiore. Fino alla 9.3.1 stavano nel catalogo come scale.
@@ -74,6 +127,17 @@ def _format_friendly_name(programmatic_id, paradigm):
     elif paradigm == 'scala':
         name = ' '.join(a.capitalize() for a in name.split('_'))
     return name.strip()
+
+def scala_comune(tonica, chiave):
+    """La scala comune indicata dalla chiave, costruita sulla tonica, che e'
+    un pitch di music21, fino all'ottava sopra. UnknownScaleError se la
+    chiave non c'e'."""
+    voce = _COMUNI_PER_CHIAVE.get(chiave)
+    if voce is None:
+        raise UnknownScaleError("comune", chiave)
+    altezze = [tonica.transpose(intervallo) for intervallo in voce[2]] + [tonica.transpose("P8")]
+    return scale.ConcreteScale(tonic=tonica, pitches=altezze)
+
 
 def descrizione_scl(percorso) -> str:
     """La riga di descrizione di un file .scl dell'archivio Scala: per il
@@ -168,6 +232,12 @@ def build_scale_catalog() -> list[dict]:
     catalog = []
     processed_ids = set() # Per evitare ID duplicati
 
+    # --- Paradigma 0: le scale comuni di Chitabry ---
+    # Le chiavi non entrano in processed_ids: hanno un paradigma loro, e un
+    # file Scala con lo stesso nome restera' una scala diversa.
+    for chiave, nome, _intervalli, formula in SCALE_COMUNI:
+        catalog.append({'programmatic_id': chiave, 'friendly_name': nome, 'paradigm': 'comune', 'descrizione': formula})
+
     # --- Paradigma 1: Sottoclassi ConcreteScale ---
     print("   Analisi classi ConcreteScale...")
     try:
@@ -181,8 +251,8 @@ def build_scale_catalog() -> list[dict]:
                 catalog.append({
                     'programmatic_id': prog_id,
                     'friendly_name': _format_friendly_name(prog_id, 'concrete'),
-                    'paradigm': 'concrete'
-                    # 'class': cls # Rimosso per semplicità
+                    'paradigm': 'concrete',
+                    'descrizione': DESCRIZIONI_MUSIC21.get(prog_id, ""),
                 })
                 processed_ids.add(prog_id)
     except (TypeError, AttributeError) as e:
@@ -271,6 +341,12 @@ def get_scale_from_usi(usi_string: str) -> scale.Scale:
             raise ScaleException("Classe ScalaScale non trovata.") from e
         except (Music21Exception, OSError, TypeError, ValueError) as e:
             raise ScaleException(f"Errore istanziazione ScalaScale('{tonic_str}', '{scl_filename}'): {e}") from e
+
+    elif paradigm == 'comune':
+        try:
+            return scala_comune(tonic_pitch, scale_id)
+        except (Music21Exception, TypeError, ValueError) as e:
+            raise ScaleException(f"Errore costruzione della scala comune {scale_id} su {tonic_str}: {e}") from e
 
     elif paradigm == 'custom':
         try:
