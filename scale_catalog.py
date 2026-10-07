@@ -2,6 +2,8 @@
 # Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 # Revisione 1 del 2026-09-09: le eccezioni catturate sono quelle che music21
 # e il file system sollevano davvero, e ogni errore rilanciato conserva la causa.
+# Dalla 9.3.2 le scale dell'archivio Scala portano la loro descrizione, letta
+# dal file, e le classi generiche di music21 non stanno piu' nel catalogo.
 
 import inspect
 import re
@@ -11,6 +13,11 @@ from music21 import harmony, pitch, scale
 from music21.exceptions21 import Music21Exception
 
 SCALE_CATALOG: list[dict] = []
+# Le classi di music21 che non sono scale ma basi per costruirne: istanziate
+# con la sola tonica danno una scala vuota, di due o tre note, o ripetono la
+# cromatica e la maggiore. Fino alla 9.3.1 stavano nel catalogo come scale.
+CLASSI_GENERICHE = frozenset({"ConcreteScale", "CyclicalScale", "OctaveRepeatingScale", "SieveScale",
+                              "ScalaScale", "DiatonicScale"})
 SCALE_TYPES_DICT: dict[str, str] = {}
 USER_CHORD_DICT: dict[str, str] = {}
 
@@ -51,7 +58,8 @@ def _find_scale_subclasses(base_class):
     for subclass in subclasses:
         if subclass.__module__.startswith('music21.key'):
             continue
-        if not inspect.isabstract(subclass) and issubclass(subclass, scale.ConcreteScale):
+        if (not inspect.isabstract(subclass) and issubclass(subclass, scale.ConcreteScale)
+                and subclass.__name__ not in CLASSI_GENERICHE):
             found_classes.add(subclass)
         found_classes.update(_find_scale_subclasses(subclass))
     return found_classes
@@ -66,6 +74,28 @@ def _format_friendly_name(programmatic_id, paradigm):
     elif paradigm == 'scala':
         name = ' '.join(a.capitalize() for a in name.split('_'))
     return name.strip()
+
+def descrizione_scl(percorso) -> str:
+    """La riga di descrizione di un file .scl dell'archivio Scala: per il
+    formato e' la prima che non comincia con il punto esclamativo, che apre i
+    commenti, e puo' anche essere vuota. I file sono in utf-8 o, i piu'
+    vecchi, in latin-1, che legge qualunque byte.
+    Fino alla 9.3.1 la descrizione si chiedeva a getScaleInfo, che music21
+    non ha piu': ogni voce restava con il nome del file, come 05-19, e la
+    ricerca per parola non trovava le scale per quello che sono."""
+    for codifica in ("utf-8", "latin-1"):
+        try:
+            with open(percorso, encoding=codifica) as f:
+                for riga in f:
+                    if not riga.startswith("!"):
+                        return riga.strip()
+            return ""
+        except UnicodeDecodeError:
+            continue
+        except OSError:
+            return ""
+    return ""
+
 
 def get_user_chord_dictionary() -> dict[str, str]:
     """
@@ -175,16 +205,11 @@ def build_scale_catalog() -> list[dict]:
             try:
                 scl_path = Path(scl_path_obj) # Assicura sia Path
                 prog_id = scl_path.stem
-                filename_scl = scl_path.name
 
                 if prog_id not in processed_ids and scl_path.is_file():
                     friendly_name_raw = _format_friendly_name(prog_id, 'scala')
-                    description = friendly_name_raw
-                    try:
-                        scale_info_data = scale.scala.getScaleInfo(filename_scl)
-                        description = scale_info_data.get('description', friendly_name_raw)
-                    except (Music21Exception, OSError, KeyError, ValueError, AttributeError):
-                        description = friendly_name_raw  # La descrizione e' un di piu': senza, resta il nome
+                    # La descrizione e' un di piu': senza, resta il nome del file
+                    description = descrizione_scl(scl_path)
 
                     catalog.append({
                         'programmatic_id': prog_id,

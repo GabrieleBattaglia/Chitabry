@@ -2,6 +2,12 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.3.2 (7 ottobre 2026)
+Il catalogo delle scale dice cosa sono le scale dell'archivio Scala, e non contiene piu' classi che scale non sono.
+*   Le 3932 scale dell'archivio Scala si chiamavano tutte con il nome del loro file, per esempio 05-19, che non dice niente: Chitabry chiedeva la descrizione a una funzione che music21 non ha piu', e senza dirlo teneva il nome del file. Adesso la descrizione si legge dal file stesso, e quella scala si chiama 5 out of 19-tET. La ricerca per parola trova finalmente le scale per quello che sono: blues ne trova otto, pentatonic quarantatre, raga diciannove. Le descrizioni sono quelle dell'archivio, in inglese. Leggerle tutte all'avvio costa due decimi di secondo.
+*   Sei delle 27 classi di music21 non sono scale ma le basi da cui music21 le costruisce, e con la sola tonica davano una scala vuota, di due o tre note, oppure una copia della cromatica o della maggiore: ConcreteScale, CyclicalScale, OctaveRepeatingScale, SieveScale, ScalaScale e DiatonicScale. Non stanno piu' nel catalogo.
+*   Tre prove nuove, 125 in tutto.
+
 Versione 9.3.0 (7 ottobre 2026)
 Arrivano le cromatiche a dieci fori, come la JDR Trochilus, le cromatiche senza valvole e le armoniche del registro basso.
 *   La cromatica Solo si puo' avere anche a dieci fori, da DO4 a FA6 per quella in DO, e la Richter e la Paddy Richter si possono avere anche come cromatiche a dieci fori con il cursore: sono la Trochilus Blues e la Trochilus Pop, che a cursore premuto diventano la stessa armonica un semitono sopra.
