@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 23, di mercoledi' 7 ottobre 2026, per la versione 9.10.0.
+L'ultima revisione di questo documento e' la numero 24, di mercoledi' 7 ottobre 2026, per la versione 9.10.15.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -48,12 +48,13 @@ Indice Dettagliato degli Argomenti:
 12. Impostazioni.
    - 12.1. Gestisci Strumenti.
    - 12.2. Cambia nomenclatura.
-   - 12.3. Modifica suono 1 (Accordi).
-   - 12.4. Modifica suono 2 (Sintetico).
-   - 12.5. Seleziona Strumento MIDI.
-   - 12.6. Connetti Tastiera MIDI.
-   - 12.7. Volume MIDI.
-   - 12.8. Banco di suoni.
+   - 12.3. Cambia Tipo Suono Attivo.
+   - 12.4. Modifica suono 1 (Accordi).
+   - 12.5. Modifica suono 2 (Sintetico).
+   - 12.6. Seleziona Strumento MIDI.
+   - 12.7. Connetti Tastiera MIDI.
+   - 12.8. Volume MIDI.
+   - 12.9. Banco di suoni.
 13. Nota sul manico.
 14. Trova Posizione.
 15. Armonica a bocca.
@@ -268,7 +269,7 @@ Questa funzione avvia l'accordatore acustico cromatico in tempo reale per il tuo
 
 8.1. Il processo.
 1. All'avvio, l'applicazione chiede se desideri il rilevamento automatico della periferica attiva. Se rispondi Sì (INVIO), ascolta tutte le periferiche insieme per 5 secondi e tiene quelle con un segnale sopra i 46 dB. Mentre ascolta, una riga si riscrive ogni mezzo secondo con i secondi passati e il volume piu' forte sentito fin li', per esempio: Ascolto 3/5 s, picco 62 dB. Le periferiche che non si lasciano ascoltare insieme alle altre si riprovano una per volta, e la riga dice Riprovo 1/2. Se rispondi No (ESC), o se non viene rilevato alcun segnale, viene mostrata la lista di tutti i dispositivi di input disponibili sul sistema.
-2. Viene presentata la lista dei dispositivi, numerata: seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS). Dopo il rilevamento i dispositivi sono in ordine dal segnale piu' forte, con il volume accanto, e Invio senza scrivere niente sceglie il primo. Senza rilevamento il primo e' il dispositivo di ingresso predefinito del sistema, e Invio sceglie quello.
+2. Viene presentata la lista dei dispositivi, numerata: seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS). Dopo il rilevamento i dispositivi sono in ordine dal segnale piu' forte, con il volume accanto, e Invio senza scrivere niente sceglie il primo. Senza rilevamento, o se il rilevamento non sente niente, il primo e' il dispositivo di ingresso predefinito del sistema, e Invio sceglie quello. Con un solo dispositivo la lista non c'e': Chitabry lo sceglie da solo e ne scrive il nome, per esempio Dispositivo di input: Microfono [WASAPI].
 3. Suona una corda sul tuo strumento. L'accordatore mostrerà in tempo reale:
    - La nota rilevata (espressa nella nomenclatura attiva in Impostazioni), preceduta da "N:".
    - La deviazione in centesimi di semitono (espressa in percentuale), es. "(+12%)" o "(-5%)". Deviazione positiva indica nota crescente (allenta), negativa indica calante (tendi).
@@ -281,8 +282,8 @@ Questa funzione avvia l'accordatore acustico cromatico in tempo reale per il tuo
    - Volumi (dB): minimo (mediano) massimo.
 
 8.2. Come riconosce la nota.
-Dalla versione 9.8 l'accordatore riconosce la nota con YIN, il metodo di de Cheveigne' e Kawahara usato dagli accordatori e dai programmi di analisi della voce. Legge da 27,5 Hz, il LA piu' grave del pianoforte, che tiene dentro il SI grave del basso a cinque corde, fino a 4500 Hz, sopra la cima delle armoniche piu' acute. Fino alla 9.6 leggeva da 50 a 2000 Hz: il MI e il SI gravi del basso non si leggevano, e il foro 10 soffiato di un'armonica in DO, un DO7 a 2093 Hz, risultava un'ottava sotto.
-Misurato su toni sintetici di frequenza nota, dal SI0 al LA7, con e senza rumore: nel registro centrale la nota e' giusta a meno di un centesimo e non ci sono errori d'ottava, che prima erano fra l'uno e il cinque per cento delle letture. Nelle note piu' acute la precisione scende a qualche centesimo.
+Dalla versione 9.8 l'accordatore riconosce la nota con YIN, il metodo di de Cheveigne' e Kawahara usato dagli accordatori e dai programmi di analisi della voce. Legge da 27,5 Hz, il LA piu' grave del pianoforte, anche un po' calante, e quindi anche il SI grave del basso a cinque corde, fino a 4500 Hz, sopra la cima delle armoniche piu' acute. Ascolta a blocchi di circa 85 millesimi, anche quando la scheda audio lavora a 96 o 192 kHz. Fino alla 9.6 leggeva da 50 a 2000 Hz: il MI e il SI gravi del basso non si leggevano, e il foro 10 soffiato di un'armonica in DO, un DO7 a 2093 Hz, risultava un'ottava sotto.
+Misurato su toni sintetici di frequenza nota, dal LA0 al DO8: nel registro centrale la nota e' giusta a meno di un centesimo, e senza rumore o con un rumore fino a una dozzina di decibel sotto il segnale non ci sono errori d'ottava. Con un rumore piu' forte qualche lettura su cento cade un'ottava sotto, e la mediana di ogni secondo la toglie. Il metodo di prima sbagliava d'ottava tutto cio' che stava sopra i 1900 Hz. Nelle note piu' acute la precisione scende a qualche centesimo.
 La riga si aggiorna una volta al secondo, con la mediana delle letture di quel secondo, una decina, cosi' una lettura sbagliata isolata non arriva a schermo. Se la nota e' la stessa del secondo prima, entro trenta centesimi, la lettura si media con quella precedente, per una riga piu' ferma; se e' cambiata, si riparte subito dalla nota nuova. Fino alla 9.6 la media mescolava anche due note diverse, e passando da DO4 a RE4 la riga diceva DO#4 per un paio di secondi.
 
 9. Scale.
@@ -366,21 +367,23 @@ Qui potete configurare alcuni parametri di Chitabry:
 Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo 15, Armonica a bocca.
 12.2. Cambia nomenclatura.
 Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
-12.3. Modifica suono 1 (Accordi).
+12.3. Cambia Tipo Suono Attivo.
+Sceglie il suono con cui Chitabry suona le note: 1 la sintesi Karplus-Strong, 2 la sintesi a onda semplice, 3 lo strumento MIDI di Windows, 4 il banco di suoni. Se scegli il banco e non ce n'e' ancora uno pronto, parte la configurazione descritta al sottocapitolo 12.9, Banco di suoni. Dove la barra spaziatrice cambia suono, gira fra gli stessi suoni, e il banco entra nel giro solo quando e' pronto.
+12.4. Modifica suono 1 (Accordi).
 Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
-12.4. Modifica suono 2 (Sintetico).
+12.5. Modifica suono 2 (Sintetico).
 Permette di configurare i parametri del sintetizzatore ad onda semplice: la forma d'onda e l'inviluppo, cioe' come la nota nasce, si assesta e si spegne. L'inviluppo ha quattro valori. Attacco, decadimento e rilascio sono tempi in millesimi di secondo: l'attacco e' quanto la nota ci mette a raggiungere il volume pieno, il decadimento quanto ci mette a scendere dal picco al livello di mantenimento, il rilascio quanto ci mette a spegnersi quando lasciate il tasto. Il mantenimento invece non e' un tempo ma un livello, in percentuale del volume: e' il volume a cui la nota resta finche' la tenete. Con i valori di serie, dieci millesimi di attacco, sessanta di decadimento, settanta per cento di mantenimento e centoventi millesimi di rilascio, la nota parte subito, fa un gradino udibile e si chiude senza strascicare. Un attacco lungo fa sentire la nota in ritardo rispetto a quando avete premuto: fino alla versione 8.1.0 questi valori erano percentuali della durata della nota, e i valori di serie facevano un attacco di centottanta millesimi.
-12.5. Seleziona Strumento MIDI.
-Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome.
-12.6. Connetti Tastiera MIDI.
+12.6. Seleziona Strumento MIDI.
+Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome. Scegliere lo strumento attiva anche il suono MIDI, tranne quando il suono attivo e' il banco: il banco suona con lo stesso strumento, e resta attivo.
+12.7. Connetti Tastiera MIDI.
 Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
-12.7. Volume MIDI.
+12.8. Volume MIDI.
 Il volume delle note suonate con il suono MIDI, da 0 a 100: vale per lo strumento MIDI scelto e per l'armonica, che suona sul suo canale. Non tocca il battito del metronomo nell'esercizio delle scale, che prende il volume dal preset attivo del metronomo, accento e battito ciascuno con il suo.
-12.8. Banco di suoni.
+12.9. Banco di suoni.
 Il quarto suono di Chitabry, accanto ai due sintetici e al MIDI: un banco General MIDI, cioe' un file sf2 o sf3, suonato da FluidSynth, lo stesso motore che usa MeTeOra. Serve quando lo strumento del sintetizzatore di Windows non piace, come l'armonica, che li' ha un vibrato che non si toglie: nel banco SGM, per esempio, l'armonica e' ferma.
 La prima volta, se FluidSynth non c'e', Chitabry chiede se scaricarlo dalla pagina ufficiale su GitHub, e mostra i megabyte che arrivano. Poi chiede se cercare i banchi su tutti i dischi fissi: la ricerca puo' durare qualche minuto, una riga dice le cartelle visitate, e ESC la ferma. Si tengono solo i banchi General MIDI completi, con i 128 strumenti e la batteria.
-Nell'elenco, numerato, ogni banco ha il nome, la dimensione e la cartella; c'e' anche il banco attuale, se ce n'e' uno, e la voce per scaricare FluidR3 GM, il banco libero di FluidSynth, 148 MB. Scelto il banco, Chitabry chiede il volume, da 0 a 1, e se usarlo come suono attivo; da li' in poi la barra spaziatrice lo comprende nel giro dei suoni, con la sigla BAN.
-Lo strumento e' quello scelto alla voce Seleziona Strumento MIDI, e con un'armonica attiva le sue note suonano con lo strumento Harmonica. Le note si preparano in memoria, una per una, e passano dal mixer di Chitabry come quelle sintetiche: nell'esercizio delle scale il battito del metronomo e' quello del preset e arriva insieme alla nota. Ogni strumento del banco viene pareggiato sul suo DO centrale, perche' nei banchi gli strumenti hanno volumi molto diversi, e il volume del banco vale uguale per tutti. Anche le note fuori dal temperamento, come quelle di molte scale dell'archivio Scala, suonano alla frequenza giusta.
+Nell'elenco, numerato, ogni banco ha il nome, la dimensione e la cartella; c'e' anche il banco attuale, se ce n'e' uno, e la voce per scaricare FluidR3 GM, il banco libero di FluidSynth, 148 MB. Se non c'e' nessun banco da scegliere, Chitabry chiede prima di scaricare FluidR3, e ESC lascia tutto com'e'. Scelto il banco, Chitabry chiede il volume, da 0 a 1, e se usarlo come suono attivo; da li' in poi la barra spaziatrice lo comprende nel giro dei suoni, con la sigla BAN.
+Lo strumento e' quello scelto alla voce Seleziona Strumento MIDI, e con un'armonica attiva le sue note suonano con lo strumento Harmonica. Le note si preparano in memoria, una per una, e passano dal mixer di Chitabry come quelle sintetiche: nell'esercizio delle scale il battito del metronomo e' quello del preset e arriva insieme alla nota. Ogni strumento del banco viene pareggiato sul suo DO centrale, perche' nei banchi gli strumenti hanno volumi molto diversi, e il volume del banco vale uguale per tutti: il livello si misura su una nota lunga, cosi' anche gli archi e i pad, che crescono piano, non superano gli altri. Sulla Tastiera una nota tenuta suona fino a otto secondi, e poi si spegne con il rilascio del suo strumento. Anche le note fuori dal temperamento, come quelle di molte scale dell'archivio Scala, suonano alla frequenza giusta.
 FluidSynth e i banchi scaricati stanno nelle cartelle fluidsynth e banchi, accanto al programma.
 
 13. Nota sul manico.

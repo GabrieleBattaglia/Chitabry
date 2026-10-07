@@ -22,17 +22,24 @@ BLOCK_SIZE = 4096
 RMS_THRESHOLD = 0.002
 # YIN: il primo minimo della differenza normalizzata sotto la soglia da' il
 # periodo; se nessuno ci scende, sotto quella di ripiego. Misurato su toni
-# sintetici dal MI1 al LA7, puliti e con rumore: con 0,15 nessun errore
-# d'ottava, dove l'autocorrelazione di prima ne faceva dall'uno al cinque per
-# cento nel registro centrale e li sbagliava tutti sopra i 1900 Hz.
+# sintetici dal LA0 al DO8: senza rumore nessun errore d'ottava, e nemmeno
+# con un rumore fino a una dozzina di decibel sotto il segnale; piu' forte,
+# qualche lettura su cento sbaglia, e la mediana di ogni secondo la toglie.
+# L'autocorrelazione di prima sbagliava tutto cio' che stava sopra i 1900 Hz.
 SOGLIA_YIN = 0.15
 SOGLIA_RIPIEGO = 0.35
+# I passi del ritardo per campione: la differenza si calcola ogni quarto di
+# campione. Nelle note sopra i 3 kHz un periodo dura una dozzina di campioni,
+# e ai ritardi interi le armoniche non tornano in fase: nessuno scendeva
+# sotto la soglia, e il LA7 e il DO8 si leggevano un'ottava sotto.
+PASSI_PER_CAMPIONE = 4
 # L'estensione: dal LA0 del pianoforte, che tiene dentro il SI0 del basso a
 # cinque corde, 31 Hz, alla cima delle armoniche acute,
 # come il FA#7 di un'armonica in FA#. Fino alla 9.6 era da 50 a 2000 Hz, e il
 # foro 10 soffiato di un'armonica in DO, un DO7 a 2093 Hz, si leggeva
-# un'ottava sotto.
-FREQUENZA_MINIMA = 27.5
+# un'ottava sotto. Il limite basso sta mezzo semitono sotto il LA0, cosi' si
+# legge anche un LA0 calante, o intonato con le letture appena sotto i 27,5.
+FREQUENZA_MINIMA = 27.5 * 2 ** (-50 / 1200)
 FREQUENZA_MASSIMA = 4500.0
 # Media mobile esponenziale sulla frequenza mostrata, per un display stabile,
 # ma solo fra due secondi che danno la stessa nota: entro trenta centesimi.
@@ -57,10 +64,10 @@ def rileva_frequenza(mono, sr):
     Kawahara: la differenza quadratica fra il segnale e se stesso spostato,
     normalizzata con la sua media cumulata, ha un minimo al periodo, e il
     primo minimo sotto la soglia evita gli errori d'ottava che il picco piu'
-    alto dell'autocorrelazione commette. La parabola sulla differenza grezza
-    raffina il periodo fra due campioni: nelle note acute, dove un periodo e'
-    di venti campioni, porta l'ancia da quaranta a novanta letture su cento
-    entro cinque centesimi. Restituisce 0.0 se il blocco non ha una nota."""
+    alto dell'autocorrelazione commette. La differenza si calcola ogni quarto
+    di campione, e la parabola sul suo minimo raffina ancora il periodo:
+    nelle note acute, dove un periodo dura pochi campioni, i ritardi interi
+    non bastano a trovarlo. Restituisce 0.0 se il blocco non ha una nota."""
     n = len(mono)
     tau_min = max(2, int(sr / FREQUENZA_MASSIMA))
     tau_max = min(n // 2, int(sr / FREQUENZA_MINIMA))
@@ -72,35 +79,54 @@ def rileva_frequenza(mono, sr):
     fft_size = 1
     while fft_size < 2 * n:
         fft_size *= 2
-    # La differenza d(tau) con la FFT: energia della finestra, piu' energia
-    # della finestra spostata, meno due volte la correlazione incrociata
-    correlazione = np.fft.irfft(np.fft.rfft(x, fft_size) * np.conj(np.fft.rfft(x[:finestra], fft_size)))[:tau_max + 1]
+    passi = PASSI_PER_CAMPIONE
+    ultimo = tau_max * passi
     energia = np.concatenate(([0.0], np.cumsum(x ** 2)))
-    taus = np.arange(tau_max + 1)
-    d = energia[finestra] + (energia[taus + finestra] - energia[taus]) - 2.0 * correlazione
-    d[0] = 0.0
     if energia[finestra] < 1e-12:
         return 0.0
+    # La differenza d(tau) con la FFT: energia della finestra, piu' energia
+    # della finestra spostata, meno due volte la correlazione incrociata. La
+    # correlazione si interpola ai quarti di campione allungando la FFT
+    # inversa, le energie con una retta fra un campione e l'altro.
+    spettro = np.fft.rfft(x, fft_size) * np.conj(np.fft.rfft(x[:finestra], fft_size))
+    correlazione = np.fft.irfft(spettro, passi * fft_size)[:ultimo + 1] * passi
+    ritardi = np.arange(ultimo + 1) / passi
+    indici = np.arange(len(energia))
+    d = energia[finestra] + np.interp(ritardi + finestra, indici, energia) - np.interp(ritardi, indici, energia) - 2.0 * correlazione
+    d[0] = 0.0
     normalizzata = np.ones_like(d)
     cumulata = np.cumsum(d[1:])
-    normalizzata[1:] = d[1:] * taus[1:] / np.where(cumulata == 0, 1.0, cumulata)
-    tau = None
+    normalizzata[1:] = d[1:] * np.arange(1, ultimo + 1) / np.where(cumulata == 0, 1.0, cumulata)
+    primo = tau_min * passi
+    passo = None
     for soglia in (SOGLIA_YIN, SOGLIA_RIPIEGO):
-        sotto = np.nonzero(normalizzata[tau_min:tau_max] < soglia)[0]
+        sotto = np.nonzero(normalizzata[primo:ultimo] < soglia)[0]
         if len(sotto):
-            tau = tau_min + int(sotto[0])
+            passo = primo + int(sotto[0])
             # Si scende fino al fondo della valle
-            while tau + 1 < tau_max and normalizzata[tau + 1] < normalizzata[tau]:
-                tau += 1
+            while passo + 1 < ultimo and normalizzata[passo + 1] < normalizzata[passo]:
+                passo += 1
             break
-    if tau is None or tau < 1 or tau + 1 > tau_max:
+    if passo is None or passo < 1:
         return 0.0
-    a, b, c = d[tau - 1], d[tau], d[tau + 1]
+    # Una valle che scende ancora al bordo ha il fondo fuori dalla finestra:
+    # la parabola lo inventerebbe, e meglio nessuna nota che una sbagliata
+    if passo + 1 >= ultimo and normalizzata[ultimo] < normalizzata[passo]:
+        return 0.0
+    a, b, c = d[passo - 1], d[passo], d[passo + 1]
     curvatura = a - 2.0 * b + c
-    periodo = tau + 0.5 * (a - c) / curvatura if curvatura > 1e-12 else float(tau)
+    periodo = passo + 0.5 * (a - c) / curvatura if curvatura > 1e-12 else float(passo)
     if periodo <= 0:
         return 0.0
-    return sr / periodo
+    return sr * passi / periodo
+
+
+def dimensione_del_blocco(sr):
+    """I campioni di un blocco dell'accordatore: sempre circa 85 ms, che
+    tengono due periodi della nota piu' grave. Con 4096 campioni fissi,
+    sopra i 56 kHz le note basse uscivano sbagliate, il MI1 del basso come
+    FA#1: 4096 a 44,1 e 48 kHz, 8192 a 88,2 e 96, 16384 a 192."""
+    return max(BLOCK_SIZE, 1 << math.ceil(math.log2(2 * sr / FREQUENZA_MINIMA)))
 
 
 def frequenza_da_mostrare(letture, precedente=None):
@@ -198,8 +224,11 @@ def _rileva_dispositivi_attivi(input_devices):
         print(_riga_di_ascolto(inizio, livelli), end="", flush=True)
         if not any(t.is_alive() for t in threads):
             break
+        # Una scadenza sola per il giro: dividere l'attesa per i fili faceva
+        # riscrivere la riga ogni decimo di secondo, se molti erano gia' finiti
+        scadenza = time.monotonic() + AGGIORNAMENTO_RILEVAMENTO
         for t in threads:
-            t.join(timeout=AGGIORNAMENTO_RILEVAMENTO / max(1, len(threads)))
+            t.join(timeout=max(0.0, scadenza - time.monotonic()))
     for numero, idx in enumerate(failed_parallel, start=1):
         esito = {}
         filo = threading.Thread(target=lambda i=idx, e=esito: e.update(rms=_misura_rumore_sicura(i, livelli)))
@@ -267,16 +296,27 @@ def Accordatore():
         filtered_devices = _rileva_dispositivi_attivi(input_devices)
         proposta = "il primo, il piu' forte"
     else:
+        filtered_devices = input_devices
+    if filtered_devices is input_devices:
+        # Nessuna ricerca, o nessun segnale: l'elenco non ha volumi, e il
+        # predefinito del sistema va primo
         filtered_devices = _predefinito_prima(input_devices)
         proposta = "il primo"
-    print("Dispositivi di input disponibili.")
-    # Invio a vuoto sceglie il primo dell'elenco, che e' gia' in ordine
-    scelta_device = menu(d=filtered_devices, p=f"Seleziona il dispositivo di input (Invio per {proposta}): ", show=True,
-                         numbered=True, ordered=False, empty_enter=next(iter(filtered_devices)))
+    if len(filtered_devices) == 1:
+        # Con una voce sola il menu sceglie senza mostrare niente: almeno si
+        # legge quale periferica ascolta
+        scelta_device, nome = next(iter(filtered_devices.items()))
+        print(f"Dispositivo di input: {nome}")
+    else:
+        print("Dispositivi di input disponibili.")
+        # Invio a vuoto sceglie il primo dell'elenco, che e' gia' in ordine
+        scelta_device = menu(d=filtered_devices, p=f"Seleziona il dispositivo di input (Invio per {proposta}): ", show=True,
+                             numbered=True, ordered=False, empty_enter=next(iter(filtered_devices)))
     if scelta_device is None:
         return
     device_idx = int(scelta_device)
     device_sr = int(sd.query_devices(device_idx, 'input')['default_samplerate'])
+    blocco = dimensione_del_blocco(device_sr)
     pitch_readings = []
     current_rms = [0.0]
     pitch_lock = threading.Lock()
@@ -299,7 +339,7 @@ def Accordatore():
     print("Accordatore cromatico.")
     print("ESC per uscire.")
     try:
-        stream = sd.InputStream(device=device_idx, samplerate=device_sr, channels=1, blocksize=BLOCK_SIZE, dtype='float32', callback=_audio_callback)
+        stream = sd.InputStream(device=device_idx, samplerate=device_sr, channels=1, blocksize=blocco, dtype='float32', callback=_audio_callback)
         stream.start()
     except ERRORI_AUDIO as e:
         print(f"Errore apertura audio: {e}")

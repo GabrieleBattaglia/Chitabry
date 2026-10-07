@@ -1,10 +1,10 @@
 # Chitabry, versione: numero, data e autori stanno in un posto solo.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Nato con la revisione 1 del 2026-09-09: prima la versione e la data vivevano
 # nella stessa stringa dentro Chitabry.py, e midistudy la importava da li'
 # rieseguendo tutto il modulo principale.
 
-VERSIONE = "9.10.0"
+VERSIONE = "9.10.15"
 RELEASE_DATE = "2026-10-07"
 APP_NAME = "Chitabry"
 AUTORI = "Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalità auto)"

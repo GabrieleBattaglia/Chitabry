@@ -1,36 +1,29 @@
-Prove a mano dalla 8.1.2 alla 9.6.18: metronomo (issue 57), armonica (issue 58), cromatiche a dieci fori come la Trochilus, scale comuni, posizioni e capitolo su music21. Da sorgente. Una riga per voce: cancellate quelle che vanno, commentate dopo i due punti quelle che no.
-Passo 1: Manico dello strumento.
-Domanda 1: lo schema dei fori si legge bene sulla barra braille, con le colonne allineate e le righe dei bending e degli overbend comprensibili?
-GB: caspita, questa tabella che hai fatto è fantastica!!! Complimenti, la soluzione è perfetta e con la barra Braille si legge meravigliosamente. Puoi segnare in memoria che questo tipo di rappresentazioni mi sono congeniali.
-
-Passo 3: Trova Posizione con -3//, +6*, -5/, +5/, +3/, poi Invio a vuoto.
-GB: tutto bene però chiedi: "Scrivete". Questo è in disaccordo di forma. Usa Scrivi o scrivere.
-
-Passo 5: Scale, SOL, gruppo 1, scrivete bl e Invio per la blues, Invio sull'ottava proposta, poi A, D e L.
-Domanda 5: posizione, tabella delle dodici posizioni, tablatura, gradi e note critiche tutti insieme sono troppi, o vanno bene?
-GB: vanno bene ma fatico a capirle a causa della mia scarsa conoscenza della teoria musicale. Se confermi che sono formalmente assolutamente corrette, possono rimanere così. Eventualmente fai un nuovo controllo su diversi esempi ed assicurati dell'accuratezza delle informazioni fornite da chitabry.
-
-Domanda 6: durante l'ascolto la riga di stato con la tablatura al posto dei nomi si segue?
-GB: sì, molto bene. Ho notato che se attivo il metronomo, il suono dell'armonica si abbassa di volume. Se è un effetto voluto va bene, ma l'armonica dovrebbe rimanere al suo volume che si dovrebbe impostare nella sezione impostazioni, mentre il metronomo usato, col relativo volume, dovrebbe essere quello attivo nella sezione metronomo. Verifica che sia così ed applica le correzioni, se non lo fosse.
-
-Passo 6: ripetete l'esercizio con il suono MIDI, barra spaziatrice fino a MID.
-Domanda 7: si sente l'armonica del General MIDI, e poi nella Tastiera torna lo strumento MIDI di prima?
-GB: sì. Forse dipende dal banco mid scelto ma l'armonica attuale, ha un vibrato su quasi tutte le note. Non è sgradevole ma preferivo una nota senza. Magari verifica quale banco usa chitabry ed offri l'opportunità di listare quelli sul pc e sceglierne uno. Questo codice è presente in meteora, se vuoi rubarglielo.
-
-Passo 10: aggiungete la vostra Trochilus: Armonica a bocca, Cromatica, la sua tonalita', Solo, 10 fori, Senza valvole, Registro normale, e rendetela attiva.
-Passo 11: aprite l'Accordatore e suonate sulla Trochilus una nota per volta, a cursore aperto salvo l'ultima. Dopo i due punti di ogni misura scrivete la riga che legge l'accordatore, per esempio N:DO4 (+2%) Hz:262.0. I valori attesi sono per la Trochilus in DO: se la vostra e' in un'altra tonalita', scrivetelo qui:
-Misura 1: foro 1 soffiato, atteso DO4, 261,6 Hz: c4
-Misura 2: foro 1 aspirato, atteso RE4, 293,7 Hz: d4
-Misura 3: foro 2 soffiato, atteso MI4, 329,6 Hz: e4
-Misura 4: foro 2 aspirato, atteso FA4, 349,2 Hz: f4
-Misura 5: foro 3 soffiato, atteso SOL4, 392,0 Hz: g4
-Misura 6: foro 3 aspirato, atteso LA4, 440,0 Hz: a4
-Misura 7: foro 4 soffiato, atteso DO5, 523,3 Hz: c5
-Misura 8: foro 4 aspirato, atteso SI4, 493,9 Hz: b4
-altri tutti coincidenti...
-Nota: mentre l'accordatore ascolta i microfoni, prima di avviarsi, non dà alcun feedback. Se le periferiche sono stante, non si capisce cosa stia facnedo. Usando il prompt \r \r, indica Ascolto x/y e volume rilevato.
-Poi, nel menù per scegliere la periferica, proponi già di default quella che ha sentito a volume più alto o con latenza innferiore.
-Verifica anche se l'algoritmo di rilevazione della nota è efficace o può essere ottimizzato. Ci prende abbastanza ma presenta anche un bel margine di incertezza.
-
-Ok anche per il manuale ma ha un grave difetto: mancano i numeri davanti hai titoli dei capitoli e sottocapitoli.
-Trovo 16 music21 nell'indice ma poi non c'è un capitolo 16, c'è solo music21 ed è difficile da trovare con le funzioni di ricerca degli editor.
+Prove a mano dalla 9.8.3 alla 9.10.15: accordatore, teoria dell'armonica, volume MIDI, banco di suoni e numeri della guida. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le note del giro precedente sono salvate in git.
+Passo 1: Accordatore, INVIO per il rilevamento automatico, e intanto suona o parla vicino al microfono.
+Domanda 1: durante i cinque secondi la riga, per esempio Ascolto 3/5 s, picco 62 dB, si legge bene sulla barra braille?
+Domanda 2: nell'elenco il microfono che usi e' il primo, con il volume accanto, e Invio lo sceglie?
+Passo 2: esci, rientra nell'Accordatore, INVIO per il rilevamento, e questa volta resta in silenzio per i cinque secondi.
+Domanda 3: il primo dell'elenco e' il microfono predefinito di Windows, e il prompt dice solo Invio per il primo?
+Passo 3: sulla Hohner in DO suona il foro 4 soffiato e il foro 4 aspirato, alternandoli lentamente.
+Domanda 4: a ogni cambio la riga passa subito da DO5 a RE5, senza note di mezzo come DO#?
+Passo 4: sempre sulla Hohner, suona il foro 10 soffiato.
+Domanda 5: la riga dice DO7, intorno a 2093 Hz? Prima risultava un'ottava sotto.
+Domanda 6: in generale la lettura ti sembra piu' ferma e sicura di prima?
+Passo 5: con la Hohner attiva, Trova Posizione, poi Costruttore Accordi con SOL settima di dominante.
+Domanda 7: i messaggi dicono Scrivi e Scegli, e il SOL7 suona una volta sola?
+Passo 6: Scale, SOL, gruppo 1, blues, e leggi i gradi della tablatura.
+Domanda 8: i gradi sono 1, b3, 4, b5, 5 e b7, con il REb come b5?
+Passo 7: Impostazioni, Volume MIDI, prova 60; poi Scale con il suono MIDI e il metronomo acceso.
+Domanda 9: l'armonica resta al suo volume quando accendi il metronomo, e il wood block ha il volume del tuo preset?
+Passo 8: Impostazioni, Banco di suoni: lascia scaricare FluidSynth, cerca i banchi su tutti i dischi, e scegli SGM-V2.01 nella cartella VstPlugins; volume 0.8, e usalo come suono attivo.
+Domanda 10: lo scaricamento e la ricerca si seguono bene con le righe di avanzamento? Quanto dura la ricerca?
+Passo 9: Scale, SOL blues con la Hohner e il suono BAN, esercizio con A, D e L, con il metronomo acceso.
+Domanda 11: l'armonica del banco suona senza vibrato, a tempo con il battito, e al volume giusto rispetto al click?
+Passo 10: rimetti la chitarra come strumento, perche' con l'armonica attiva il banco suona sempre Harmonica. Poi Impostazioni, Seleziona Strumento MIDI, Church Organ; e Tastiera con il suono BAN: un DO tenuto, poi un MI, poi una nota tenuta per piu' di otto secondi.
+Domanda 12: scelto l'organo, il messaggio dice che il suono attivo resta il banco?
+Domanda 13: all'inizio del MI senti ancora il DO di prima? La nota lunga, dopo otto secondi, si spegne dolcemente o con uno scatto? Senti un ritardo fra il tasto e la nota?
+Passo 11: Seleziona Strumento MIDI, una delle Acoustic Guitar, e prova il suono BAN in Trova Posizione e nel Costruttore Accordi.
+Domanda 14: la chitarra del banco va bene, e il suo volume e' simile a quello dell'armonica e dell'organo?
+Passo 12: Guida: cerca 16. poi 12.3. e 12.9. con la ricerca del tuo editor, e scorri l'indice.
+Domanda 15: i numeri dei capitoli ti aiutano a orientarti?
+Esito:

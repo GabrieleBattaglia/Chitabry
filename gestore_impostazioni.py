@@ -286,9 +286,16 @@ def _scegli_strumento_midi():
     if scelto is not None:
         program = GBAudio.MIDI_INSTRUMENTS.index(scelto)
         config.impostazioni['midi_strumento'] = program
-        config.impostazioni['tipo_suono'] = 'midi'
+        # Il banco suona con lo stesso strumento: se e' il suono attivo resta,
+        # invece di lasciare il posto al MIDI di Windows
+        banco_attivo = config.impostazioni.get('tipo_suono') == 'banco'
+        if not banco_attivo:
+            config.impostazioni['tipo_suono'] = 'midi'
         config.salva_modifiche()
-        print(f"Strumento MIDI impostato su: {scelto} e attivato.")
+        if banco_attivo:
+            print(f"Strumento impostato su: {scelto}. Il suono attivo resta il banco.")
+        else:
+            print(f"Strumento MIDI impostato su: {scelto} e attivato.")
         GBAudio.get_midi_out().select_instrument(program)
     key("Premi un tasto...")
 
@@ -364,9 +371,17 @@ def _configura_banco():
             voci[percorso] = f"{os.path.basename(percorso)}, {banchi.dimensione_da_leggere(dimensione)}, in {os.path.dirname(percorso)}"
     if attuale and attuale not in voci and os.path.isfile(attuale):
         voci = {attuale: f"{os.path.basename(attuale)}, quello attuale", **voci}
-    voci["scarica"] = f"Scarica FluidR3 GM, il banco libero di FluidSynth, {banchi.dimensione_da_leggere(banchi.FLUIDR3_DIMENSIONE)}"
-    print("Scegli il banco di suoni:")
-    scelta = menu(d=voci, keyslist=True, show=True, numbered=True, ordered=False, ntf="Scelta non valida", p="Banco: ")
+    dimensione = banchi.dimensione_da_leggere(banchi.FLUIDR3_DIMENSIONE)
+    if not voci:
+        # Con una voce sola il menu la sceglie senza chiedere: 148 MB si
+        # scaricano solo con un si'
+        if not enter_escape(f"Nessun banco da scegliere. Scarico FluidR3 GM, il banco libero di FluidSynth, {dimensione}? (INVIO per si', ESC per no): "):
+            return
+        scelta = "scarica"
+    else:
+        voci["scarica"] = f"Scarica FluidR3 GM, il banco libero di FluidSynth, {dimensione}"
+        print("Scegli il banco di suoni:")
+        scelta = menu(d=voci, keyslist=True, show=True, numbered=True, ordered=False, ntf="Scelta non valida", p="Banco: ")
     if scelta is None:
         return
     if scelta == "scarica":

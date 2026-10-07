@@ -12,6 +12,7 @@
 import contextlib
 import ctypes
 import hashlib
+import http.client
 import io
 import math
 import os
@@ -55,7 +56,7 @@ _PEZZO_DELLO_SCARICAMENTO = 1 << 20
 GUADAGNO = 1.0
 # Il picco a cui si porta il DO centrale di ogni strumento del banco, prima
 # del volume scelto: gli strumenti di un soundfont hanno livelli molto
-# diversi, con il banco SGM l'armonica arrivava a 0,09 e la chitarra a 0,45, e
+# diversi, con il banco SGM l'armonica arrivava a 0,14 e la chitarra a 0,45, e
 # senza pareggiarli il volume del banco andrebbe rifatto a ogni strumento.
 PICCO_DI_RIFERIMENTO = 0.5
 # Quanto dura la coda dopo il rilascio, cioe' quanto la nota si spegne da
@@ -66,6 +67,9 @@ SECONDI_TENUTA = 8.0
 # L'escursione predefinita del pitch bend, in semitoni: serve alle note che
 # non cadono sul temperamento, come quelle di molte scale dell'archivio Scala.
 ESCURSIONE_BEND = 2.0
+# I campioni che si scartano dopo aver spento le voci della nota prima:
+# un blocco interno di FluidSynth, che ne rende 64 alla volta.
+CAMPIONI_DI_SILENZIO = 64
 
 
 def e_un_banco(percorso):
@@ -195,14 +199,19 @@ def _scarica(url, avanza=None):
     if not url.startswith("https://"):
         raise ValueError(f"solo indirizzi https: {url}")
     richiesta = urllib.request.Request(url, headers={"User-Agent": "Chitabry"})  # noqa: S310 - indirizzi https fissi, controllati sopra
-    with urllib.request.urlopen(richiesta, timeout=60) as risposta:  # noqa: S310 - idem
-        totale = int(risposta.headers.get("Content-Length") or 0) or None
-        pezzi, scaricati = [], 0
-        while pezzo := risposta.read(_PEZZO_DELLO_SCARICAMENTO):
-            pezzi.append(pezzo)
-            scaricati += len(pezzo)
-            if avanza is not None:
-                avanza(scaricati, totale)
+    try:
+        with urllib.request.urlopen(richiesta, timeout=60) as risposta:  # noqa: S310 - idem
+            totale = int(risposta.headers.get("Content-Length") or 0) or None
+            pezzi, scaricati = [], 0
+            while pezzo := risposta.read(_PEZZO_DELLO_SCARICAMENTO):
+                pezzi.append(pezzo)
+                scaricati += len(pezzo)
+                if avanza is not None:
+                    avanza(scaricati, totale)
+    except http.client.HTTPException as e:
+        # Una risposta troncata o che non e' HTTP non e' un OSError, e
+        # chiuderebbe Chitabry invece di dire che lo scaricamento non e' riuscito
+        raise OSError(f"{url}: risposta del server non valida o interrotta ({e!r})") from e
     return b"".join(pezzi)
 
 
@@ -249,11 +258,14 @@ def scarica_fluidr3(avanza=None):
 
 
 # La libreria di FluidSynth, caricata alla prima nota, e il synth con il
-# banco attivo, uno solo: le note si rendono una alla volta, dal filo
-# principale, e il lucchetto basta a tenerle in fila.
+# banco attivo, uno solo. Le note arrivano dal filo principale e da quello
+# della tastiera MIDI esterna, e il lucchetto le tiene in fila; e' rientrante
+# perche' _synth chiama chiudi quando il banco cambia, gia' dentro il
+# lucchetto, e chiudi lo prende a sua volta, cosi' il synth non si libera
+# mentre un'altra nota lo sta usando.
 _LIBRERIA = []
 _SYNTH = {}
-_BLOCCO = threading.Lock()
+_BLOCCO = threading.RLock()
 
 
 def _fluid():
@@ -269,6 +281,7 @@ def _fluid():
         "new_fluid_synth": (p, [p]),
         "fluid_synth_sfload": (intero, [p, ctypes.c_char_p, intero]),
         "fluid_synth_system_reset": (intero, [p]),
+        "fluid_synth_all_sounds_off": (intero, [p, intero]),
         "fluid_synth_program_change": (intero, [p, intero, intero]),
         "fluid_synth_pitch_bend": (intero, [p, intero, intero]),
         "fluid_synth_noteon": (intero, [p, intero, intero, intero]),
@@ -312,11 +325,12 @@ def _synth(banco, fs):
 
 def chiudi():
     """Chiude il synth del banco, se c'e': per quando il banco cambia."""
-    _FATTORI.clear()
-    if "synth" in _SYNTH and _LIBRERIA:
-        _LIBRERIA[0].delete_fluid_synth(_SYNTH["synth"])
-        _LIBRERIA[0].delete_fluid_settings(_SYNTH["impostazioni"])
-    _SYNTH.clear()
+    with _BLOCCO:
+        _FATTORI.clear()
+        if "synth" in _SYNTH and _LIBRERIA:
+            _LIBRERIA[0].delete_fluid_synth(_SYNTH["synth"])
+            _LIBRERIA[0].delete_fluid_settings(_SYNTH["impostazioni"])
+        _SYNTH.clear()
 
 
 def _scrivi(fs_lib, synth, campioni):
@@ -343,6 +357,12 @@ def rendi_nota(banco, programma, frequenza, secondi, fs, velocita=100, coda=CODA
         synth = _synth(banco, fs)
         fs_lib = _fluid()
         fs_lib.fluid_synth_system_reset(synth)
+        # Il reset non spegne le voci, nemmeno quelle ancora nella coda della
+        # nota prima, che rientrerebbero all'inizio di questa come un
+        # fantasma: le spegne all_sounds_off, e i campioni scartati buttano
+        # anche quelli rimasti nel blocco interno di FluidSynth
+        fs_lib.fluid_synth_all_sounds_off(synth, -1)
+        _scrivi(fs_lib, synth, CAMPIONI_DI_SILENZIO)
         fs_lib.fluid_synth_program_change(synth, 0, int(programma))
         fs_lib.fluid_synth_pitch_bend(synth, 0, max(0, min(16383, bend)))
         fs_lib.fluid_synth_noteon(synth, 0, nota, int(velocita))
@@ -353,20 +373,27 @@ def rendi_nota(banco, programma, frequenza, secondi, fs, velocita=100, coda=CODA
 
 
 # Il fattore che pareggia ogni strumento, per banco, strumento e frequenza
-# di campionamento: si misura una volta, alla prima nota
+# di campionamento: si misura una volta, alla prima nota, in una ventina di
+# millesimi
 _FATTORI = {}
 
 
 def fattore_dello_strumento(banco, programma, fs):
     """Quanto moltiplicare le note di uno strumento perche' il suo DO
     centrale arrivi al picco di riferimento. Le note fra loro tengono la
-    dinamica che il banco da' loro."""
+    dinamica che il banco da' loro. Il picco si misura sulla nota piu' lunga
+    che Chitabry rende, la tenuta della Tastiera con la sua coda: gli archi e
+    i pad crescono piano, e misurati su mezzo secondo prendevano un fattore
+    che nelle note lunghe li portava ben sopra il riferimento, fino a
+    saturare. Le loro note brevi restano piu' piano, come nel banco."""
     chiave = (banco, programma, fs)
-    if chiave not in _FATTORI:
-        prova = rendi_nota(banco, programma, 261.63, 0.5, fs, coda=0.0)
+    fattore = _FATTORI.get(chiave)
+    if fattore is None:
+        prova = rendi_nota(banco, programma, 261.63, SECONDI_TENUTA, fs)
         picco = float(np.abs(prova).max()) if prova.size else 0.0
-        _FATTORI[chiave] = min(20.0, max(0.5, PICCO_DI_RIFERIMENTO / picco)) if picco > 1e-6 else 1.0
-    return _FATTORI[chiave]
+        fattore = min(20.0, max(0.5, PICCO_DI_RIFERIMENTO / picco)) if picco > 1e-6 else 1.0
+        _FATTORI[chiave] = fattore
+    return fattore
 
 
 class RendererBanco:
@@ -394,8 +421,10 @@ class RendererBanco:
         return np.column_stack([mono, mono]).astype(np.float32)
 
     def render_tenuta(self):
-        """La nota tenuta della Tastiera: otto secondi senza rilascio, che il
-        mixer chiude con la sua rampa quando il tasto si lascia."""
+        """La nota tenuta della Tastiera: otto secondi, e se il tasto si
+        lascia prima il mixer la chiude con la sua rampa. Gli ultimi sono il
+        rilascio dello strumento: senza, la nota tenuta piu' a lungo si
+        troncava di colpo, con uno scatto."""
         fattore = fattore_dello_strumento(self.banco, self.programma, self.fs)
-        mono = rendi_nota(self.banco, self.programma, self.frequenza, SECONDI_TENUTA, self.fs, coda=0.0) * (fattore * self.volume)
+        mono = rendi_nota(self.banco, self.programma, self.frequenza, SECONDI_TENUTA - CODA, self.fs) * (fattore * self.volume)
         return mono.astype(np.float32), None

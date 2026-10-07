@@ -637,8 +637,9 @@ PROGRAMMA_ARMONICA = 22
 # sintetizzatore GS li mette di suo su ogni canale e un click li vuole secchi.
 CC_PAN = 10
 # Il volume del canale, che Chitabry regola dalle impostazioni per le note
-# degli strumenti MIDI e dell'armonica; il click resta al pieno, e il suo
-# volume lo danno le velocita' prese dal preset del metronomo.
+# degli strumenti MIDI e dell'armonica. Il canale del click non lo riceve e
+# resta al volume di partenza del sintetizzatore, 100 su 127; il suo volume
+# lo danno le velocita' prese dal preset del metronomo.
 CC_VOLUME = 7
 CC_RIVERBERO = 91
 CC_CHORUS = 93
