@@ -86,6 +86,7 @@ Chitabry puo' essere compilato sia per Windows che per MacOS, dovrebbe girare an
 1. Come installare Chitabry.
 L'installazione e' un processo molto semplice. Scompattate l'archivio della release in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni: troverete Chitabry.exe e la cartella _internal, che contiene le librerie e questa guida.
 Poi lanciate l'eseguibile, oppure aprite una finestra terminale nella cartella dove avete incollato l'eseguibile, digitate chitabry (o il nome dell'eseguibile) e premete invio.
+L'eseguibile non e' firmato: al primo avvio Windows puo' mostrare l'avviso di SmartScreen. Scegliete Ulteriori informazioni e poi Esegui comunque.
 
 Nota: Al primo avvio, Chitabry creerà automaticamente un file chiamato chitabry-settings.json accanto all'eseguibile, qualunque sia la cartella da cui lo avete lanciato. Questo file memorizza le vostre impostazioni, i suoni personalizzati e, soprattutto, il vostro database di accordi. Non cancellatelo\!
 Ogni modifica alle impostazioni viene scritta subito su disco, e la versione precedente del file resta come copia di sicurezza chitabry-settings.json.bak: se il file principale dovesse risultare illeggibile, Chitabry lo dice e si ferma senza toccarlo, e vi basta rinominare la copia per ripartire. Lo stesso vale per i preset del metronomo, in clitronomo_presets.json.

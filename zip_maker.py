@@ -1,7 +1,8 @@
 # Chitabry, utilita': prepara l'archivio per la distribuzione.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # 04/09/2026: primo chiamante, il mestiere sta in crea_archivio_release di GBUtils V103.
 # 09/09/2026: fra le esclusioni anche le copie .bak e i file dei preset messi da parte.
+# 07/10/2026: fuori anche FluidSynth e i banchi scaricati, dalla 10.0.0.
 
 """Comprime la cartella prodotta da PyInstaller in un solo archivio.
 
@@ -24,6 +25,10 @@ from GBUtils import crea_archivio_release
 
 FUORI = [
     "midi/",
+    # Dalla 10.0.0: FluidSynth e i banchi che Chitabry scarica accanto
+    # all'eseguibile, se la prova del pacchetto li ha fatti nascere
+    "fluidsynth/",
+    "banchi/",
     "chitabry-settings.json",
     "chitabry-settings.json.bak",
     "chitabry-settings.json.backup",
