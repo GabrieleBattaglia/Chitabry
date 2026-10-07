@@ -380,3 +380,53 @@ def test_aggiungere_la_trochilus_dal_gestore(monkeypatch):
     assert nome_strumento == "Armonica cromatica DO Solo 10 fori senza valvole"
     assert voce == {"tipo": "armonica", "famiglia": "cromatica", "tonalita": "C", "accordatura": "solo", "fori": 10,
                     "valvole": False, "registro": "normale"}
+
+
+def test_l_armonica_che_serve_per_una_tonica():
+    sol = NOMI.index("G")
+    assert armonica.tonalita_per(sol, 1) == "G"
+    assert armonica.tonalita_per(sol, 2) == "C"
+    assert armonica.tonalita_per(sol, 3) == "F"
+    assert armonica.tonalita_per(sol, 12) == "D"
+
+
+def test_la_tabella_delle_posizioni(richter):
+    """La stessa scala nelle dodici posizioni: le posizioni dei modi della
+    scala maggiore di DO non chiedono tecniche nell'ottava migliore."""
+    maggiore = (0, 2, 4, 5, 7, 9, 11)
+    righe = armonica.tabella_posizioni(richter, maggiore)
+    assert [r[0] for r in righe] == list(range(1, 13))
+    assert [NOMI[r[1]] for r in righe[:3]] == ["C", "G", "D"]
+    prima = righe[0]
+    assert nome(prima[3][0]) == "C5"
+    assert [t.simbolo for t in prima[3][1]] == ["+4", "-4", "+5", "-5", "+6", "-6", "-7", "+7"]
+    assert armonica.piu_comode(righe)[0] == 1
+    # La pentatonica minore di LA ha le note del DO: quarta posizione, tutta naturale
+    penta = armonica.tabella_posizioni(richter, (0, 3, 5, 7, 10))
+    assert armonica.piu_comode(penta)[0] == 4
+    assert armonica.fatica(penta[3][3][1]) == 0
+
+
+def test_l_ottava_comoda_del_sol_blues(richter):
+    tonica, tecniche = armonica.ottava_comoda(richter, NOMI.index("G"), (0, 3, 5, 6, 7, 10))
+    assert nome(tonica) == "G4"
+    assert [t.simbolo for t in tecniche] == ["-2", "-3/", "+4", "-4/", "-4", "-5", "+6"]
+    # Sulla cromatica con le valvole il cursore non pesa: il SOL maggiore ha
+    # un'ottava senza fatica, con il FA# preso dal cursore
+    cromatica = armonica.HarmonicaModel("C", "solo", 10)
+    tonica, tecniche = armonica.ottava_comoda(cromatica, NOMI.index("G"), (0, 2, 4, 5, 7, 9, 11))
+    assert armonica.fatica(tecniche) == 0
+    assert any(t.cursore for t in tecniche)
+
+
+def test_la_tabella_a_schermo(monkeypatch, capsys, richter):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    s = esercizio_scale._costruisci_scala("G", "comune:blues", 4, richter)
+    esercizio_scale._tabella_posizioni(s, richter, 2)
+    righe = capsys.readouterr().out.splitlines()
+    assert righe[0].startswith("Le dodici posizioni della scala blues")
+    assert righe[2] == ("Seconda posizione (cross harp): quella scelta, SOL blues su questa armonica. "
+                        "Ottava piu' comoda dalla tonica SOL4, naturale 5, bending di mezzo tono 2.")
+    assert righe[3].startswith("Terza posizione (slant harp): RE blues su questa armonica, oppure SOL blues sull'armonica in FA.")
+    assert righe[-1].startswith("Le piu' comode")
+    assert len(righe) == 14

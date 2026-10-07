@@ -409,6 +409,61 @@ def descrivi_posizione(numero):
     return testo + f", la tonica sta {quinte} sotto quella dell'armonica"
 
 
+def tonalita_per(classe_tonica, numero):
+    """La tonalita' dell'armonica su cui una tonica si suona nella posizione
+    indicata: per il SOL in seconda, l'armonica in DO."""
+    return TONALITA[(classe_tonica - 7 * (numero - 1)) % 12]
+
+
+def ottava_comoda(modello, classe_tonica, intervalli):
+    """Il tratto di un'ottava, dalla tonica alla tonica sopra, che su questa
+    armonica chiede meno fatica, a parita' il piu' grave. Restituisce la
+    coppia (numero MIDI della tonica, tecnica migliore di ogni nota), con
+    None dove la nota manca; None se la tonica non sta nell'estensione."""
+    gradi = [*sorted({i % 12 for i in intervalli}), 12]
+    grave, acuta = modello.estensione()
+    trovata = None
+    for tonica in range(grave, acuta + 1):
+        if tonica % 12 != classe_tonica:
+            continue
+        tecniche = [modello.migliore(tonica + g) for g in gradi]
+        if trovata is None or fatica(tecniche) < fatica(trovata[1]):
+            trovata = (tonica, tecniche)
+    return trovata
+
+
+def tabella_posizioni(modello, intervalli):
+    """La stessa scala nelle dodici posizioni di questa armonica.
+    intervalli sono i semitoni delle note della scala sopra la tonica. Per
+    ogni posizione restituisce la quaterna (numero, classe della tonica che
+    la scala ha su questa armonica, tecnica migliore di ogni sua nota su
+    tutta l'estensione, ottava piu' comoda come la da' ottava_comoda).
+    Spostare la tonica sull'armonica o cambiare armonica per la stessa tonica
+    chiede le stesse tecniche, a parte gli estremi dell'estensione: per
+    questo una tabella sola risponde a tutte e due le domande."""
+    base = TONALITA.index(modello.tonalita)
+    grave, acuta = modello.estensione()
+    righe = []
+    for numero in range(1, 13):
+        tonica = (base + 7 * (numero - 1)) % 12
+        classi = {(tonica + i) % 12 for i in intervalli}
+        estensione = [modello.migliore(m) for m in range(grave, acuta + 1) if m % 12 in classi]
+        righe.append((numero, tonica, estensione, ottava_comoda(modello, tonica, intervalli)))
+    return righe
+
+
+def piu_comode(righe, quante=3):
+    """Le posizioni piu' comode di una tabella_posizioni: prima la fatica
+    dell'ottava piu' comoda, che e' quella che si suona, poi quella di tutta
+    l'estensione, poi il numero. La somma su tutta l'estensione, da sola,
+    premia le posizioni che evitano gli overbend dell'ottava acuta, che in
+    seconda posizione nessuno usa per il blues."""
+    def chiave(riga):
+        ottava = riga[3]
+        return (fatica(ottava[1]) if ottava else float("inf"), fatica(riga[2]), riga[0])
+    return [riga[0] for riga in sorted(righe, key=chiave)[:quante]]
+
+
 def conta_tecniche(tecniche):
     """Quante volte compare ogni categoria in un elenco di tecniche, con
     None per le note che l'armonica non ha. Ordinate dalla piu' facile."""

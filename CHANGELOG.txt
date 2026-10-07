@@ -2,6 +2,13 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.6.0 (7 ottobre 2026)
+Le dodici posizioni in cui si suona una scala sull'armonica.
+*   Scelta una scala con un'armonica attiva, prima della tablatura Chitabry elenca le dodici posizioni, dalla prima alla dodicesima, una per riga. Ogni riga dice quale scala esce su questa armonica in quella posizione e quale armonica serve per suonarci la tonica che avete scelto: con il SOL blues e un'armonica in DO, la terza posizione e' il RE blues su questa armonica, oppure il SOL blues sull'armonica in FA.
+*   Per ogni posizione c'e' l'ottava piu' comoda, con la nota da cui parte e le tecniche che chiede, e in fondo le tre posizioni piu' comode. Su un'armonica in DO la piu' comoda e' la prima posizione per il DO maggiore, la seconda per il SOL misolidio, la terza per il RE dorico e la quarta per la pentatonica minore di LA, che li' non chiede nessuna tecnica.
+*   La classifica guarda l'ottava che si suona e non tutta l'estensione: sommando tutta l'estensione, gli overblow e gli overdraw dell'ottava acuta, che per il blues in seconda nessuno usa, la spingevano in fondo. Conta soltanto le tecniche e non lo stile: per la blues mette la terza e la quarta davanti alla seconda, perche' nella loro ottava migliore chiedono un bending solo invece di due.
+*   La guida passa alla revisione 18. Quattro prove nuove, 133 in tutto.
+
 Versione 9.5.0 (7 ottobre 2026)
 Le scale di tutti i giorni, con i nomi italiani, e una scelta del tipo di scala che si capisce.
 *   Venti scale comuni, temperate e con i nomi italiani: maggiore, le tre minori, i sette modi, le due pentatoniche, la blues e la blues maggiore, le due bebop, la frigia dominante, i toni interi, le due diminuite e la cromatica. music21 non le aveva, o non in una forma da studiare: la sola blues era la Weighted Hexatonic Blues, che a ogni esecuzione decide da se' se mettere la quinta diminuita, e le pentatoniche normali mancavano. Le note hanno la grafia della teoria: il SOL blues ha il REb, non il DO#.

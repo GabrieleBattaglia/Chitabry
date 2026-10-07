@@ -78,6 +78,7 @@ class Scala:
 
     def __init__(self, tonica_std, nome_base, scala_m21):
         self.tonica_std = tonica_std
+        self.nome_base = nome_base
         self.nome = f"{get_nota(tonica_std)} {nome_base}"
         self.scala_m21 = scala_m21
         self.microtonale = False
@@ -382,6 +383,39 @@ def _tablatura_completa(s, modello):
             print(f"{_nome_nella_scala(nomi[midi % 12], midi)}: {tecnica.simbolo}, {tecnica.descrizione().lower()}")
 
 
+def _tabella_posizioni(s, modello, scelta):
+    """Le dodici posizioni in cui si suona questa scala, nell'ordine, ognuna
+    con la scala che da' su questa armonica, l'armonica che serve per la
+    tonica scelta e le tecniche che chiede su tutta l'estensione; in fondo,
+    le tre piu' comode. Per un'armonica sola le domande sono due, quale
+    tonica in quale posizione e quale armonica per questa tonica, e la
+    tabella risponde a tutte e due."""
+    tonica = pitch.Pitch(s.tonica_std).pitchClass
+    intervalli = {(m - tonica) % 12 for m in (midi_temperato(p) for p in s.pitches) if m is not None}
+    if not intervalli:
+        return
+    righe = armonica.tabella_posizioni(modello, intervalli)
+    print(f"Le dodici posizioni della scala {s.nome_base}, con le tecniche dell'ottava piu' comoda in ciascuna:")
+    for numero, classe, _estensione, ottava in righe:
+        titolo = armonica.ORDINALI[numero - 1].capitalize() + " posizione"
+        if numero in armonica.NOMI_POSIZIONE:
+            titolo += f" ({armonica.NOMI_POSIZIONE[numero]})"
+        if numero == scelta:
+            dove = f"quella scelta, {s.nome} su questa armonica"
+        else:
+            sull_armonica = get_nota(armonica.tonalita_per(tonica, numero))
+            dove = f"{get_nota(armonica.TONALITA[classe])} {s.nome_base} su questa armonica, oppure {s.nome} sull'armonica in {sull_armonica}"
+        if ottava is None:
+            tecniche = "la tonica non c'e' sull'armonica"
+        else:
+            # La tonica con la grafia della riga: SIb, non LA#
+            nome_tonica = get_nota(s.tonica_std if numero == scelta else armonica.TONALITA[classe])
+            tecniche = f"dalla tonica {nome_tonica}{ottava[0] // 12 - 1}, {_riassunto(ottava[1])}"
+        print(f"{titolo}: {dove}. Ottava piu' comoda {tecniche}.")
+    comode = armonica.piu_comode(righe)
+    print(f"Le piu' comode, per le tecniche che chiedono nell'ottava migliore: {', '.join(armonica.ORDINALI[n - 1] for n in comode)}.")
+
+
 def _scegli_ottava(tonica_std, selected_key, modello):
     """Le ottave in cui la scala comincia sull'armonica, con le tecniche che
     chiede ciascuna, e la scelta di quella da esercitare: Invio prende la
@@ -421,6 +455,7 @@ def _mostra_armonica(s, tonica_std, selected_key):
     print(f"Scala richiesta: {s.nome}, in {armonica.descrivi_posizione(numero)}.")
     if modello.chiave_accordatura == "richter" and numero in armonica.USI_RICHTER:
         print(f"Sulla Richter questa posizione si usa per {armonica.USI_RICHTER[numero]}.")
+    _tabella_posizioni(s, modello, numero)
     _tablatura_completa(s, modello)
     scelta = _scegli_ottava(tonica_std, selected_key, modello)
     if scelta is not None:

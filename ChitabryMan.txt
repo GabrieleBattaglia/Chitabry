@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 17, di mercoledi' 7 ottobre 2026, per la versione 9.5.0.
+L'ultima revisione di questo documento e' la numero 18, di mercoledi' 7 ottobre 2026, per la versione 9.6.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -434,6 +434,7 @@ Con un'armonica attiva.
 Le scale sull'armonica.
 Scelta la scala, al posto del manico Chitabry mostra:
    La posizione, cioe' quante quinte separano la tonica della scala dalla tonalita' dell'armonica: SOL su un'armonica in DO e' la seconda posizione, la cross harp del blues. Sulla Richter, per le posizioni piu' usate, dice anche a cosa servono di solito.
+   Le dodici posizioni della stessa scala, dalla prima alla dodicesima, una per riga. Ogni riga risponde a due domande: quale scala esce su questa armonica in quella posizione, e quale armonica serve per suonare in quella posizione la scala che avete scelto. Per esempio, scelto il SOL blues su un'armonica in DO, la riga della terza posizione dice: RE blues su questa armonica, oppure SOL blues sull'armonica in FA. Accanto c'e' l'ottava piu' comoda di quella posizione, con la nota da cui parte e le tecniche che chiede, e in fondo le tre posizioni piu' comode. La classifica conta soltanto le tecniche, non lo stile: per la blues, su un'armonica in DO, mette la terza e la quarta davanti alla seconda, perche' nella loro ottava migliore chiedono un bending solo invece di due. La seconda resta la posizione del blues per il suono dei bending aspirati, che una classifica non misura.
    La tablatura della scala su tutta l'estensione, una nota per riga, con il modo piu' comodo e, fra parentesi, gli altri. Per esempio: SOL4: -2 (anche +3).
    La stessa tablatura in una riga, in salita e in discesa.
    I gradi della scala, ciascuno con tutti i fori in cui si trova.
