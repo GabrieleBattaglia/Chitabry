@@ -1,21 +1,34 @@
-Prove a mano della 9.0.0 (armonica, issue 58) e della 8.1.2 (metronomo, issue 57), da sorgente. Una riga per voce: cancellate quelle che vanno, commentate dopo i due punti quelle che no.
+Prove a mano dalla 8.1.2 alla 9.6.18: metronomo (issue 57), armonica (issue 58), cromatiche a dieci fori come la Trochilus, scale comuni, posizioni e capitolo su music21. Da sorgente. Una riga per voce: cancellate quelle che vanno, commentate dopo i due punti quelle che no.
 Prima: Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento, Armonica a bocca, Diatonica, DO, Richter, Invio sul nome proposto, e rendetela attiva.
 Passo 1: Manico dello strumento.
 Domanda 1: lo schema dei fori si legge bene sulla barra braille, con le colonne allineate e le righe dei bending e degli overbend comprensibili?
 Passo 2: Nota sul manico con SOL, poi di nuovo con SOL4.
 Domanda 2: righe come "SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato)." sono comode, o preferite solo i simboli?
-Passo 3: Trova Posizione con -3//, +6*, -5/, +3/, poi Invio a vuoto.
+Passo 3: Trova Posizione con -3//, +6*, -5/, +5/, +3/, poi Invio a vuoto.
 Domanda 3: le note suonano giuste, e le spiegazioni dei simboli impossibili si capiscono?
-Passo 4: Costruttore Accordi, SOL settima di dominante, ascoltate il gruppo 1; poi LA minore.
+Passo 4: Costruttore Accordi, SOL settima di dominante, che sta in un gruppo solo e suona una volta; poi LA minore, e ascoltate il gruppo 1.
 Domanda 4: i gruppi di fori, e la nota che manca quando l'accordo non sta intero, sono utili cosi'?
-Passo 5: Scale, SOL, una scala blues (la Weighted Hexatonic Blues di music21 e' probabilistica: a volte ha la quinta diminuita, a volte no), Invio sull'ottava proposta, poi A, D e L.
-Domanda 5: posizione, tablatura, gradi e note critiche tutti insieme sono troppi, o vanno bene?
+Passo 5: Scale, SOL, gruppo 1, scrivete bl e Invio per la blues, Invio sull'ottava proposta, poi A, D e L.
+Domanda 5: posizione, tabella delle dodici posizioni, tablatura, gradi e note critiche tutti insieme sono troppi, o vanno bene?
 Domanda 6: durante l'ascolto la riga di stato con la tablatura al posto dei nomi si segue?
 Passo 6: ripetete l'esercizio con il suono MIDI, barra spaziatrice fino a MID.
 Domanda 7: si sente l'armonica del General MIDI, e poi nella Tastiera torna lo strumento MIDI di prima?
-Passo 7: aggiungete una cromatica Solo a 12 fori in DO, rendetela attiva, ripetete Manico dello strumento e Trova Posizione con +4< e -4/.
-Domanda 8: le righe con il cursore e il rifiuto del bending sulla cromatica sono chiari?
+Passo 7: aggiungete una cromatica Solo a 12 fori in DO, con le valvole, rendetela attiva, ripetete Manico dello strumento e Trova Posizione con +4< e -4/.
+Domanda 8: le righe con il cursore e il rifiuto del bending sulla cromatica con le valvole sono chiari?
 Passo 8: rimettete attiva la chitarra e controllate che Manico dello strumento, Nota sul manico, Trova Posizione e Costruttore Accordi siano come prima.
 Passo 9: nel Metronomo caricate un preset con ml, cambiate i BPM con b100, caricatene un altro con ml.
 Domanda 9: arriva la domanda Sovrascrivi, Nuovo nome, Carica senza salvare, Annulla, e ogni risposta fa quello che dice?
+Passo 10: aggiungete la vostra Trochilus: Armonica a bocca, Cromatica, la sua tonalita', Solo, 10 fori, Senza valvole, Registro normale, e rendetela attiva.
+Passo 11: con l'Accordatore suonate sulla Trochilus, a cursore aperto, i fori 4 e 5 soffiati, poi i fori 9 e 10 soffiati e aspirati.
+Domanda 10: su una Trochilus in DO Chitabry si aspetta DO5 sui fori 4 e 5 soffiati, DO6 e RE6 sul foro 9, MI6 e FA6 sul foro 10. Tornano? Se no, scrivete le note che leggete: il costruttore non pubblica la disposizione a dieci fori, e la correggo sulla vostra.
+Passo 12: Manico dello strumento, poi Trova Posizione con -3/<, -1/ e +4*, poi Invio a vuoto.
+Domanda 11: le righe a cursore premuto, dopo quelle a cursore aperto, si seguono? I bending con il cursore suonano come sullo strumento?
+Passo 13: con la diatonica in DO attiva, Scale, SOL, gruppo 1, blues, e leggete la tabella delle dodici posizioni.
+Domanda 12: ogni riga dice la scala su questa armonica e l'armonica per il SOL blues: serve cosi'? La classifica mette quarta e terza davanti alla seconda, perche' chiedono un bending solo: vi torna, o va pesata diversamente?
+Passo 14: Scale, DO, gruppo 3, cercate pentatonic, poi pentatonic japanese, poi blues.
+Domanda 13: con le descrizioni dell'archivio, in inglese, si capisce cosa si sta scegliendo?
+Passo 15: Costruttore Accordi con la chitarra attiva, DO, scrivete m9 e Invio; poi DO, un punto solo, e half.
+Domanda 14: m9 da' il DO minore nona, DO MIb SOL SIb RE, e la ricerca per nome trova i cinque semidiminuiti?
+Passo 16: Guida, capitolo 16, music21: scale e accordi.
+Domanda 15: il capitolo vi orienta fra gruppi, scale e sigle, o manca qualcosa?
 Esito:
