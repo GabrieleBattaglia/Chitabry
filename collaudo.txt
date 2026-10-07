@@ -1,21 +1,14 @@
 Prove a mano dalla 9.8.3 alla 9.11.0: accordatore, teoria dell'armonica, volume MIDI, banco di suoni e numeri della guida. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le note del giro precedente sono salvate in git.
-Passo 1: Accordatore, INVIO per il rilevamento automatico, e intanto suona o parla vicino al microfono.
-Domanda 1: durante i cinque secondi la riga, per esempio Ascolto 3/5 s, picco 62 dB, si legge bene sulla barra braille?
-Domanda 2: nell'elenco il microfono che usi e' il primo, con il volume accanto, e Invio lo sceglie?
-Passo 2: esci, rientra nell'Accordatore, INVIO per il rilevamento, e questa volta resta in silenzio per i cinque secondi.
-Domanda 3: il primo dell'elenco e' il microfono predefinito di Windows, e il prompt dice solo Invio per il primo?
-Passo 3: sulla Hohner in DO suona il foro 4 soffiato e il foro 4 aspirato, alternandoli lentamente.
-Domanda 4: a ogni cambio la riga passa subito da DO5 a RE5, senza note di mezzo come DO#?
-Passo 4: sempre sulla Hohner, suona il foro 10 soffiato.
-Domanda 5: la riga dice DO7, intorno a 2093 Hz? Prima risultava un'ottava sotto.
-Domanda 6: in generale la lettura ti sembra piu' ferma e sicura di prima?
+GB: va tutto bene ma dovremmo stabilire un tasto rapido che chieda la soglia di silenzio perché a volte è troppo sensibile, a volte lo è poco, dipende dal rumore ambientale. Perciò facciamo che lo spazio chiede la soglia entro cui l'accordatore non ascolta. Ok?
+
 Passo 5: con la Hohner attiva, Trova Posizione, poi Costruttore Accordi con SOL settima di dominante.
+GB: sono andato in impostazioni ed ho visto che non c'è un banco strumenti impostato. Ho scelto la voce e mi chiede di scaricarlo. Qui mi fermo perché non voglio un doppione, sul mio pc se ne sono parecchi di banchi, incluso il fluidSynth. Perché chitabry mi dice che non ce ne sono? Evidentemente cerca male o nei posti sbagliati.
+Questo è un bug critico e va corretto subito.
+Pois, s per seleziona strumento attivo: qui ci sono i numeri per gli strumenti. Non va bene, dobbiamo usare anche qui la comoda menu, così scelgo dal nome dello strumento e non da un numero.
+
 Domanda 7: i messaggi dicono Scrivi e Scegli, e il SOL7 suona una volta sola?
-Passo 6: Scale, SOL, gruppo 1, blues, e leggi i gradi della tablatura.
-Domanda 8: i gradi sono 1, b3, 4, b5, 5 e b7, con il REb come b5?
-Passo 7: Impostazioni, Volume MIDI, prova 60; poi Scale con il suono MIDI e il metronomo acceso.
-Domanda 9: l'armonica resta al suo volume quando accendi il metronomo, e il wood block ha il volume del tuo preset?
-Passo 8: Impostazioni, Banco di suoni: lascia scaricare FluidSynth, cerca i banchi su tutti i dischi, e scegli SGM-V2.01 nella cartella VstPlugins; volume 0.8, e usalo come suono attivo.
+GB: sì, ma anche qui servono tasti per ascoltare le singole note, come si fa per la chitarra, poi un tasto, q oppure a, per mantenere la coerenza con il resto dell'app per sentirlo tutto assieme, così il musicista se lo ascolta finché vuole, mentre ora può solo uscire. Accordo e le singole note, non dovrebbero essere così lunghe come sono ora, devono prendere la durata di 2/4 in base al tempo impostato nel metronomo attivo.
+
 Domanda 10: lo scaricamento e la ricerca si seguono bene con le righe di avanzamento? Quanto dura la ricerca?
 Passo 9: Scale, SOL blues con la Hohner e il suono BAN, esercizio con A, D e L, con il metronomo acceso.
 Domanda 11: l'armonica del banco suona senza vibrato, a tempo con il battito, e al volume giusto rispetto al click?
