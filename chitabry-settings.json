@@ -3434,8 +3434,10 @@
     "versione_formato": 3,
     "midi_volume": 100,
     "banco": {
-        "percorso": "",
+        "percorso": "E:\\git\\tmp\\player-accessibile\\ascolti_midi\\scaricati\\GeneralUser-GS.sf2",
         "volume": 0.8,
-        "dur": 4.0
-    }
+        "dur": 4.0,
+        "fluidsynth": "E:\\git\\Mine\\MeTeOra\\fluidsynth"
+    },
+    "soglia_accordatore": 60
 }
