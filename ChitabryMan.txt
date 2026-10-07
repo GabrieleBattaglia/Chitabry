@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 24, di mercoledi' 7 ottobre 2026, per la versione 9.10.15.
+L'ultima revisione di questo documento e' la numero 25, di mercoledi' 7 ottobre 2026, per la versione 9.11.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -349,7 +349,7 @@ Selezionando questa voce potrete mettere alla prova la vostra capacità di ricon
 11.2. Svolgimento.
    Una partita è composta da 30 round. Ad ogni round ascolterete il suono bersaglio. Il prompt, estremamente compatto e ottimizzato per i display Braille, vi mostrerà il risultato del round precedente e i comandi disponibili.
    - Premete un tasto qualsiasi per riascoltare il suono quante volte volete.
-   - Premete la Barra Spaziatrice per passare al volo dal suono del Sintetizzatore a quello della Chitarra per aiutarvi nel riconoscimento.
+   - Premete la Barra Spaziatrice per passare al volo fra il suono della Chitarra, quello del Sintetizzatore e, se ne avete scelto uno, il banco di suoni del sottocapitolo 12.9, per aiutarvi nel riconoscimento. Il suono MIDI di Windows qui non c'e'.
    - Premete Invio quando vi sentite pronti a digitare la vostra risposta.
 
 11.3. Calcolo del Punteggio.
@@ -368,7 +368,7 @@ Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumen
 12.2. Cambia nomenclatura.
 Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
 12.3. Cambia Tipo Suono Attivo.
-Sceglie il suono con cui Chitabry suona le note: 1 la sintesi Karplus-Strong, 2 la sintesi a onda semplice, 3 lo strumento MIDI di Windows, 4 il banco di suoni. Se scegli il banco e non ce n'e' ancora uno pronto, parte la configurazione descritta al sottocapitolo 12.9, Banco di suoni. Dove la barra spaziatrice cambia suono, gira fra gli stessi suoni, e il banco entra nel giro solo quando e' pronto.
+Sceglie il suono con cui Chitabry suona le note: 1 la sintesi Karplus-Strong, 2 la sintesi a onda semplice, 3 lo strumento MIDI di Windows, 4 il banco di suoni. Se scegli il banco e non ce n'e' ancora uno pronto, parte la configurazione descritta al sottocapitolo 12.9, Banco di suoni. Dove la barra spaziatrice cambia suono gira fra questi, e il banco entra nel giro solo quando e' pronto; in Gioca col suono il MIDI di Windows resta fuori.
 12.4. Modifica suono 1 (Accordi).
 Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
 12.5. Modifica suono 2 (Sintetico).

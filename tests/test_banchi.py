@@ -74,6 +74,21 @@ def test_il_banco_si_salta_finche_non_e_pronto(monkeypatch):
     assert suoni.sigla_suono("banco") == "BAN"
 
 
+def test_il_gioco_col_suono_alterna_anche_il_banco(monkeypatch):
+    """In Gioca col suono la barra spaziatrice alternava solo i due suoni
+    sintetici: con un banco pronto c'e' anche lui."""
+    import gioca_suono
+    monkeypatch.setattr(suoni, "banco_pronto", lambda: False)
+    assert gioca_suono._prossimo_suono("suono_1") == "suono_2"
+    assert gioca_suono._prossimo_suono("suono_2") == "suono_1"
+    monkeypatch.setattr(suoni, "banco_pronto", lambda: True)
+    giro = ["suono_1"]
+    for _ in range(3):
+        giro.append(gioca_suono._prossimo_suono(giro[-1]))
+    assert giro == ["suono_1", "suono_2", "banco", "suono_1"]
+    assert gioca_suono._prossimo_suono("midi") == "suono_1"
+
+
 def test_le_note_del_banco_passano_dal_renderer(monkeypatch):
     """Chi suona non sa quale suono sta suonando: configura e chiede il mono."""
     monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "x.sf2", "volume": 0.5, "dur": 2.0}, "midi_strumento": 22})

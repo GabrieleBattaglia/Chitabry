@@ -1,4 +1,4 @@
-Prove a mano dalla 9.8.3 alla 9.10.15: accordatore, teoria dell'armonica, volume MIDI, banco di suoni e numeri della guida. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le note del giro precedente sono salvate in git.
+Prove a mano dalla 9.8.3 alla 9.11.0: accordatore, teoria dell'armonica, volume MIDI, banco di suoni e numeri della guida. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le note del giro precedente sono salvate in git.
 Passo 1: Accordatore, INVIO per il rilevamento automatico, e intanto suona o parla vicino al microfono.
 Domanda 1: durante i cinque secondi la riga, per esempio Ascolto 3/5 s, picco 62 dB, si legge bene sulla barra braille?
 Domanda 2: nell'elenco il microfono che usi e' il primo, con il volume accanto, e Invio lo sceglie?
@@ -24,6 +24,8 @@ Domanda 12: scelto l'organo, il messaggio dice che il suono attivo resta il banc
 Domanda 13: all'inizio del MI senti ancora il DO di prima? La nota lunga, dopo otto secondi, si spegne dolcemente o con uno scatto? Senti un ritardo fra il tasto e la nota?
 Passo 11: Seleziona Strumento MIDI, una delle Acoustic Guitar, e prova il suono BAN in Trova Posizione e nel Costruttore Accordi.
 Domanda 14: la chitarra del banco va bene, e il suo volume e' simile a quello dell'armonica e dell'organo?
-Passo 12: Guida: cerca 16. poi 12.3. e 12.9. con la ricerca del tuo editor, e scorri l'indice.
-Domanda 15: i numeri dei capitoli ti aiutano a orientarti?
+Passo 12: Gioca col suono, Note, e con il banco ancora scelto premi la barra spaziatrice tre volte, ascoltando la nota a ogni cambio.
+Domanda 15: il giro e' Sintetico, poi il banco con la chitarra, poi Accordi, e la nota del banco ha l'altezza giusta?
+Passo 13: Guida: cerca 16. poi 12.3. e 12.9. con la ricerca del tuo editor, e scorri l'indice.
+Domanda 16: i numeri dei capitoli ti aiutano a orientarti?
 Esito:

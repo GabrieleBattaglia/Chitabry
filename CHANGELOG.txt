@@ -2,6 +2,11 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.11.0 (7 ottobre 2026)
+Il banco di suoni anche in Gioca col suono.
+*   In Gioca col suono la barra spaziatrice alterna adesso la Chitarra, il Sintetizzatore e, quando un banco e' pronto, il banco di suoni, con lo strumento scelto per il MIDI (Gabriele, 7 ottobre 2026). Prima il banco li' non suonava.
+*   La guida passa alla revisione 25. Una prova nuova, 194 in tutto.
+
 Versione 9.10.15 (7 ottobre 2026)
 Quindici correzioni, da una seconda revisione a piu' voci del banco di suoni e dell'accordatore, verificate una per una.
 *   Banco: la nota precedente rientrava all'inizio della successiva, come un fantasma. Dopo un DO d'organo, nel primo decimo di secondo del MI il DO suonava forte quanto il MI stesso; adesso ne resta meno del sei per cento. Si sentiva soprattutto con l'organo, gli archi e il coro.

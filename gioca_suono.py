@@ -1,5 +1,5 @@
 # Chitabry, gioca col suono: l'allenamento dell'orecchio su note e frequenze, con la classifica.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Revisione 1 del 2026-09-09: i parametri del suono passano dagli helper di
 # suoni.py invece di essere riletti qui, la classifica si legge in modo
 # lineare e il punteggio si salva subito.
@@ -46,6 +46,17 @@ def _risposta_nota(ans_str):
         print(f"Nota non valida in {config.impostazioni['nomenclatura']}.")
         return None
     return pitch.Pitch(nota_std + ans_str[-1]).midi
+
+
+def _prossimo_suono(attuale):
+    """Il suono dopo quello attuale, per la barra spaziatrice: i due
+    sintetici, e il banco quando ce n'e' uno pronto, come ha chiesto
+    Gabriele il 7 ottobre 2026. Il MIDI di Windows resta fuori, come prima:
+    il gioco suona dal mixer."""
+    giro = ['suono_1', 'suono_2'] + (['banco'] if suoni.banco_pronto() else [])
+    if attuale not in giro:
+        return giro[0]
+    return giro[(giro.index(attuale) + 1) % len(giro)]
 
 
 def _durata_testo(durata_sec):
@@ -125,7 +136,7 @@ def avvia():
                     print("\nEsercizio concluso prematuramente. Il punteggio non sara' salvato.")
                     return
                 if comando == ' ':
-                    stato['suono'] = 'suono_2' if stato['suono'] == 'suono_1' else 'suono_1'
+                    stato['suono'] = _prossimo_suono(stato['suono'])
                     print(f"\r[Suono: {suoni.descrizione_suono(stato['suono'])}]{' ' * 20}\r", end="", flush=True)
                     continue
                 if comando not in ('\r', '\n'):
