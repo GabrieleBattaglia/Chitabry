@@ -7,7 +7,7 @@ from GBUtils import dgt, key, menu
 
 import config
 import suoni
-from nomenclatura import get_nota, nome_da_midi, nome_utente_in_std, nomi_note_utente
+from nomenclatura import get_nota, nome_con_grafia, nome_da_midi, nome_utente_in_std, nomi_note_utente
 
 # Le righe dello schema, nell'ordine in cui si leggono: prima le note
 # naturali, poi i bending aspirati dei fori bassi, quelli soffiati dei fori
@@ -118,7 +118,7 @@ def trova_posizione():
     si preme Invio a vuoto, per provare un simbolo dopo l'altro."""
     modello = config.ARMONICA
     print(f"Trova la nota di un foro su {nome_attivo()}, {descrivi(modello)}.")
-    print("Scrivete + per soffiato o - per aspirato, il numero del foro, poi una barra per ogni semitono di bending, "
+    print("Scrivi + per soffiato o - per aspirato, il numero del foro, poi una barra per ogni semitono di bending, "
           "l'asterisco per l'overbend o il segno minore per il cursore. Per esempio -3// o +4*.")
     while True:
         testo = dgt("Simbolo (Invio per tornare al menu): ", smax=8).strip()
@@ -136,15 +136,23 @@ def trova_posizione():
         suoni.suona_note([tecnica.midi], armonica=True)
 
 
+def _nome_nell_accordo(nomi_classi, midi):
+    """Una nota di un gruppo di fori, con la grafia dell'accordo se c'e'."""
+    if midi % 12 in nomi_classi:
+        return nome_con_grafia(nomi_classi[midi % 12], midi)
+    return nome_da_midi(midi)
+
+
 def accordi(classi, nomi_classi, nome_accordo):
     """Il Costruttore Accordi con un'armonica attiva: i gruppi di fori vicini,
     nello stesso verso, che suonano l'accordo, da ascoltare uno per uno.
-    nomi_classi dice come chiamare ogni classe di altezza, con la grafia
-    dell'accordo: un SIb resta SIb e non diventa LA#."""
+    nomi_classi da' per ogni classe di altezza il nome di music21 con la
+    grafia dell'accordo, come B- per il SIb: le note dei gruppi e quelle che
+    mancano si scrivono cosi', e un SIb resta SIb e non diventa LA#."""
     modello = config.ARMONICA
     finestre = modello.accordi(classi)
     if not finestre:
-        print(f"Su {nome_attivo()} non ci sono fori vicini, nello stesso verso, che suonino almeno due note di {nome_accordo}.")
+        print(f"Su {nome_attivo()} non ci sono fori vicini, nello stesso verso, che suonino almeno due note di {nome_accordo} senza note estranee.")
         key("Premi un tasto per tornare al menu...")
         return
     if finestre[0].completo and len(finestre) == 1:
@@ -152,12 +160,12 @@ def accordi(classi, nomi_classi, nome_accordo):
     elif finestre[0].completo:
         print(f"{nome_accordo} su {nome_attivo()}: {len(finestre)} gruppi di fori vicini, nello stesso verso, lo suonano per intero.")
     else:
-        print(f"Nessun gruppo di fori vicini suona {nome_accordo} per intero: questi sono i gruppi che ne suonano di piu'.")
+        print(f"Nessun gruppo di fori vicini suona {nome_accordo} per intero: questi sono i gruppi, senza note estranee, che ne suonano di piu'.")
     voci = {}
     for numero, finestra in enumerate(finestre, start=1):
-        testo = f"{finestra.simboli}: {' '.join(nome_da_midi(n) for n in finestra.note)}"
+        testo = f"{finestra.simboli}: {' '.join(_nome_nell_accordo(nomi_classi, n) for n in finestra.note)}"
         if finestra.mancanti:
-            testo += f", manca {', '.join(nomi_classi.get(c, '?') for c in sorted(finestra.mancanti))}"
+            testo += f", manca {', '.join(get_nota(nomi_classi[c].replace('-', 'b')) if c in nomi_classi else '?' for c in sorted(finestra.mancanti))}"
         voci[str(numero)] = testo
     if len(finestre) == 1:
         # Con una voce sola menu la restituisce subito senza leggere un tasto:
@@ -167,7 +175,7 @@ def accordi(classi, nomi_classi, nome_accordo):
         suoni.suona_note(finestre[0].note, armonica=True)
         key("Premi un tasto per tornare al menu...")
         return
-    print("Scegliete il numero del gruppo da ascoltare, Esc per uscire.")
+    print("Scegli il numero del gruppo da ascoltare, Esc per uscire.")
     mostra = True
     while True:
         scelta = menu(d=voci, keyslist=True, show=mostra, ordered=False, ntf="Scelta non valida")

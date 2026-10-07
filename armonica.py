@@ -243,6 +243,14 @@ class HarmonicaModel:
         else:
             self.soffiati = [base + s for s in self.accordatura.soffiati]
             self.aspirati = [base + a for a in self.accordatura.aspirati]
+        # Le ance con il cursore premuto: un semitono sopra, tranne in cima alle
+        # Solo a 12 e 16 fori, dove l'ultimo aspirato con il cursore e' un RE e
+        # non un DO, che c'e' gia' soffiando: cosi' la Hohner 270 arriva al RE7.
+        self.soffiati_cursore = [n + 1 for n in self.soffiati]
+        self.aspirati_cursore = [n + 1 for n in self.aspirati]
+        if self.cromatica and self.chiave_accordatura == "solo" and self.fori % 4 == 0:
+            # Il SI con il cursore darebbe DO: due semitoni sopra, RE
+            self.aspirati_cursore[-1] += 2
         self.tecniche = self._calcola_tecniche()
         self.per_midi = {}
         for tecnica in self.tecniche:
@@ -264,9 +272,9 @@ class HarmonicaModel:
         tecniche = []
         stati_cursore = (False, True) if self.cromatica else (False,)
         for cursore in stati_cursore:
-            alzo = 1 if cursore else 0
-            for foro, (soffio, aspiro) in enumerate(zip(self.soffiati, self.aspirati, strict=True), start=1):
-                soffio, aspiro = soffio + alzo, aspiro + alzo
+            soffiati = self.soffiati_cursore if cursore else self.soffiati
+            aspirati = self.aspirati_cursore if cursore else self.aspirati
+            for foro, (soffio, aspiro) in enumerate(zip(soffiati, aspirati, strict=True), start=1):
                 tecniche.append(Tecnica(foro, "+", soffio, cursore=cursore))
                 tecniche.append(Tecnica(foro, "-", aspiro, cursore=cursore))
                 if not self.si_piega:
@@ -328,6 +336,8 @@ class HarmonicaModel:
         """Perche' su questo foro la tecnica chiesta non c'e'. Il cursore alza
         le due ance insieme, quindi le ragioni sono le stesse."""
         soffio, aspiro = self.soffiati[foro - 1], self.aspirati[foro - 1]
+        if cursore:
+            soffio, aspiro = self.soffiati_cursore[foro - 1], self.aspirati_cursore[foro - 1]
         coda = "<" if cursore else ""
         if aspiro > soffio:
             piega, salto = "-", aspiro - soffio
@@ -361,7 +371,7 @@ class HarmonicaModel:
         larghezza_piena = max(2, min(len(classi), 4))
         versi = [("+", False, self.soffiati), ("-", False, self.aspirati)]
         if self.cromatica:
-            versi += [("+", True, [n + 1 for n in self.soffiati]), ("-", True, [n + 1 for n in self.aspirati])]
+            versi += [("+", True, self.soffiati_cursore), ("-", True, self.aspirati_cursore)]
         candidate = []
         for larghezza in range(larghezza_piena, 1, -1):
             for verso, cursore, note in versi:
@@ -413,6 +423,29 @@ def descrivi_posizione(numero):
         return testo + f", la tonica sta {quinte} sopra quella dell'armonica"
     quinte = "una quinta" if passi == 11 else f"{12 - passi} quinte"
     return testo + f", la tonica sta {quinte} sotto quella dell'armonica"
+
+
+# Le posizioni da 1 a 6 e la 12 hanno per tonica un grado della scala
+# maggiore dell'armonica: si scrivono con l'armatura della sua tonalita'. Sulla
+# armonica in MI la quarta posizione e' DO#, la relativa minore, non REb.
+INTERVALLI_DELLE_POSIZIONI = {1: 0, 2: 7, 3: 2, 4: 9, 5: 4, 6: 11, 12: 5}
+_LETTERE = "CDEFGAB"
+_SEMITONI_DELLE_LETTERE = (0, 2, 4, 5, 7, 9, 11)
+_PASSI_DI_LETTERA = {0: 0, 7: 4, 2: 1, 9: 5, 4: 2, 11: 6, 5: 3}
+
+
+def tonica_della_posizione(tonalita, numero):
+    """Il nome della tonica che una posizione da' su questa armonica, con il
+    nome di lettera giusto: per le posizioni 1-6 e 12 quello del grado della
+    scala maggiore dell'armonica, per le altre quello dei costruttori."""
+    tonalita = normalizza_tonalita(tonalita)
+    base = TONALITA.index(tonalita)
+    if numero not in INTERVALLI_DELLE_POSIZIONI:
+        return TONALITA[(base + 7 * (numero - 1)) % 12]
+    semitoni = INTERVALLI_DELLE_POSIZIONI[numero]
+    lettera = _LETTERE[(_LETTERE.index(tonalita[0]) + _PASSI_DI_LETTERA[semitoni]) % 7]
+    alterazione = ((base + semitoni) - _SEMITONI_DELLE_LETTERE[_LETTERE.index(lettera)] + 6) % 12 - 6
+    return lettera + ("#" * alterazione if alterazione > 0 else "b" * -alterazione)
 
 
 def tonalita_per(classe_tonica, numero):

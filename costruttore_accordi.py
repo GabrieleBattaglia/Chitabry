@@ -126,7 +126,7 @@ def CostruttoreAccordi():
     if config.ARMONICA is not None:
         nomi_classi = {}
         for p_note in accordo.pitches:
-            nomi_classi.setdefault(p_note.pitchClass, get_nota(p_note.name.replace('-', 'b')))
+            nomi_classi.setdefault(p_note.pitchClass, p_note.name)
         armonica_vista.accordi(set(nomi_classi), nomi_classi, nome_accordo)
         return
     print("Calcolo delle migliori diteggiature in corso...")

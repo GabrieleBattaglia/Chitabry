@@ -92,7 +92,7 @@ def test_la_cromatica_solo_ha_il_cursore_e_niente_bending():
     assert tab["+1<"] == "C#4"
     assert tab["-4<"] == "C5"
     assert not any("/" in s or "*" in s for s in tab)
-    assert [nome(m) for m in cromatica.estensione()] == ["C4", "C#7"]
+    assert [nome(m) for m in cromatica.estensione()] == ["C4", "D7"]
     sedici = armonica.HarmonicaModel("C", "solo", 16)
     assert nome(sedici.soffiati[0]) == "C3"
     assert len(sedici.soffiati) == 16
@@ -484,7 +484,7 @@ def test_un_solo_gruppo_di_fori_suona_una_volta(monkeypatch, capsys, richter):
     monkeypatch.setattr(armonica_vista.suoni, "suona_note", lambda note, armonica=False: suonate.append(tuple(note)))
     monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: "")
     monkeypatch.setattr(armonica_vista, "menu", lambda **_k: pytest.fail("con un gruppo solo il menu non serve"))
-    armonica_vista.accordi({7, 11, 2, 5}, {7: "SOL", 11: "SI", 2: "RE", 5: "FA"}, "SOL7")
+    armonica_vista.accordi({7, 11, 2, 5}, {7: "G", 11: "B", 2: "D", 5: "F"}, "SOL7")
     assert suonate == [(67, 71, 74, 77)]
     assert "-2 -3 -4 -5: SOL4 SI4 RE5 FA5." in capsys.readouterr().out
 
@@ -518,3 +518,56 @@ def test_le_scale_che_non_si_ripetono_all_ottava(monkeypatch, capsys, richter):
     esercizio_scale._tabella_posizioni(s, richter, 1)
     assert "la tabella non si fa" in capsys.readouterr().out
     assert esercizio_scale._si_ripete_all_ottava(esercizio_scale._costruisci_scala("C", "comune:blues", 4, richter))
+
+
+def test_i_gradi_si_contano_dalla_tonica_come_nelle_formule(monkeypatch, capsys, richter):
+    """Verifica della teoria del 7 ottobre 2026: nel SOL blues il REb era il
+    grado 4, mentre e' la quinta diminuita."""
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    etichetta = esercizio_scale._etichetta_grado
+    assert [etichetta("G", n) for n in ("G", "B-", "C", "D-", "D", "F")] == ["1", "b3", "4", "b5", "5", "b7"]
+    assert [etichetta("C", n) for n in ("D", "E", "F#", "G#", "B-")] == ["2", "3", "#4", "#5", "b7"]
+    assert [etichetta("A#", n) for n in ("C##", "E#", "G##")] == ["3", "5", "7"]
+    s = esercizio_scale._costruisci_scala("G", "comune:blues", 4, richter)
+    esercizio_scale._tablatura_completa(s, richter)
+    gradi = [r for r in capsys.readouterr().out.splitlines() if r.startswith("Grado ")]
+    assert [r.split(":")[0] for r in gradi] == ["Grado 1, SOL", "Grado b3, SIb", "Grado 4, DO", "Grado b5, REb", "Grado 5, RE", "Grado b7, FA"]
+
+
+def test_gli_accordi_sulle_minori_hanno_la_grafia_dell_accordo(monkeypatch, capsys):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Minore"})
+    monkeypatch.setattr(config, "ARMONICA", armonica.HarmonicaModel("C", "natural_minor"))
+    viste = []
+    monkeypatch.setattr(armonica_vista, "menu", lambda **k: viste.append(k["d"]))
+    armonica_vista.accordi({7, 10, 2}, {7: "G", 10: "B-", 2: "D"}, "SOL minore")
+    voci = " ".join(viste[0].values())
+    assert "-1 -2 -3: RE4 SOL4 SIb4" in voci
+    assert "LA#" not in voci + capsys.readouterr().out
+
+
+def test_le_toniche_delle_posizioni_con_l_armatura_dell_armonica():
+    assert [armonica.tonica_della_posizione("E", n) for n in (1, 2, 3, 4, 5, 6, 12)] == ["E", "B", "F#", "C#", "G#", "D#", "A"]
+    assert [armonica.tonica_della_posizione("C", n) for n in (1, 2, 3, 4, 5, 6, 12)] == ["C", "G", "D", "A", "E", "B", "F"]
+    assert [armonica.tonica_della_posizione("Bb", n) for n in (1, 2, 4, 6)] == ["Bb", "F", "G", "A"]
+    assert armonica.tonica_della_posizione("E", 7) == "Bb"
+
+
+def test_la_cima_delle_solo_a_dodici_e_sedici_fori_e_un_re():
+    """La Hohner 270 va dal DO4 al RE7: il foro 12 aspirato con il cursore e'
+    un RE, perche' il DO c'e' gia' soffiando."""
+    dodici = armonica.HarmonicaModel("C", "solo", 12)
+    assert simboli(dodici)["-12<"] == "D7"
+    assert [nome(m) for m in dodici.estensione()] == ["C4", "D7"]
+    assert "-12<" not in [t.simbolo for t in dodici.tecniche_per_nota(96)]
+    assert simboli(armonica.HarmonicaModel("C", "solo", 16))["-16<"] == "D7"
+    # La Solo a dieci fori, come la Trochilus, finisce su FA6 e FA#6: non cambia
+    assert simboli(armonica.HarmonicaModel("C", "solo", 10, valvole=False))["-10<"] == "F#6"
+
+
+def test_il_messaggio_senza_gruppi_dice_senza_note_estranee(monkeypatch, capsys, richter):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
+    monkeypatch.setattr(config, "ARMONICA", richter)
+    monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: "")
+    monkeypatch.setattr(richter, "accordi", lambda classi: [])
+    armonica_vista.accordi({2, 6, 9, 0}, {2: "D", 6: "F#", 9: "A", 0: "C"}, "RE7")
+    assert "senza note estranee" in capsys.readouterr().out

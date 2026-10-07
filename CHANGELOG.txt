@@ -2,6 +2,16 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.8.9 (7 ottobre 2026)
+Sei correzioni, da una verifica indipendente della teoria su 6863 esempi e dal collaudo.
+*   I gradi della scala sull'armonica erano numerati con la posizione della nota nella scala, giusta solo per le scale di sette note: nel SOL blues il REb risultava grado 4, mentre e' la quinta diminuita, e il DO, che e' il quarto grado, risultava il terzo. Adesso il grado si conta dalla tonica e si scrive come nelle formule delle scale comuni: Grado b3, SIb; Grado 4, DO; Grado b5, REb.
+*   Nel Costruttore Accordi, sulle armoniche minori, le note dei gruppi di fori erano scritte sempre con i diesis: il SOL minore sulla Natural Minor in DO usciva RE4 SOL4 LA#4. Adesso hanno la grafia dell'accordo: RE4 SOL4 SIb4.
+*   Nella tabella delle posizioni, le toniche delle posizioni dalla prima alla sesta e della dodicesima si scrivono con l'armatura dell'armonica: sull'armonica in MI la quarta posizione e' il DO#, la relativa minore, e non il REb.
+*   Sulle cromatiche Solo a dodici e sedici fori, l'ultimo foro aspirato con il cursore premuto e' un RE e non un DO, come sulla Hohner 270: l'estensione arriva al RE7 invece che al DO#7, e il RE7 c'e'.
+*   Quando nessun gruppo di fori vicini suona almeno due note di un accordo, il messaggio dice adesso senza note estranee: prima sembrava che quelle due note non si trovassero affatto, mentre si trovano insieme a note che con l'accordo non c'entrano.
+*   I messaggi di Chitabry usano la seconda persona singolare, come il resto del programma: Scrivi, Scegli, correggi, al posto di Scrivete, Scegliete, correggete (Gabriele, collaudo del 7 ottobre 2026).
+*   La guida passa alla revisione 21. Cinque prove nuove, 167 in tutto.
+
 Versione 9.8.3 (7 ottobre 2026)
 L'accordatore ascolta meglio e dice cosa sta facendo, e la guida ha i numeri dei capitoli.
 *   Accordatore: durante la ricerca delle periferiche, che dura cinque secondi, una riga si riscrive ogni mezzo secondo con i secondi passati e il volume piu' forte sentito, per esempio Ascolto 3/5 s, picco 62 dB. Prima per cinque secondi non si leggeva niente, e non si capiva se il programma stesse lavorando.

@@ -43,6 +43,22 @@ def get_nota(nota_std_music21):
     return nome + micro_suffix + ottava
 
 
+def nome_con_grafia(nome_m21, midi):
+    """Il nome di una nota con la grafia voluta e l'ottava che suona: un
+    SIb resta SIb e non diventa LA#, e un DOb si numera con l'ottava del SI
+    che suona. nome_m21 e' il nome di music21 senza ottava, come B- o C#.
+    Era dentro l'esercizio delle scale; dalla 9.8 la usano anche gli accordi
+    sull'armonica, che scrivevano SOL minore con il LA#."""
+    from music21 import pitch
+    p = pitch.Pitch(nome_m21)
+    p.octave = midi // 12 - 1
+    while p.midi > midi:
+        p.octave -= 1
+    while p.midi < midi:
+        p.octave += 1
+    return get_nota(p.nameWithOctave.replace('-', 'b'))
+
+
 def nota_std_da_midi(midi):
     """Da numero MIDI al nome standard con i diesis e l'ottava, per esempio C#4."""
     return f"{config.NOTE_STD[midi % 12]}{midi // 12 - 1}"

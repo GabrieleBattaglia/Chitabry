@@ -269,7 +269,7 @@ def aggiorna_manico():
             # Un archivio ritoccato a mano: si avvisa e si suona comunque,
             # senza riscrivere niente, cosi' la voce si puo' correggere.
             print(f"L'armonica {strum_attivo} ha dati che non tornano: {e}.")
-            print("Fino a quando non la correggete, Chitabry usa una diatonica in DO, accordatura Richter.")
+            print("Fino a quando non la correggi, Chitabry usa una diatonica in DO, accordatura Richter.")
             ARMONICA = armonica.HarmonicaModel()
         NUM_CORDE, NUM_TASTI = 0, 0
         SCALACROMATICA_STD, CAPOTASTI, CORDE = {}, {}, {}

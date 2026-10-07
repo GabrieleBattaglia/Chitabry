@@ -26,7 +26,7 @@ import scale_catalog
 import suoni
 from generatore_scale import ScalePathfinder
 from manico import Manlimiti, visualizza_note_su_manico
-from nomenclatura import get_nota, mappa_toniche, nome_da_midi
+from nomenclatura import get_nota, mappa_toniche, nome_con_grafia, nome_da_midi
 from ricerca import fuzzy_search_and_select
 from strumento import InstrumentModel
 
@@ -205,7 +205,7 @@ def _scegli_tipo(tonica_std):
         paradigma = "concrete"
     voci = {v["friendly_name"]: v.get("descrizione", "") for v in voci_gruppo}
     chiavi = {v["friendly_name"]: f"{paradigma}:{v['programmatic_id']}" for v in voci_gruppo}
-    print(f"Tipo di scala per {nota}: scrivete le prime lettere, il menu completa da solo il resto, e Invio sceglie il nome completo.")
+    print(f"Tipo di scala per {nota}: scrivi le prime lettere, il menu completa da solo il resto, e Invio sceglie il nome completo.")
     scelto = menu(d=voci, keyslist=True, show=True, pager=25, ordered=False, ntf="Tipo non valido")
     return None if scelto is None else chiavi[scelto]
 
@@ -327,13 +327,28 @@ def _mostra_manico(s):
 def _nome_nella_scala(nome_m21, midi):
     """Il nome di una nota con la grafia della scala e l'ottava che suona:
     un SIb resta SIb, e un DOb si numera con l'ottava del SI che suona."""
-    p = pitch.Pitch(nome_m21)
-    p.octave = midi // 12 - 1
-    while p.midi > midi:
-        p.octave -= 1
-    while p.midi < midi:
-        p.octave += 1
-    return get_nota(p.nameWithOctave.replace('-', 'b'))
+    return nome_con_grafia(nome_m21, midi)
+
+
+def _etichetta_grado(tonica_std, nome_m21):
+    """Il grado di una nota contato dalla tonica, nella forma delle formule
+    delle scale comuni: 4, b5, #4, b7. Fino alla 9.6 il numero era la
+    posizione della nota nella scala, giusto solo per le scale di sette note:
+    nel SOL blues il REb risultava grado 4, mentre e' la quinta diminuita."""
+    from music21 import interval
+    sotto = pitch.Pitch(tonica_std)
+    sotto.octave = 4
+    sopra = pitch.Pitch(nome_m21)
+    sopra.octave = 4
+    lettere = "CDEFGAB"
+    if sopra.ps < sotto.ps or (sopra.ps == sotto.ps and lettere.index(sopra.step) < lettere.index(sotto.step)):
+        sopra.octave = 5
+    nome = interval.Interval(sotto, sopra).simpleName
+    qualita, numero = nome.rstrip("0123456789"), nome[len(nome.rstrip("0123456789")):]
+    perfetto = numero in ("1", "4", "5", "8")
+    alterazioni = {"P": "", "M": "", "m": "b", "d": "b" if perfetto else "bb", "A": "#",
+                   "dd": "bb" if perfetto else "bbb", "AA": "##"}
+    return f"{alterazioni.get(qualita, '?')}{numero}"
 
 
 def _riassunto(tecniche):
@@ -422,11 +437,11 @@ def _tablatura_completa(s, modello):
     print(f"In salita: {' '.join(simboli)}")
     print(f"In discesa: {' '.join(reversed(simboli))}")
     if gradi:
-        print("Gradi della scala, con il modo piu' comodo in ogni ottava:")
-        for grado, (classe, nome) in enumerate(gradi.items(), start=1):
+        print("Gradi della scala, contati dalla tonica, con il modo piu' comodo in ogni ottava:")
+        for classe, nome in gradi.items():
             dove = [t.simbolo for (m, _), t in zip(note, tecniche, strict=True) if m % 12 == classe and t is not None]
             testo = " ".join(dove) if dove else "non c'e' su questa armonica"
-            print(f"Grado {grado}, {get_nota(nome.replace('-', 'b'))}: {testo}")
+            print(f"Grado {_etichetta_grado(s.tonica_std, nome)}, {get_nota(nome.replace('-', 'b'))}: {testo}")
     print(f"Tecniche su tutta l'estensione: {_riassunto(tecniche)}.")
     critiche = [(nome, t) for (_, nome), t in zip(note, tecniche, strict=True) if t is not None and t.livello >= 2]
     if critiche:
@@ -451,7 +466,7 @@ def _tabella_posizioni(s, modello, scelta):
         return
     righe = armonica.tabella_posizioni(modello, intervalli)
     print(f"Le dodici posizioni della scala {s.nome_base}, con le tecniche dell'ottava piu' comoda in ciascuna:")
-    for numero, classe, _estensione, ottava in righe:
+    for numero, _classe, _estensione, ottava in righe:
         titolo = armonica.ORDINALI[numero - 1].capitalize() + " posizione"
         if numero in armonica.NOMI_POSIZIONE:
             titolo += f" ({armonica.NOMI_POSIZIONE[numero]})"
@@ -459,12 +474,12 @@ def _tabella_posizioni(s, modello, scelta):
             dove = f"quella scelta, {s.nome} su questa armonica"
         else:
             sull_armonica = get_nota(armonica.tonalita_per(tonica, numero))
-            dove = f"{get_nota(armonica.TONALITA[classe])} {s.nome_base} su questa armonica, oppure {s.nome} sull'armonica in {sull_armonica}"
+            dove = f"{get_nota(armonica.tonica_della_posizione(modello.tonalita, numero))} {s.nome_base} su questa armonica, oppure {s.nome} sull'armonica in {sull_armonica}"
         if ottava is None:
             tecniche = "la tonica non c'e' sull'armonica"
         else:
             # La tonica con la grafia della riga: SIb, non LA#
-            nome_tonica = get_nota(s.tonica_std if numero == scelta else armonica.TONALITA[classe])
+            nome_tonica = get_nota(s.tonica_std if numero == scelta else armonica.tonica_della_posizione(modello.tonalita, numero))
             tecniche = f"dalla tonica {nome_tonica}{ottava[0] // 12 - 1}, {_riassunto(ottava[1])}"
         print(f"{titolo}: {dove}. Ottava piu' comoda {tecniche}.")
     comode = armonica.piu_comode(righe)
