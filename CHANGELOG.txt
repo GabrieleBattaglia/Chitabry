@@ -2,6 +2,15 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.8.3 (7 ottobre 2026)
+L'accordatore ascolta meglio e dice cosa sta facendo, e la guida ha i numeri dei capitoli.
+*   Accordatore: durante la ricerca delle periferiche, che dura cinque secondi, una riga si riscrive ogni mezzo secondo con i secondi passati e il volume piu' forte sentito, per esempio Ascolto 3/5 s, picco 62 dB. Prima per cinque secondi non si leggeva niente, e non si capiva se il programma stesse lavorando.
+*   Accordatore: nell'elenco delle periferiche, dopo la ricerca, la piu' forte viene per prima, con il volume accanto, e Invio senza scrivere niente sceglie quella. Senza ricerca viene per primo il microfono predefinito del sistema.
+*   Accordatore: la nota si riconosce con YIN invece che con l'autocorrelazione, da 27,5 a 4500 Hz invece che da 50 a 2000. Misurato su toni sintetici dal SI0 al LA7: nel registro centrale niente piu' errori d'ottava, che erano fra l'uno e il cinque per cento delle letture, e precisione sotto il centesimo; si leggono il MI e il SI gravi del basso, che prima mancavano; e il foro 10 soffiato di un'armonica in DO, un DO7, non risulta piu' un'ottava sotto, come succedeva a tutto cio' che stava sopra i 1900 Hz.
+*   Accordatore: la riga mediava la lettura di ogni secondo con quella del secondo prima anche quando la nota era cambiata, e passando da DO4 a RE4 diceva DO#4 per un paio di secondi: era il margine di incertezza che si sentiva. Adesso la media si fa solo fra due letture della stessa nota, entro trenta centesimi, e a ogni nota nuova la riga riparte subito.
+*   Guida: ogni capitolo e sottocapitolo ha il suo numero davanti al titolo, come nell'indice, e l'indice si ricava dai titoli, cosi' corrispondono parola per parola: cercando 16. si arriva al capitolo su music21. I sottocapitoli dell'indice che nel testo non esistevano, come Scelta della Tonica, sono diventati quelli veri. Le voci delle Impostazioni, della Tastiera e di Gioca col suono sono sottocapitoli numerati, i rimandi dicono il numero del capitolo, ed e' sparita una riga con il cancelletto rimasta da un vecchio formato. Il capitolo 8 ha un sottocapitolo nuovo, 8.2, su come l'accordatore riconosce la nota. La guida passa alla revisione 20.
+*   Sedici prove nuove per l'accordatore, 162 in tutto.
+
 Versione 9.6.18 (7 ottobre 2026)
 Diciotto correzioni, trovate da una revisione a piu' voci del lavoro sull'armonica e sulle scale e verificate una per una.
 *   Nel Costruttore Accordi, con un'armonica attiva, un accordo che sta in un solo gruppo di fori, come il SOL7 su un'armonica in DO, ripartiva all'infinito e non si poteva fermare nemmeno con Esc. Adesso si sente una volta, e un tasto riporta al menu.

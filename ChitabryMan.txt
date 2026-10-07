@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 19, di mercoledi' 7 ottobre 2026, per la versione 9.6.18.
+L'ultima revisione di questo documento e' la numero 20, di mercoledi' 7 ottobre 2026, per la versione 9.8.3.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -7,63 +7,65 @@ Indice Dettagliato degli Argomenti:
 2. Il sistema dei menu (Regole Standard).
 3. Il menu' principale.
 4. Costruttore Accordi.
-   - 4.1. Scelta della Tonica.
-   - 4.2. Scelta del Tipo di accordo.
-   - 4.3. Ascolto e interazione delle Forme/Diteggiature.
-5. Flauto (Diteggiature per il Flauto Traverso).
-6. Metronomo (Manuale Completo).
+   - 4.1. Il processo.
+   - 4.2. Durante l'ascolto di una forma.
+5. Flauto.
+   - 5.1. Il processo.
+6. Metronomo.
    - 6.1. Caratteristiche Principali.
    - 6.2. Utilizzo.
-   - 6.3. Riferimento Comandi:
-     * Controlli di Base.
-     * Ritmo.
-     * Parametri del suono.
-     * Gestione dei preset.
-     * Programmazione.
-     * Allenamento con le battute fantasma.
+   - 6.3. Riferimento Comandi.
+      - 6.3.1. Controlli di Base.
+      - 6.3.2. Ritmo.
+      - 6.3.3. Parametri del suono.
+      - 6.3.4. Gestione dei preset.
+      - 6.3.5. Programmazione.
+      - 6.3.6. Allenamento con le battute fantasma.
    - 6.4. Sviluppatori.
-
-7. MidiStudy (Analisi e Studio File MIDI/ABC).
-   - 7.1. Funzionamento generale.
+7. MidiStudy.
+   - 7.1. Funzionamento.
    - 7.2. Scegli Tracce (Multi-selezione).
    - 7.3. Azioni sulle Tracce isolate/unite.
-   - 7.4. Visualizzatore Interattivo (per Display Braille).
-   - 7.5. Notazione e Durate.
-8. Accordatore (Accordatore Cromatico in Tempo Reale).
-   - 8.1. Il processo di accordatura.
-9. Scale (Studio e Pathfinder delle Scale).
-   - 9.1. Scelta della Tonica.
-   - 9.2. Scelta del Tipo di Scala.
-   - 9.3. Ricerca Diteggiature (CAGED e 3 Note per Corda).
-   - 9.4. Menu Esercizio Scala.
+   - 7.4. Visualizzatore Interattivo.
+   - 7.5. Notazione.
+8. Accordatore.
+   - 8.1. Il processo.
+   - 8.2. Come riconosce la nota.
+9. Scale.
+   - 9.1. Il processo.
+   - 9.2. Menu Esercizio Scala.
 10. Tastiera (Player Generico).
-    - 10.1. Tastiera PC (Layout QWERTY Italiano).
-    - 10.2. Tastiera MIDI Esterna (Collegamento fisico e Bluetooth).
-    - 10.3. Controlli Comuni.
-    - 10.4. Ottimizzazione per Display Braille.
-11. Gioca col suono (Ear Training).
-    - 11.1. Scelta del Gioco (Note / Frequenze).
-    - 11.2. Svolgimento del Gioco.
-    - 11.3. Calcolo del Punteggio.
-    - 11.4. Classifica (Hall of Fame).
+   - 10.1. Tastiera PC (Layout QWERTY Italiano).
+   - 10.2. Tastiera MIDI Esterna.
+   - 10.3. Controlli Comuni.
+   - 10.4. Note tenute.
+   - 10.5. Display Braille.
+11. Gioca col suono.
+   - 11.1. Scelta del Gioco.
+   - 11.2. Svolgimento.
+   - 11.3. Calcolo del Punteggio.
+   - 11.4. Classifica (Hall of Fame).
 12. Impostazioni.
-    - 12.1. Gestione Strumenti (strumenti a corda e armoniche).
-    - 12.2. Cambia nomenclatura (Latina / Anglosassone).
-    - 12.3. Configurazione Parametri Suoni (Sintesi e MIDI).
-13. Nota sul manico (Ricerca posizioni note).
-14. Trova Posizione (Corda.Tasto).
+   - 12.1. Gestisci Strumenti.
+   - 12.2. Cambia nomenclatura.
+   - 12.3. Modifica suono 1 (Accordi).
+   - 12.4. Modifica suono 2 (Sintetico).
+   - 12.5. Seleziona Strumento MIDI.
+   - 12.6. Connetti Tastiera MIDI.
+13. Nota sul manico.
+14. Trova Posizione.
 15. Armonica a bocca.
-    - 15.1. La notazione.
-    - 15.2. Le armoniche che Chitabry conosce.
-    - 15.3. Aggiungere un'armonica.
-    - 15.4. Con un'armonica attiva.
-    - 15.5. Le scale sull'armonica.
+   - 15.1. La notazione.
+   - 15.2. Le armoniche che Chitabry conosce.
+   - 15.3. Aggiungere un'armonica.
+   - 15.4. Con un'armonica attiva.
+   - 15.5. Le scale sull'armonica.
 16. music21: scale e accordi.
-    - 16.1. Le scale in tre gruppi.
-    - 16.2. Le scale comuni.
-    - 16.3. Le classi di music21.
-    - 16.4. L'archivio Scala.
-    - 16.5. Gli accordi.
+   - 16.1. Le scale in tre gruppi.
+   - 16.2. Le scale comuni.
+   - 16.3. Le classi di music21.
+   - 16.4. L'archivio Scala.
+   - 16.5. Gli accordi.
 17. Guida.
 18. Esci.
 19. Ringraziamenti.
@@ -79,7 +81,7 @@ Gabriele Battaglia.
 
 Chitabry puo' essere compilato sia per Windows che per MacOS, dovrebbe girare anche sotto Linux ma non ho la possibilita' di testarlo di persona.
 
-Come installare Chitabry.
+1. Come installare Chitabry.
 L'installazione e' un processo molto semplice. Scompattate l'archivio della release in una cartella di vostra scelta, qualsiasi posizione va bene, comprese penne USB e dischi esterni: troverete Chitabry.exe e la cartella _internal, che contiene le librerie e questa guida.
 Poi lanciate l'eseguibile, oppure aprite una finestra terminale nella cartella dove avete incollato l'eseguibile, digitate chitabry (o il nome dell'eseguibile) e premete invio.
 
@@ -89,13 +91,13 @@ Ogni modifica alle impostazioni viene scritta subito su disco, e la versione pre
 Alla conclusione del programma (selezionando "Esci"), la finestra si chiude automaticamente; se avevate aperto un terminale o prompt dei comandi, dovete chiuderlo digitando exit e battendo invio.
 Prima di lanciare il software, vi consiglio di leggere questo manuale.
 
-Il sistema dei menu (Regole Standard)
+2. Il sistema dei menu (Regole Standard).
 Chitabry utilizza un sistema di menu intelligenti per la navigazione:
 1. Ricerca Veloce: Quando visualizzate un menu, potete digitare parte della parola che cercate. Il menu si restringerà automaticamente (filtro in tempo reale).
 2. Tasti di scelta rapida: Alcuni menu presentano opzioni con una lettera dedicata (es. 'A' per Ascolta). Basta premere la lettera e invio.
 3. Tornare Indietro (Uscire): In qualsiasi sottomenu o prompt di inserimento, per annullare l'operazione e tornare al livello precedente, vi basta premere il tasto ESC (Escape) sulla tastiera. In alternativa, se state digitando del testo, premere semplicemente il tasto Invio (senza aver scritto nulla) sortirà lo stesso effetto. Non troverete voci esplicite "Indietro" scritte a schermo, poiché l'uso di ESC o Invio vuoto è una regola globale e sempre valida per l'intera applicazione.
 
-Il menu' principale.
+3. Il menu' principale.
 Vediamo le scelte disponibili nel menu' principale e come funzionano.
 
 Chitabry e' un'applicazione a console. Questo significa che non possiede una finestra con pulsanti e mouse. Chitabry apre una finestra singola, tipicamente a sfondo scuro, su cui compaiono i messaggi e i menu.
@@ -108,14 +110,14 @@ Questo sistema rende facilissimo trovare un tipo di scala o un accordo anche tra
 
 Vediamo ora le singole voci del menu.
 
-  Costruttore Accordi
+4. Costruttore Accordi.
 
 Questa è la funzione teorica di Chitabry. Non si occupa solo di quali note compongono un accordo, ma calcola dinamicamente come suonarlo sulla chitarra (o su qualunque strumento a corda configurato). È uno strumento potentissimo per lo studio dell'armonia e della tecnica.
 
-Il processo:
+4.1. Il processo.
 
 1.  Scegli la Tonica: Selezionate la nota fondamentale (es. "DO", "FA", "SIb").
-2.  Scegli il Tipo: Si aprirà un menu filtrabile con una cinquantina di tipi di accordi, che si filtra scrivendo l'inizio della sigla, per esempio m7 o maj7; Invio senza scrivere niente sceglie la triade maggiore. Le sigle, e come cercare per nome, sono nel capitolo music21: scale e accordi.
+2.  Scegli il Tipo: Si aprirà un menu filtrabile con una cinquantina di tipi di accordi, che si filtra scrivendo l'inizio della sigla, per esempio m7 o maj7; Invio senza scrivere niente sceglie la triade maggiore. Le sigle, e come cercare per nome, sono nel capitolo 16, music21: scale e accordi.
        Suggerimento: Se non trovate il tipo, selezionate l'opzione >> Cerca tipo di accordo... (digitando ... o filtrando) per una ricerca testuale completa.
 
 Chitabry vi mostrerà subito le note che compongono quell'accordo (es. DO Maggiore = DO4, MI4, SOL4).
@@ -124,36 +126,34 @@ Subito dopo, l'algoritmo intelligente di Chitabry calcolerà le 10 migliori dite
    - Scegliete il numero della forma per vederne i dettagli (posizioni dito per dito) e ascoltarne la riproduzione polifonica.
    - All'interno del dettaglio, potrete riascoltare l'accordo o tornare alla lista delle forme.
 
-Durante l'ascolto di una forma:
+4.2. Durante l'ascolto di una forma.
    - Tasti 1-0: Suonano le singole note (1=grave, 0=acuta).
    - Q: Pennata in giù (Strum "battere", dal grave all'acuto).
    - A: Pennata in su (Strum "levare", dall'acuto al grave).
    - SPAZIO: Alterna i suoni Chitarra, Sintetico e MIDI.
 
-Se lo strumento attivo e' un'armonica, al posto delle diteggiature Chitabry cerca i gruppi di fori vicini che suonano l'accordo: lo trovate nel capitolo Armonica a bocca.
+Se lo strumento attivo e' un'armonica, al posto delle diteggiature Chitabry cerca i gruppi di fori vicini che suonano l'accordo: lo trovate nel capitolo 15, Armonica a bocca.
 
-  Flauto
+5. Flauto.
 
 Questa funzione permette di consultare in modo rapido e interattivo le diteggiature per il Flauto Traverso.
 
-Il processo:
+5.1. Il processo.
 1. All'avvio della funzione viene mostrata una legenda dettagliata delle chiavi per la mano sinistra (MS) e per la mano destra (MD).
 2. Viene richiesto l'inserimento dell'ottava e della nota desiderata (es. '2 FA#', '1 SIb', '3 DO') oppure semplicemente l'invio vuoto per uscire e tornare al menu principale.
    - Le ottave valide vanno da 1 a 4 (la quarta ottava supporta solo DO e RE).
    - Il formato della nota si adegua automaticamente alla nomenclatura scelta nelle Impostazioni (latina o anglosassone).
 3. Chitabry mostrerà la diteggiatura esatta (dita da premere per ciascuna mano), fornendo eventuali consigli e descrivendo le posizioni alternative consigliate per quella specifica nota.
 
-  Metronomo
+6. Metronomo.
 
 Questa voce avvia il metronomo testuale avanzato integrato in Chitabry. Di seguito il manuale completo per l'utilizzo del Metronomo.
-
-# metronomo
 
 Integrato in Chitabry 6.1.0
 
 Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controllabile da tastiera, scritto in Python. Progettato per musicisti, sviluppatori e chiunque preferisca la velocità e la semplicità del terminale.
 
- Caratteristiche Principali
+6.1. Caratteristiche Principali.
 
    Interfaccia a Riga di Comando: Nessuna GUI. Tutte le operazioni avvengono tramite comandi testuali, garantendo minime risorse di sistema e massima velocità.
    Programmazione Avanzata: Crea sequenze complesse dove il metronomo cambia BPM o si silenzia automaticamente a battute predefinite. Perfetto per esercizi con cambi di tempo o per studiare la propria stabilità ritmica.
@@ -161,15 +161,15 @@ Un metronomo da riga di comando (CLI) efficiente, leggero e interamente controll
    Accessibilità: Il programma è stato sviluppato pensando all'accessibilità. Essendo un'applicazione testuale, è pienamente compatibile con screen reader (come NVDA, JAWS, VoiceOver) e display Braille, garantendo un'esperienza utente completa a persone non vedenti e ipovedenti.
    Configurazione Audio Dettagliata: Personalizza la frequenza, il volume, la durata, l'attack e il decay per ogni suono (accento, beat e suddivisione).
 
- Utilizzo
+6.2. Utilizzo.
 
 Per avviare il programma, avvia Chitabry e scegli Metronomo dal menu principale, questi dovrà avere i permessi di scrittura per salvare il proprio file di impostazioni, quindi assicurati che il sistema operativo gli conceda i permessi di scrittura sulla cartella in cui lo hai salvato.
 
 All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, verrà avviato un metronomo di default a 120 BPM in 4/4.
 
- Riferimento Comandi
+6.3. Riferimento Comandi.
 
- Controlli di Base
+6.3.1. Controlli di Base.
 
    g avvia il metronomo.
    s lo ferma.
@@ -178,13 +178,13 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
    ? mostra la lista dei comandi.
    q esce dal programma.
 
- Ritmo
+6.3.2. Ritmo.
 
    b seguito dalle battute al minuto le imposta, per esempio b 120.
    t seguito dal tempo lo imposta, per esempio t 7/8.
    0, 1, 2 e 3 accendono e spengono le suddivisioni: 0 nessuna, 1 ottavi, 2 sedicesimi, 3 trentaduesimi.
 
- Parametri del suono
+6.3.3. Parametri del suono.
 
    I comandi di questo gruppo portano attaccato il numero del suono da regolare: 1 e' l'accento, 2 il battito, 3 la suddivisione.
    l imposta la durata del suono in millesimi di secondo, per esempio l1 100.
@@ -193,37 +193,37 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
    a imposta l'attacco in millesimi, per esempio a1 5.
    d imposta il decadimento in millesimi, per esempio d2 50.
 
- Gestione dei preset
+6.3.4. Gestione dei preset.
 
    m mostra la lista dei preset salvati.
    ms seguito da un nome salva la configurazione corrente, per esempio ms Esercizio A.
    ml seguito da un nome carica il preset che lo porta, per esempio ml Esercizio. Se il metronomo ha modifiche non salvate, prima di caricare vi chiede se sovrascrivere il preset attuale, salvarle con un nome nuovo, caricare senza salvare o annullare.
    mc seguito da un nome cancella il preset che lo porta, per esempio mc Lento.
 
- Programmazione
+6.3.5. Programmazione.
 
    p visualizza la sequenza programmata.
    pa aggiunge un passo alla sequenza, agganciandolo in coda: vi chiede la durata in battute e poi il tipo, 1 per un tempo fisso, 2 per una rampa, 3 per una pausa.
    pa seguito dalla durata e dalle battute al minuto fa la stessa cosa in una riga sola: pa 8 130 aggiunge otto battute a centotrenta. Con la lettera m al posto del numero le battute sono mute, per esempio pa 4 m.
    pc seguito dal numero di una battuta cancella il passo che comincia li', per esempio pc 16.
 
- Allenamento con le battute fantasma
+6.3.6. Allenamento con le battute fantasma.
 
    gb seguito da quante battute suonare e da quante silenziarne attiva le battute fantasma cicliche: gb 3 1 suona tre battute e ne silenzia una.
    gb r seguito da una percentuale attiva le battute fantasma casuali: gb r 25 silenzia a caso una battuta su quattro.
    gb off disattiva le battute fantasma.
 
-  Sviluppatori
+6.4. Sviluppatori.
 
     Gabriele Battaglia (IZ4APU): concept e sviluppo principale.
     Gemini: code review, debugging e implementazione di nuove feature fino alla versione 7.
     ClaudIA (Claude Fable 5.1, UltraCode): revisione generale del codice dalla versione 8.
 
- MidiStudy
+7. MidiStudy.
 
 Il potente modulo per l'analisi, lo studio e la conversione testuale/grafica di file MIDI e ABC. Permette di esplorare brani musicali, isolare singole tracce o selezionarne molteplici (multi-traccia) per studiarle in un formato accessibile.
 
-Funzionamento:
+7.1. Funzionamento.
 1.  Chitabry cerca i file .mid, .midi o .abc nella cartella midi accanto all'eseguibile, e la crea se non c'e': copiate li' i brani da studiare. All'avvio del programma, vi verrà notificato se ci sono file vecchi da ripulire (scadenza a 1 anno).
 2.  Selezionate un file dal menu. Verranno estratti e visualizzati immediatamente i metadati (BPM, Tempo, Tonalità).
 3.  Nel menu principale del brano potete:
@@ -233,10 +233,10 @@ Funzionamento:
     - Accedere alla suite "Strumenti ABC" (se avete scaricato e configurato i tool abcMIDI sul vostro sistema, come midi2abc, abc2midi, mftext).
     - "Scegli tracce" per isolare lo studio.
 
-Scegli Tracce (Multi-selezione):
+7.2. Scegli Tracce (Multi-selezione).
 Vedrete l'elenco delle tracce. Digitate il numero corrispondente per selezionare/deselezionare le tracce ([X]). Digitate ? per visualizzare il riepilogo delle tracce attive, oppure 0 per confermare. Le tracce selezionate verranno unite in uno speciale Mix.
 
-Azioni sulle Tracce isolate/unite:
+7.3. Azioni sulle Tracce isolate/unite.
     - Ascolta: Riproduce solo le tracce isolate col player nativo MCI.
     - Visualizza: Apre il Visualizzatore Interattivo testuale per display Braille.
     - Trasponi: Cerca in automatico la tonalità con meno accidenti (diesis/bemolli) o permette l'inserimento manuale.
@@ -245,7 +245,7 @@ Azioni sulle Tracce isolate/unite:
         2. ABC (Il formato standard mondiale ASCII per spartiti - Esportatore Nativo)
         3. PDF (Spartito grafico ad alta qualità per vedenti - Richiede che "LilyPond" sia installato tramite Winget).
 
-Visualizzatore Interattivo:
+7.4. Visualizzatore Interattivo.
 Pensato per l'accessibilità, mostra una battuta alla volta sovrascrivendo la stessa riga (\r) in modo che il cursore Braille resti immobile. Il motore esegue una quantizzazione automatica (es. normalizza strani 23/48 in perfetti 1/8) e rileva dinamicamente i cambi di tempo nella battuta.
 - Z e X: Naviga indietro e avanti.
 - + e -: Aumenta o diminuisci il BPM per l'ascolto. = per digitare il valore esatto.
@@ -255,18 +255,18 @@ Pensato per l'accessibilità, mostra una battuta alla volta sovrascrivendo la st
 - P: Cambia il suono del sintetizzatore integrato.
 - ESC (o Q): Esce.
 
-Notazione:
+7.5. Notazione.
 - Durate: /4 (Quarto), /8 (Ottavo), /16 (Sedicesimo).
 - Accordi: Note racchiuse tra parentesi quadre, es. [DO4 MI4 SOL4].
 - Legature: Il simbolo ~ a fine riga indica che l'ultima nota continua nella battuta successiva.
 
-  Accordatore
+8. Accordatore.
 
 Questa funzione avvia l'accordatore acustico cromatico in tempo reale per il tuo strumento.
 
-Il processo:
-1. All'avvio, l'applicazione chiede se desideri il rilevamento automatico della periferica attiva. Se rispondi Sì (INVIO), esegue un ascolto di 5 secondi per individuare i dispositivi con segnale attivo (RMS >= 0.002). Se rispondi No (ESC) o se non viene rilevato alcun segnale, viene mostrata la lista di tutti i dispositivi di input disponibili sul sistema.
-2. Viene presentata la lista dei dispositivi (filtrata o completa): seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS).
+8.1. Il processo.
+1. All'avvio, l'applicazione chiede se desideri il rilevamento automatico della periferica attiva. Se rispondi Sì (INVIO), ascolta tutte le periferiche insieme per 5 secondi e tiene quelle con un segnale sopra i 46 dB. Mentre ascolta, una riga si riscrive ogni mezzo secondo con i secondi passati e il volume piu' forte sentito fin li', per esempio: Ascolto 3/5 s, picco 62 dB. Le periferiche che non si lasciano ascoltare insieme alle altre si riprovano una per volta, e la riga dice Riprovo 1/2. Se rispondi No (ESC), o se non viene rilevato alcun segnale, viene mostrata la lista di tutti i dispositivi di input disponibili sul sistema.
+2. Viene presentata la lista dei dispositivi, numerata: seleziona il numero corrispondente al tuo microfono (supporta MME, WASAPI, DirectSound e WDM-KS). Dopo il rilevamento i dispositivi sono in ordine dal segnale piu' forte, con il volume accanto, e Invio senza scrivere niente sceglie il primo. Senza rilevamento il primo e' il dispositivo di ingresso predefinito del sistema, e Invio sceglie quello.
 3. Suona una corda sul tuo strumento. L'accordatore mostrerà in tempo reale:
    - La nota rilevata (espressa nella nomenclatura attiva in Impostazioni), preceduta da "N:".
    - La deviazione in centesimi di semitono (espressa in percentuale), es. "(+12%)" o "(-5%)". Deviazione positiva indica nota crescente (allenta), negativa indica calante (tendi).
@@ -278,14 +278,19 @@ Il processo:
    - Frequenze (Hz): minima (mediana) massima.
    - Volumi (dB): minimo (mediano) massimo.
 
-  Scale
+8.2. Come riconosce la nota.
+Dalla versione 9.8 l'accordatore riconosce la nota con YIN, il metodo di de Cheveigne' e Kawahara usato dagli accordatori e dai programmi di analisi della voce. Legge da 27,5 Hz, il LA piu' grave del pianoforte, che tiene dentro il SI grave del basso a cinque corde, fino a 4500 Hz, sopra la cima delle armoniche piu' acute. Fino alla 9.6 leggeva da 50 a 2000 Hz: il MI e il SI gravi del basso non si leggevano, e il foro 10 soffiato di un'armonica in DO, un DO7 a 2093 Hz, risultava un'ottava sotto.
+Misurato su toni sintetici di frequenza nota, dal SI0 al LA7, con e senza rumore: nel registro centrale la nota e' giusta a meno di un centesimo e non ci sono errori d'ottava, che prima erano fra l'uno e il cinque per cento delle letture. Nelle note piu' acute la precisione scende a qualche centesimo.
+La riga si aggiorna una volta al secondo, con la mediana delle letture di quel secondo, una decina, cosi' una lettura sbagliata isolata non arriva a schermo. Se la nota e' la stessa del secondo prima, entro trenta centesimi, la lettura si media con quella precedente, per una riga piu' ferma; se e' cambiata, si riparte subito dalla nota nuova. Fino alla 9.6 la media mescolava anche due note diverse, e passando da DO4 a RE4 la riga diceva DO#4 per un paio di secondi.
+
+9. Scale.
 
 Simile al Costruttore Accordi, questa è la funzione teorica per lo studio delle scale. Utilizza l'enorme archivio di music21 per darvi accesso a migliaia di scale da tutto il mondo.
 
-Il processo:
+9.1. Il processo.
 
 1.  Scegli la Tonica: (Es. "LA").
-2.  Scegli il Tipo di Scala, in due passi: prima il gruppo, cioe' le scale comuni con i nomi italiani, le classi di music21 o l'archivio Scala; poi la scala dentro il gruppo, scrivendo l'inizio del nome nei primi due, o una parola della descrizione nel terzo. Il capitolo music21: scale e accordi spiega i gruppi e le scale che contengono.
+2.  Scegli il Tipo di Scala, in due passi: prima il gruppo, cioe' le scale comuni con i nomi italiani, le classi di music21 o l'archivio Scala; poi la scala dentro il gruppo, scrivendo l'inizio del nome nei primi due, o una parola della descrizione nel terzo. Il capitolo 16, music21: scale e accordi spiega i gruppi e le scale che contengono.
 
 Chitabry vi mostrerà:
 
@@ -296,7 +301,7 @@ Chitabry vi mostrerà:
       Es: Corda 6: tasti (0, 2, 3), dita (0, 2, 3), note (Mi2, Fa#2, Sol2);
     - Digitate p (Prosegui) o premete ESC per passare all'esercizio audio.
 
-Menu Esercizio Scala:
+9.2. Menu Esercizio Scala.
    - A / D: Ascolta la scala a tempo, in salita o in discesa.
    - Tasti 1-9 e 0: Suonano le singole note della scala appena generata.
    - L: Attiva il loop; premuto durante il loop lo ferma.
@@ -306,61 +311,69 @@ Menu Esercizio Scala:
    - ?: Mostra l'aiuto.
    - ESC: durante un ascolto singolo lo interrompe e si resta nell'esercizio; dal menu dell'esercizio, o mentre il loop gira, esce dall'esercizio e torna al menu principale.
 
-Se lo strumento attivo e' un'armonica, al posto del manico Chitabry mostra la posizione, la tablatura su tutta l'estensione e la scelta dell'ottava per l'esercizio: lo trovate nel capitolo Armonica a bocca.
+Se lo strumento attivo e' un'armonica, al posto del manico Chitabry mostra la posizione, la tablatura su tutta l'estensione e la scelta dell'ottava per l'esercizio: lo trovate nel capitolo 15, Armonica a bocca.
 
- Tastiera (Player Generico)
+10. Tastiera (Player Generico).
 
 Trasforma la tastiera del vostro PC in uno strumento musicale polifonico a 16 voci e supporta la riproduzione tramite tastiere MIDI esterne (fisiche o Bluetooth).
 
-- Tastiera PC (Layout QWERTY Italiano):
+10.1. Tastiera PC (Layout QWERTY Italiano).
   - Riga inferiore (Z, X, C...): Ottava base (Naturali e relativi Diesis sui tasti S, D, G...).
   - Riga superiore (Q, W, E...): Ottava successiva.
   - SHIFT: Se premuto insieme ai tasti, sposta l'esecuzione di un'ulteriore ottava (sotto per la riga Z, sopra per la riga Q).
-- Tastiera MIDI Esterna:
+10.2. Tastiera MIDI Esterna.
   - Se hai connesso e abilitato un dispositivo MIDI di input (tastiera fisica o bluetooth) tramite la voce "Connetti Tastiera MIDI" nel menu "Impostazioni", potrai utilizzarla direttamente.
   - Con il suono MIDI la nota la produce il sintetizzatore del sistema, che ha un suo ritardo: e' normale che risponda un po' meno pronto degli altri due suoni, e non dipende da Chitabry.
   - Una volta all'interno di questa funzione, suonando i tasti fisici della tua tastiera MIDI esterna potrai suonare liberamente in tempo reale con piena polifonia nativa, e lo schermo stamperà in tempo reale la nota suonata e la sua frequenza (es. [Tastiera MIDI] Nota: DO4 (261.6 Hz)).
-- Controlli Comuni:
+10.3. Controlli Comuni.
   - F1 - F8: Impostano istantaneamente l'ottava base per la tastiera del PC, da 2 (F1) a 9 (F8); all'ingresso l'ottava base e' la 3.
   - SPAZIO: Cambia il tipo di suono del sintetizzatore alternando fra la sintesi Karplus-Strong, che e' la chitarra, la sintesi a onda semplice, che e' il suono sintetico, e il MIDI, che suona con lo strumento del banco attivo.
   - ESC: Torna al menu principale.
-- Note tenute: dalla 8.1.0 la nota vive finche' tenete giu' il tasto, e lasciandolo si chiude con la discesa che l'inviluppo del suono dichiara nel suo rilascio, invece di essere troncata. Tenendo premuto non si sente piu' il tremolo dell'auto-ripetizione di Windows. Quanto la nota tenuta duri dipende dal suono scelto: la corda pizzicata del suono 1 decade comunque, mentre il suono sintetico resta fermo sul suo livello di mantenimento finche' tenete il tasto, e quel livello si regola dalle impostazioni. Su Linux e Mac questo non vale, perche' il terminale non sa dire quando un tasto viene lasciato.
-- Display Braille: Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
+10.4. Note tenute.
+Dalla 8.1.0 la nota vive finche' tenete giu' il tasto, e lasciandolo si chiude con la discesa che l'inviluppo del suono dichiara nel suo rilascio, invece di essere troncata. Tenendo premuto non si sente piu' il tremolo dell'auto-ripetizione di Windows. Quanto la nota tenuta duri dipende dal suono scelto: la corda pizzicata del suono 1 decade comunque, mentre il suono sintetico resta fermo sul suo livello di mantenimento finche' tenete il tasto, e quel livello si regola dalle impostazioni. Su Linux e Mac questo non vale, perche' il terminale non sa dire quando un tasto viene lasciato.
+10.5. Display Braille.
+Il prompt mostra in tempo reale la nota suonata, la frequenza in Hz e l'ottava base attuale, restando ottimizzato entro i 40 caratteri per lettori di barre Braille.
 
- Gioca col suono
+11. Gioca col suono.
 
 Una nuova e divertente modalità per l'ear training (allenamento dell'orecchio musicale).
 Selezionando questa voce potrete mettere alla prova la vostra capacità di riconoscere le note o le frequenze pure "a orecchio".
 
-1. Scelta del Gioco:
+11.1. Scelta del Gioco.
    - Note: Il programma genera una nota MIDI casuale tra C2 (Do grave) e C7 (Do acutissimo). Vi verrà chiesto se volete includere i diesis/bemolli o giocare solo con le note naturali.
    - Frequenze: Il programma genera una frequenza pura casuale (in Hz) all'interno dello stesso range udibile (da 65 a 2093 Hz).
 
-2. Svolgimento:
+11.2. Svolgimento.
    Una partita è composta da 30 round. Ad ogni round ascolterete il suono bersaglio. Il prompt, estremamente compatto e ottimizzato per i display Braille, vi mostrerà il risultato del round precedente e i comandi disponibili.
    - Premete un tasto qualsiasi per riascoltare il suono quante volte volete.
    - Premete la Barra Spaziatrice per passare al volo dal suono del Sintetizzatore a quello della Chitarra per aiutarvi nel riconoscimento.
    - Premete Invio quando vi sentite pronti a digitare la vostra risposta.
 
-3. Calcolo del Punteggio:
+11.3. Calcolo del Punteggio.
    - Nel gioco delle Note: Una risposta esatta vale il 100%. L'errore viene calcolato in semitoni. Ogni semitono di distanza dalla nota corretta vi farà perdere circa il 4.16% del punteggio del round (fino ad azzerarsi se vi sbagliate di oltre 2 ottave).
    - Nel gioco delle Frequenze: Riconoscere la frequenza esatta a orecchio è difficilissimo! Se vi avvicinate entro uno scarto di 10 Hz, prenderete comunque il 100%. Da lì in poi il punteggio scende proporzionalmente fino a zero per errori superiori a 100 Hz.
 
-4. Classifica (Hall of Fame):
+11.4. Classifica (Hall of Fame).
    Al termine dei 30 round, vi verrà mostrata la vostra precisione media finale e il tempo impiegato per completare la sfida. Se il vostro punteggio rientra nei migliori 30 (Hall of Fame), alla fine dei 30 round vi verrà chiesto di inserire il vostro nome per l'inserimento in classifica!
 
- Impostazioni
+12. Impostazioni.
 
 Qui potete configurare alcuni parametri di Chitabry:
 
-   Gestisci Strumenti: Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo Armonica a bocca.
-   Cambia nomenclatura: Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
-   Modifica suono 1 (Accordi): Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
-   Modifica suono 2 (Sintetico): Permette di configurare i parametri del sintetizzatore ad onda semplice: la forma d'onda e l'inviluppo, cioe' come la nota nasce, si assesta e si spegne. L'inviluppo ha quattro valori. Attacco, decadimento e rilascio sono tempi in millesimi di secondo: l'attacco e' quanto la nota ci mette a raggiungere il volume pieno, il decadimento quanto ci mette a scendere dal picco al livello di mantenimento, il rilascio quanto ci mette a spegnersi quando lasciate il tasto. Il mantenimento invece non e' un tempo ma un livello, in percentuale del volume: e' il volume a cui la nota resta finche' la tenete. Con i valori di serie, dieci millesimi di attacco, sessanta di decadimento, settanta per cento di mantenimento e centoventi millesimi di rilascio, la nota parte subito, fa un gradino udibile e si chiude senza strascicare. Un attacco lungo fa sentire la nota in ritardo rispetto a quando avete premuto: fino alla versione 8.1.0 questi valori erano percentuali della durata della nota, e i valori di serie facevano un attacco di centottanta millesimi.
-   Seleziona Strumento MIDI: Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome.
-   Connetti Tastiera MIDI: Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
+12.1. Gestisci Strumenti.
+Permette di svincolare l'app dalla chitarra e farla funzionare con altri strumenti a corda (es. Ukulele, Mandolino) e con l'armonica a bocca. Puoi selezionare uno strumento attivo tra quelli salvati, aggiungere un nuovo strumento oppure eliminare strumenti non più usati. Aggiungendo, Chitabry chiede prima il tipo: per uno strumento a corda il numero di corde, la nota di ogni corda vuota e il numero di tasti; per un'armonica le domande sono nel capitolo 15, Armonica a bocca.
+12.2. Cambia nomenclatura.
+Potete scegliere se visualizzare le note in formato "latino" (DO, RE, MI...) o "anglosassone" (C, D, E...). Questa scelta influenza tutta l'app.
+12.3. Modifica suono 1 (Accordi).
+Permette di cambiare i parametri del nuovo motore fisico "Karplus-Strong". Potete regolare la "Durezza plettro" (per un suono più dolce o metallico) e il "Sustain" (durata della vibrazione della corda).
+12.4. Modifica suono 2 (Sintetico).
+Permette di configurare i parametri del sintetizzatore ad onda semplice: la forma d'onda e l'inviluppo, cioe' come la nota nasce, si assesta e si spegne. L'inviluppo ha quattro valori. Attacco, decadimento e rilascio sono tempi in millesimi di secondo: l'attacco e' quanto la nota ci mette a raggiungere il volume pieno, il decadimento quanto ci mette a scendere dal picco al livello di mantenimento, il rilascio quanto ci mette a spegnersi quando lasciate il tasto. Il mantenimento invece non e' un tempo ma un livello, in percentuale del volume: e' il volume a cui la nota resta finche' la tenete. Con i valori di serie, dieci millesimi di attacco, sessanta di decadimento, settanta per cento di mantenimento e centoventi millesimi di rilascio, la nota parte subito, fa un gradino udibile e si chiude senza strascicare. Un attacco lungo fa sentire la nota in ritardo rispetto a quando avete premuto: fino alla versione 8.1.0 questi valori erano percentuali della durata della nota, e i valori di serie facevano un attacco di centottanta millesimi.
+12.5. Seleziona Strumento MIDI.
+Consente di scegliere uno dei 128 strumenti General MIDI disponibili nel banco del computer per la riproduzione, filtrandoli direttamente per nome.
+12.6. Connetti Tastiera MIDI.
+Permette di collegare una tastiera MIDI fisica esterna (anche Bluetooth) selezionando il dispositivo di input desiderato.
 
- Nota sul manico
+13. Nota sul manico.
 
 Questa è la funzione contraria a "Trova Posizione". Serve per sapere dove si trova una nota specifica sul manico della chitarra.
 
@@ -375,9 +388,9 @@ Corda 3, tasti: 12
 ...etc...
 
 A differenza delle vecchie versioni, questa funzione cerca la nota esatta che digitate (es. "RE" troverà solo "RE", non anche "RE#"). Per cercare un diesis, digitate "RE#".
-Con un'armonica attiva la stessa voce dice in quali fori, e con quale tecnica, si suona la nota: vedete il capitolo Armonica a bocca.
+Con un'armonica attiva la stessa voce dice in quali fori, e con quale tecnica, si suona la nota: vedete il capitolo 15, Armonica a bocca.
 
- Trova Posizione
+14. Trova Posizione.
 
 Questa funzione, abbreviata in precedenza come C.T (Corda.Tasto), vi dice quale nota si trova in una determinata posizione sul manico.
 
@@ -390,13 +403,13 @@ Ad esempio, scrivendo 6.3 (terzo tasto della sesta corda), Chitabry risponderà:
 Sulla corda 6, tasto 3, si trova la nota: SOL2
 
 Il numero finale (es. 2) indica l'ottava di appartenenza. Come bonus, Chitabry suonerà anche la nota che avete trovato!
-Con un'armonica attiva la posizione si scrive con il simbolo del foro, per esempio -3//: vedete il capitolo Armonica a bocca.
+Con un'armonica attiva la posizione si scrive con il simbolo del foro, per esempio -3//: vedete il capitolo 15, Armonica a bocca.
 
- Armonica a bocca
+15. Armonica a bocca.
 
 Dalla versione 9.0.0 Chitabry conosce anche l'armonica a bocca, diatonica a dieci fori e cromatica a dieci, dodici o sedici. Si aggiunge come uno strumento qualunque, dal Gestore Strumenti nelle Impostazioni, e quando e' lo strumento attivo le voci che per una chitarra guardano il manico guardano i fori.
 
-La notazione.
+15.1. La notazione.
 Ogni nota dell'armonica si scrive con un simbolo corto, fatto di segni e numeri e senza lettere, che sulla barra braille si legge in un colpo:
    + seguito dal numero del foro e' il foro soffiato, per esempio +4.
    - seguito dal numero del foro e' il foro aspirato, per esempio -3.
@@ -405,7 +418,7 @@ Ogni nota dell'armonica si scrive con un simbolo corto, fatto di segni e numeri 
    Sulla cromatica il segno minore e' il cursore premuto: +4< e' il foro 4 soffiato con il cursore. Scrivendo potete usare anche l'accento circonflesso o la tilde al posto del segno minore.
 Accanto al simbolo, dove serve, Chitabry scrive la stessa cosa a parole, per esempio: -3//, foro 3 aspirato, bending di un tono.
 
-Le armoniche che Chitabry conosce.
+15.2. Le armoniche che Chitabry conosce.
 La tonalita' di un'armonica, per Chitabry, e' la nota del foro 1 soffiato. Le armoniche da DO a FA# cominciano dal DO centrale in su, quelle da SOL a SI sotto, come le fanno i costruttori: l'armonica in DO va da DO4 a DO7, quella in SOL da SOL3 a SOL6. La cromatica a sedici fori aggiunge un'ottava sotto. Le armoniche del registro basso, quelle che i costruttori chiamano Low, come la Low F o la Low D, stanno un'ottava sotto le altre: aggiungendole, Chitabry vi chiede il registro.
 Attenzione alle Lee Oskar Natural Minor e Melody Maker: sopra portano scritta la tonalita' della seconda posizione, che sta una quinta piu' su. Una Natural Minor con scritto SOL minore, per Chitabry, e' un'armonica in DO.
 Le accordature delle diatoniche:
@@ -421,17 +434,17 @@ Le accordature delle cromatiche:
    Richter e Paddy Richter, a dieci fori, per le cromatiche che sono una diatonica con il cursore, come la Trochilus Blues e la Trochilus Pop: a cursore aperto e' una Richter, o una Paddy Richter, nella sua tonalita', e premendolo diventa la stessa armonica un semitono sopra.
 Bending e overbend si calcolano dalla fisica delle due ance che stanno nello stesso foro: si piega l'ancia piu' acuta, verso la piu' grave, di tutti i semitoni che stanno fra le due, e l'overbend fa suonare un semitono sopra la piu' acuta. Per questo il foro 5 della Richter non si piega: le sue due ance sono a un semitono. Sulle cromatiche conta se ci sono le valvole. Le valvole tengono separate le due ance, e su una cromatica che le ha, come le Hohner 270, Chitabry non calcola bending ne' overbend: le note in piu' le da' il cursore. Una cromatica senza valvole, come la Trochilus o una bebop, si piega invece come una diatonica, sia a cursore aperto sia a cursore premuto, e Chitabry calcola tutto due volte: sulla Trochilus Solo, -3/< e' il foro 3 aspirato, con il cursore premuto, piegato di mezzo tono.
 
-Aggiungere un'armonica.
+15.3. Aggiungere un'armonica.
 Nelle Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento: scegliete Armonica a bocca, poi la famiglia, la tonalita' e l'accordatura. Se l'accordatura esiste con piu' numeri di fori, Chitabry vi chiede quanti; se e' una cromatica, vi chiede se ha le valvole, proponendo per prima la scelta piu' comune per quell'accordatura; poi vi chiede il registro, normale o basso, dicendovi su che nota cade il foro 1 soffiato in tutti e due i casi. Chitabry propone un nome, per esempio Armonica diatonica DO Richter, che accettate con Invio o cambiate scrivendone un altro.
 
-Con un'armonica attiva.
+15.4. Con un'armonica attiva.
    Manico dello strumento mostra lo schema dei fori: una griglia con un foro per colonna e una tecnica per riga, la riga + per i soffiati, - per gli aspirati, poi i bending e gli overbend, e sulla cromatica le righe con il cursore. In fondo, l'estensione.
    Nota sul manico vi chiede una nota e vi dice in quali fori e con quale tecnica si suona, dalla piu' comoda, in tutte le ottave; aggiungendo l'ottava, per esempio SOL4, solo in quella. Per esempio: SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato).
    Trova Posizione vi chiede un simbolo, vi dice che nota suona e ve la fa sentire. Se il simbolo su quell'armonica non esiste, Chitabry vi spiega perche': per esempio che il foro 3 si piega aspirando e non soffiando. Si continua un simbolo dopo l'altro, finche' non premete Invio a vuoto.
    Costruttore Accordi, dopo le note, cerca i gruppi di fori vicini che suonano l'accordo, nello stesso verso e senza tecniche, larghi quanto le note dell'accordo e al massimo quattro: per esempio SOL7, su un'armonica in DO, e' -2 -3 -4 -5. Se nessun gruppo lo suona per intero, Chitabry mostra quelli che ne suonano di piu' e dice quale nota manca. Scegliendo il numero di un gruppo lo sentite.
    Con il suono MIDI le note dell'armonica escono con lo strumento Harmonica del General MIDI, su un canale tutto loro: lo strumento MIDI scelto nelle impostazioni resta quello per tutto il resto.
 
-Le scale sull'armonica.
+15.5. Le scale sull'armonica.
 Scelta la scala, al posto del manico Chitabry mostra:
    La posizione, cioe' quante quinte separano la tonica della scala dalla tonalita' dell'armonica: SOL su un'armonica in DO e' la seconda posizione, la cross harp del blues. Sulla Richter, per le posizioni piu' usate, dice anche a cosa servono di solito.
    Le dodici posizioni della stessa scala, dalla prima alla dodicesima, una per riga. Ogni riga risponde a due domande: quale scala esce su questa armonica in quella posizione, e quale armonica serve per suonare in quella posizione la scala che avete scelto. Per esempio, scelto il SOL blues su un'armonica in DO, la riga della terza posizione dice: RE blues su questa armonica, oppure SOL blues sull'armonica in FA. Accanto c'e' l'ottava piu' comoda di quella posizione, con la nota da cui parte e le tecniche che chiede, e in fondo le tre posizioni piu' comode. La classifica conta soltanto le tecniche, non lo stile: per la blues, su un'armonica in DO, mette in testa la quarta e la terza, che nella loro ottava migliore chiedono un bending solo, e la seconda, che ne chiede due, resta fuori dalle prime tre. Sulle cromatiche ogni nota presa con il cursore pesa mezzo bending, cosi' vince la posizione che ne usa meno. La seconda resta la posizione del blues per il suono dei bending aspirati, che una classifica non misura.
@@ -442,18 +455,18 @@ Scelta la scala, al posto del manico Chitabry mostra:
 Poi viene la scelta dell'ottava per l'esercizio: Chitabry elenca le ottave in cui la scala comincia sull'armonica, con le tecniche che chiede ciascuna, e Invio prende la piu' comoda. L'esercizio funziona come per la chitarra, ma la riga di stato mostra la tablatura al posto dei nomi delle note, con una x dove la nota sull'armonica non c'e'.
 Le scale dell'archivio Scala sono quasi tutte in intonazione naturale, con le note spostate di qualche centesimo rispetto al temperamento: sull'armonica una nota che si scosta non piu' di trentadue centesimi conta come la nota temperata vicina, cosi' entra anche la settima naturale, che sta a trentuno; una piu' lontana, come un quarto di tono, resta fuori. Alcune scale dell'archivio non si ripetono all'ottava, come la Bohlen-Pierce, che si ripete alla dodicesima: per queste Chitabry mostra le note vere ottava per ottava, senza gradi e senza tabella delle posizioni, che si contano in quinte e valgono solo per le scale che tornano uguali all'ottava.
 
- music21: scale e accordi
+16. music21: scale e accordi.
 
 Chitabry non si inventa le scale e gli accordi: li chiede a music21, una libreria per lo studio della musica nata al Massachusetts Institute of Technology e usata da musicologi di tutto il mondo. music21 li organizza a modo suo, e a volte non e' facile capire dove cercare: questo capitolo vi fa da mappa.
 
-Le scale in tre gruppi.
+16.1. Le scale in tre gruppi.
 Scelta la tonica, Chitabry vi chiede da quale gruppo prendere la scala, e all'avvio vi dice quante scale ha trovato in ciascuno.
    Gruppo 1, le scale comuni: 20 scale che Chitabry costruisce da se', temperate e con i nomi italiani, cioe' quelle che si studiano tutti i giorni. Si scelgono scrivendo le prime lettere, che il menu completa da solo. Invio su un nome intero sceglie quello anche se ce ne sono di piu' lunghi che cominciano allo stesso modo: scrivete bl, il menu completa blues, e Invio vi da' la blues, non la blues maggiore.
    Gruppo 2, le classi di music21: 21 scale scritte come programmi dentro music21, con i nomi inglesi. Si scelgono anche loro scrivendo le prime lettere, e accanto a ognuna c'e' la spiegazione in italiano.
    Gruppo 3, l'archivio Scala: 3932 scale raccolte da Manuel Op de Coul per il suo programma Scala. Sono troppe per un elenco, e si cercano scrivendo una o piu' parole che stanno nella loro descrizione, in inglese: con piu' parole devono esserci tutte, in qualunque ordine. Chitabry ne mostra al massimo cinquanta, con il nome del file fra parentesi; se ne trova di piu', vi chiede di aggiungere una parola.
 Fino alla versione 9.3 c'era un menu unico, che si filtrava con l'inizio di chiavi tecniche come concrete:MajorScale o scala:05-19: scrivendo blues non usciva niente.
 
-Le scale comuni.
+16.2. Le scale comuni.
 I numeri sono i gradi della scala contati dalla tonica: b vuol dire mezzo tono sotto il grado della scala maggiore, # mezzo tono sopra. Le note si scrivono come vuole la teoria: il SOL blues ha il REb, non il DO#.
    maggiore: 1 2 3 4 5 6 7, il modo ionio.
    minore naturale: 1 2 b3 4 5 b6 b7, il modo eolio.
@@ -477,7 +490,7 @@ I numeri sono i gradi della scala contati dalla tonica: b vuol dire mezzo tono s
    cromatica: le dodici note.
 La blues e' quella che l'armonica suona in seconda posizione: su un'armonica in DO, scegliete la tonica SOL, il gruppo 1 e la scala blues.
 
-Le classi di music21.
+16.3. Le classi di music21.
    Chromatic: cromatica, le dodici note.
    Dorian: dorica.
    Harmonic Minor: minore armonica.
@@ -502,11 +515,11 @@ Le classi di music21.
 Gli ipomodi sono i modi plagali del canto gregoriano: le stesse note del modo, ma stese dalla quarta sotto la tonica alla quinta sopra. La Hypodorian di DO, per esempio, va dal SOL sotto il DO al SOL sopra.
 Attenzione alla Weighted Hexatonic Blues: music21 la usa per comporre, e ogni volta che la si costruisce tira a sorte se metterci la quinta diminuita. Chitabry la costruisce piu' volte, per le note, per la tablatura e per ogni ottava dell'esercizio, quindi quello che leggete e quello che ascoltate possono avere note diverse, e due scelte di fila della stessa scala anche. Per studiare, la blues giusta e' quella del gruppo 1.
 
-L'archivio Scala.
+16.4. L'archivio Scala.
 Raccoglie quasi quattromila scale e accordature di tutte le epoche e di tutto il mondo: temperamenti storici, scale greche antiche nei generi diatonico, cromatico ed enarmonico, raga indiani, maqam arabi e turchi, gamelan di Giava e di Bali, scale giapponesi e cinesi, e moltissime scale moderne microtonali. Quasi nessuna e' temperata: le note cadono fra i tasti del pianoforte, e Chitabry le suona alla frequenza esatta. Il nome di ogni scala e' la sua descrizione, in inglese, come la scrive l'archivio.
 Parole che da sole danno un elenco: blues, pentatonic, raga, maqam, arabic, turkish, indian, persian, chinese, japanese, javanese, balinese, african, thai, greek, pythagorean, werckmeister, partch, 19-tET e 31-tET. Parole che da sole trovano troppo, e vanno accompagnate da un'altra: slendro e pelog, le scale del gamelan, just per l'intonazione naturale, meantone per i temperamenti mesotonici, tet per gli equabili. Per esempio meantone 1/4 trova i mesotonici a un quarto di comma, pentatonic japanese le pentatoniche giapponesi.
 
-Gli accordi.
+16.5. Gli accordi.
 Il Costruttore Accordi prende i tipi di accordo da music21, che li chiama con una sigla, la stessa che si scrive dopo il nome della nota: sulla tonica DO, m7 e' il DO minore settima. Il menu del tipo si filtra con l'inizio della sigla, non del nome: m7 per il minore settima, maj7 per il maggiore settima, dim per il diminuito. Come tutti i menu di Chitabry non distingue le maiuscole e completa da solo le lettere comuni: scrivete s, il menu completa sus, e Invio sceglie il quarto sospeso; per il secondo sospeso aggiungete solo il 2. Per la stessa ragione i maggiori nona, undicesima e tredicesima, che per music21 sono M9, M11 e M13 e per il menu sarebbero uguali ai minori m9, m11 e m13, nel menu si chiamano maj9, maj11 e maj13.
 Due casi particolari. La triade maggiore ha la sigla vuota, quindi si sceglie premendo Invio senza scrivere niente. I semidiminuiti hanno per sigla la o barrata, che sulla tastiera italiana non c'e': si trovano scrivendo un punto, che il menu completa da solo nei tre punti della ricerca per nome, e poi half. Scrivendo tutti e tre i punti, gli ultimi due finirebbero nella parola da cercare.
 La ricerca per nome cerca una o piu' parole dentro i nomi inglesi di music21, e qui le parole si scrivono per intero: per esempio seventh, ninth, dimin, sus, o minor ninth.
@@ -563,14 +576,14 @@ Le sigle, con il nome di music21 e le note sulla tonica DO:
    sus2: Suspended Second, su DO: DO RE SOL.
    tristan: Tristan, su DO: DO RE# FA# LA#.
 
- Guida
+17. Guida.
 
 Mostra questo manuale (il file ChitabryMan.txt, che viaggia dentro il pacchetto) direttamente nell'applicazione, una pagina alla volta.
 
- Esci
+18. Esci.
 
 Chiude l'applicazione. Le impostazioni e il database accordi sono gia' salvati, perche' ogni modifica viene scritta nel momento in cui la fate.
 
-Ringraziamenti.
+19. Ringraziamenti.
 Per questo lavoro impegnativo ringrazio in ordine del tutto casuale, le seguenti persone e chiedo anticipatamente perdono se ne ho dimenticata qualcuna:
 Ginevra Di Modica, Mauro Zucchi, Andrea Dessolis, Igor Zanzi.
