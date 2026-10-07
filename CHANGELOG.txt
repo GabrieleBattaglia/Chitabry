@@ -3,6 +3,7 @@ Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
 Versione 10.0.0 (7 ottobre 2026)
+Pubblicata su GitHub il 7 ottobre 2026 come release v10.0.0, con il solo archivio Chitabry.zip in allegato: per chi aggiorna dalla 8.0.0 raccoglie anche tutte le versioni dalla 8.0.1 alla 9.13.4.
 Un MIDI solo, il banco di suoni, e le note che durano finche' tieni il tasto, anche nelle scale e negli accordi (collaudo di Gabriele del 7 ottobre 2026).
 *   Il MIDI di Chitabry e' solo il banco di suoni, suonato da FluidSynth nel mixer. Il sintetizzatore di Windows, che rispondeva con un ritardo suo e non regolabile, non si usa piu': chi lo aveva come suono attivo passa al banco, e il Volume MIDI delle Impostazioni, che valeva solo per lui, se ne va. Nell'esercizio delle scale il battito del metronomo e' sempre il beep del preset; la tastiera MIDI esterna, fuori dalla Tastiera, suona con il suono attivo finche' tieni il tasto.
 *   La barra spaziatrice gira fra quattro suoni: Chitarra (S1), Sintetico (S2), il banco con lo strumento scelto nelle Impostazioni (BAN) e il banco con lo strumento General MIDI dello strumento attivo (STR), per esempio Harmonica con un'armonica attiva. I suoni del banco si saltano finche' non e' pronto, e quello dell'attivo anche quando l'attivo non ha uno strumento General MIDI o ha proprio quello scelto.
