@@ -2,6 +2,16 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.3.0 (7 ottobre 2026)
+Arrivano le cromatiche a dieci fori, come la JDR Trochilus, le cromatiche senza valvole e le armoniche del registro basso.
+*   La cromatica Solo si puo' avere anche a dieci fori, da DO4 a FA6 per quella in DO, e la Richter e la Paddy Richter si possono avere anche come cromatiche a dieci fori con il cursore: sono la Trochilus Blues e la Trochilus Pop, che a cursore premuto diventano la stessa armonica un semitono sopra.
+*   Le cromatiche possono essere con o senza valvole. Su quelle senza, come la Trochilus o una bebop, Chitabry calcola bending e overbend come su una diatonica, sia a cursore aperto sia a cursore premuto: il simbolo li mette insieme, e -3//< e' il foro 3 aspirato, con il cursore premuto, piegato di un tono. Su quelle con le valvole, come le Hohner 270, resta come prima.
+*   Le armoniche del registro basso, quelle che i costruttori chiamano Low, come la Low F, suonano un'ottava sotto le altre.
+*   Aggiungendo un'armonica, Chitabry chiede il numero di fori solo se l'accordatura ne ha piu' d'uno, le valvole solo per le cromatiche, proponendo per prima la scelta piu' comune per quell'accordatura, e il registro dicendo su che nota cade il foro 1 soffiato. Il nome suggerito dice anche il registro basso e le valvole, quando non sono quelle di solito.
+*   Le armoniche gia' salvate restano come erano. Fa eccezione la bebop, che adesso si piega: e' fatta per suonare senza valvole, e la 9.0.0 la trattava come se le avesse.
+*   Nello schema dei fori di una cromatica senza valvole ci sono prima tutte le righe a cursore aperto e poi le stesse a cursore premuto, come due armoniche a un semitono l'una dall'altra.
+*   La guida passa alla revisione 16. Sette prove nuove, 122 in tutto.
+
 Versione 9.0.0 (7 ottobre 2026)
 Arriva l'armonica a bocca, diatonica e cromatica, come strumento a tutti gli effetti (issue 58).
 *   Strumenti:

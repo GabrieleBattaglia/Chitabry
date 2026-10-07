@@ -3249,7 +3249,8 @@
                 "B3",
                 "E4"
             ],
-            "tasti": 21
+            "tasti": 21,
+            "tipo": "corde"
         },
         "Ukulele soprano": {
             "accordatura": [
@@ -3258,7 +3259,8 @@
                 "E4",
                 "A4"
             ],
-            "tasti": 12
+            "tasti": 12,
+            "tipo": "corde"
         },
         "Ukulele Concerto": {
             "accordatura": [
@@ -3267,7 +3269,8 @@
                 "E4",
                 "A4"
             ],
-            "tasti": 15
+            "tasti": 15,
+            "tipo": "corde"
         },
         "Ukulele Tenore": {
             "accordatura": [
@@ -3276,7 +3279,8 @@
                 "E4",
                 "A4"
             ],
-            "tasti": 18
+            "tasti": 18,
+            "tipo": "corde"
         },
         "Basso 4 corde": {
             "accordatura": [
@@ -3285,7 +3289,8 @@
                 "D2",
                 "G2"
             ],
-            "tasti": 24
+            "tasti": 24,
+            "tipo": "corde"
         },
         "Basso 5 corde": {
             "accordatura": [
@@ -3295,7 +3300,8 @@
                 "D2",
                 "G2"
             ],
-            "tasti": 24
+            "tasti": 24,
+            "tipo": "corde"
         },
         "Mandolino": {
             "accordatura": [
@@ -3304,7 +3310,8 @@
                 "A4",
                 "E5"
             ],
-            "tasti": 20
+            "tasti": 20,
+            "tipo": "corde"
         },
         "Banjo Bluegrass": {
             "accordatura": [
@@ -3314,7 +3321,8 @@
                 "B3",
                 "D4"
             ],
-            "tasti": 22
+            "tasti": 22,
+            "tipo": "corde"
         },
         "Chitarra 7 corde": {
             "accordatura": [
@@ -3326,7 +3334,8 @@
                 "B3",
                 "E4"
             ],
-            "tasti": 24
+            "tasti": 24,
+            "tipo": "corde"
         },
         "Guitalele": {
             "accordatura": [
@@ -3337,10 +3346,18 @@
                 "E4",
                 "A4"
             ],
-            "tasti": 18
+            "tasti": 18,
+            "tipo": "corde"
+        },
+        "Hohner Special 20 C": {
+            "tipo": "armonica",
+            "famiglia": "diatonica",
+            "tonalita": "C",
+            "accordatura": "richter",
+            "fori": 10
         }
     },
-    "strumento_attivo": "Chitarra Standard",
+    "strumento_attivo": "Hohner Special 20 C",
     "classifica_note": [
         {
             "nome": "Riprovo",
@@ -3405,5 +3422,5 @@
     "tipo_suono": "midi",
     "midi_strumento": 71,
     "midi_in_dispositivo": "",
-    "versione_formato": 2
+    "versione_formato": 3
 }

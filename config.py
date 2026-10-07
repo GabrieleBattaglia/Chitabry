@@ -233,8 +233,13 @@ def e_armonica(conf):
 
 def modello_armonica(conf):
     """Il modello dell'armonica descritta da una voce dell'elenco.
-    Solleva ValueError se tonalita', accordatura o fori non tornano."""
-    return armonica.HarmonicaModel(conf.get("tonalita", "C"), conf.get("accordatura", "richter"), conf.get("fori"))
+    Solleva ValueError se tonalita', accordatura, famiglia o fori non
+    tornano. Valvole e registro, arrivati con la 9.3.0, mancano nelle voci
+    di prima: la loro assenza vale come prima, cioe' le valvole che
+    l'accordatura ha di solito e il registro normale."""
+    return armonica.HarmonicaModel(conf.get("tonalita", "C"), conf.get("accordatura", "richter"), conf.get("fori"),
+                                   famiglia=conf.get("famiglia"), valvole=conf.get("valvole"),
+                                   registro=conf.get("registro", "normale"))
 
 
 def aggiorna_manico():

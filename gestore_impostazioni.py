@@ -10,7 +10,7 @@ import armonica
 import armonica_vista
 import config
 import GBAudio
-from nomenclatura import get_nota, nome_utente_in_std
+from nomenclatura import get_nota, nome_da_midi, nome_utente_in_std
 
 
 def ModificaSuono(suono_key):
@@ -113,24 +113,22 @@ def _nuovo_strumento_a_corda(strumenti):
     return nome, {"tipo": config.TIPO_CORDE, "accordatura": accordatura, "tasti": tasti}
 
 
+def _scelta(titolo, voci):
+    """Un menu di poche voci, nell'ordine in cui sono scritte; None con Esc."""
+    print(titolo)
+    return menu(d=voci, keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Scelta non valida")
+
+
 def _nuova_armonica(strumenti):
-    """Famiglia, fori per la cromatica, tonalita', accordatura e nome, con il
-    nome suggerito che si accetta con Invio. Restituisce la coppia
-    (nome, voce) o (None, None) se l'utente rinuncia con Esc."""
-    print("Famiglia dell'armonica:")
-    scelta = menu(d={"1": "Diatonica, 10 fori", "2": "Cromatica, con il cursore"}, keyslist=True, show=True,
-                  show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    """Famiglia, tonalita', accordatura, e poi solo se servono i fori, le
+    valvole e il registro; infine il nome, con quello suggerito che si
+    accetta con Invio. Restituisce la coppia (nome, voce) o (None, None) se
+    l'utente rinuncia con Esc."""
+    scelta = _scelta("Famiglia dell'armonica:", {"1": "Diatonica, 10 fori",
+                                                 "2": "Cromatica, con il cursore: 10, 12 o 16 fori"})
     if scelta is None:
         return None, None
     famiglia = "diatonica" if scelta == "1" else "cromatica"
-    fori = armonica.FORI_DIATONICA
-    if famiglia == "cromatica":
-        print("Quanti fori:")
-        scelta = menu(d={"12": "12 fori, tre ottave", "16": "16 fori, quattro ottave"}, keyslist=True, show=True,
-                      show_on_filter=False, ordered=False, ntf="Scelta non valida")
-        if scelta is None:
-            return None, None
-        fori = int(scelta)
     # Non quella stampata sopra: le Natural Minor e le Melody Maker portano
     # scritta la tonalita' della seconda posizione, una quinta piu' su.
     print("Tonalita' dell'armonica, cioe' la nota del foro 1 soffiato:")
@@ -140,23 +138,49 @@ def _nuova_armonica(strumenti):
         return None, None
     tonalita = toniche[scelta]
     chiavi = armonica.accordature_per_famiglia(famiglia)
-    voci = {str(i): f"{armonica.ACCORDATURE[k].nome}, {armonica.ACCORDATURE[k].descrizione}" for i, k in enumerate(chiavi, start=1)}
-    print("Accordatura:")
-    scelta = menu(d=voci, keyslist=True, show=True, show_on_filter=False, ordered=False, ntf="Scelta non valida")
+    scelta = _scelta("Accordatura:", {str(i): f"{armonica.ACCORDATURE[k].nome}, {armonica.ACCORDATURE[k].descrizione}"
+                                      for i, k in enumerate(chiavi, start=1)})
     if scelta is None:
         return None, None
     accordatura = chiavi[int(scelta) - 1]
-    suggerito = f"Armonica {famiglia} {get_nota(tonalita)} {armonica.ACCORDATURE[accordatura].nome}"
+    acc = armonica.ACCORDATURE[accordatura]
+    fori = acc.fori[0]
+    if len(acc.fori) > 1:
+        scelta = _scelta("Quanti fori:", {str(f): f"{f} fori" for f in acc.fori})
+        if scelta is None:
+            return None, None
+        fori = int(scelta)
+    voce = {"tipo": config.TIPO_ARMONICA, "famiglia": famiglia, "tonalita": tonalita, "accordatura": accordatura, "fori": fori}
+    if famiglia == "cromatica":
+        # La scelta che l'accordatura ha di solito viene per prima
+        con = "Con le valvole, come le Hohner 270: le ance non si piegano"
+        senza = "Senza valvole, come la Trochilus o una bebop: si piega come una diatonica, anche con il cursore"
+        ordine = [(True, con), (False, senza)] if acc.valvole else [(False, senza), (True, con)]
+        scelta = _scelta("Valvole:", {str(i): testo for i, (_, testo) in enumerate(ordine, start=1)})
+        if scelta is None:
+            return None, None
+        voce["valvole"] = ordine[int(scelta) - 1][0]
+    normale = armonica.midi_foro_1(tonalita, famiglia, fori)
+    scelta = _scelta("Registro:", {"1": f"Normale, il foro 1 soffiato e' {nome_da_midi(normale)}",
+                                   "2": f"Basso, quello delle armoniche Low: il foro 1 soffiato e' {nome_da_midi(normale - 12)}"})
+    if scelta is None:
+        return None, None
+    voce["registro"] = "normale" if scelta == "1" else "basso"
+    suggerito = f"Armonica {famiglia} {get_nota(tonalita)}"
+    if voce["registro"] == "basso":
+        suggerito += " basso"
+    suggerito += f" {acc.nome}"
     if famiglia == "cromatica":
         suggerito += f" {fori} fori"
+        if voce["valvole"] != acc.valvole:
+            suggerito += " con le valvole" if voce["valvole"] else " senza valvole"
     nome = dgt(f"Nome strumento (Invio per {suggerito}): ", kind="s", default=suggerito).strip()
     if not nome:
         return None, None
     if nome in strumenti:
         print("Esiste gia' uno strumento con questo nome.")
         return None, None
-    return nome, {"tipo": config.TIPO_ARMONICA, "famiglia": famiglia, "tonalita": tonalita,
-                  "accordatura": accordatura, "fori": fori}
+    return nome, voce
 
 
 def _aggiungi_strumento(strumenti):

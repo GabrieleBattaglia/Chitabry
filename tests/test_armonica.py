@@ -109,7 +109,15 @@ def test_fori_e_accordature_che_non_tornano():
     with pytest.raises(ValueError):
         armonica.HarmonicaModel("C", "richter", 12)
     with pytest.raises(ValueError):
-        armonica.HarmonicaModel("C", "solo", 10)
+        armonica.HarmonicaModel("C", "solo", 14)
+    with pytest.raises(ValueError):
+        armonica.HarmonicaModel("C", "bebop", 10)
+    with pytest.raises(ValueError):
+        armonica.HarmonicaModel("C", "richter", 12, famiglia="cromatica")
+    with pytest.raises(ValueError):
+        armonica.HarmonicaModel("C", "country", famiglia="cromatica")
+    with pytest.raises(ValueError):
+        armonica.HarmonicaModel("C", registro="altissimo")
     with pytest.raises(ValueError):
         armonica.HarmonicaModel("C", "sconosciuta")
     with pytest.raises(ValueError):
@@ -290,3 +298,85 @@ def test_le_note_vicine_al_temperamento_contano(monkeypatch):
     quarto.microtone = 50
     assert esercizio_scale.midi_temperato(quarto) is None
     assert esercizio_scale.midi_temperato("non un'altezza") is None
+
+
+def test_la_solo_a_dieci_fori_come_la_trochilus():
+    """Issue di Gabriele del 7 ottobre 2026: la JDR Trochilus Solo, dieci
+    fori e niente valvole, che si piega anche con il cursore premuto."""
+    trochilus = armonica.HarmonicaModel("C", "solo", 10, valvole=False)
+    assert [nome(m) for m in trochilus.soffiati] == ["C4", "E4", "G4", "C5", "C5", "E5", "G5", "C6", "C6", "E6"]
+    assert [nome(m) for m in trochilus.aspirati] == ["D4", "F4", "A4", "B4", "D5", "F5", "A5", "B5", "D6", "F6"]
+    tab = simboli(trochilus)
+    assert tab["-1/"] == "C#4"
+    assert tab["-1/<"] == "D4"
+    assert tab["+1*"] == "D#4"
+    assert tab["-4*"] == "C#5"
+    assert tab["+10*<"] == "G6"
+    assert trochilus.da_simbolo("-3/<").descrizione() == "Foro 3 aspirato con il cursore premuto, bending di mezzo tono"
+    assert trochilus.da_simbolo("+1*<").descrizione() == "Foro 1 overblow con il cursore premuto"
+    assert "senza valvole" in trochilus.descrizione()
+    # La stessa nota viene prima senza tecniche, anche se serve il cursore
+    assert [t.simbolo for t in trochilus.tecniche_per_nota(61)][:2] == ["+1<", "-1/"]
+
+
+def test_con_le_valvole_la_cromatica_non_si_piega():
+    valvolata = armonica.HarmonicaModel("C", "solo", 10)
+    assert valvolata.valvole
+    assert not any(t.bend or t.overbend for t in valvolata.tecniche)
+    with pytest.raises(ValueError, match="valvole"):
+        valvolata.da_simbolo("-1/")
+    assert "con le valvole" in valvolata.descrizione()
+    # La bebop di solito non ne ha, la diatonica mai
+    assert not armonica.HarmonicaModel("C", "bebop").valvole
+    assert not armonica.HarmonicaModel("C", "richter", valvole=True).valvole
+
+
+def test_la_richter_a_cursore_come_la_trochilus_blues():
+    blues = armonica.HarmonicaModel("C", "richter", famiglia="cromatica")
+    assert blues.fori == 10 and not blues.valvole
+    tab = simboli(blues)
+    assert tab["-3//"] == "A4"
+    assert tab["-3//<"] == "A#4"
+    assert tab["+1<"] == "C#4"
+    pop = armonica.HarmonicaModel("C", "paddy_richter", famiglia="cromatica")
+    assert simboli(pop)["+3<"] == "A#4"
+    assert armonica.accordature_per_famiglia("cromatica") == ["richter", "paddy_richter", "solo", "bebop"]
+
+
+def test_il_registro_basso_scende_di_un_ottava():
+    assert nome(armonica.HarmonicaModel("F", registro="basso").soffiati[0]) == "F3"
+    assert nome(armonica.HarmonicaModel("D", registro="basso").soffiati[0]) == "D3"
+    assert "registro basso" in armonica.HarmonicaModel("F", registro="basso").descrizione()
+
+
+def test_l_archivio_porta_valvole_e_registro(archivio):
+    voce = {"tipo": "armonica", "famiglia": "cromatica", "tonalita": "C", "accordatura": "solo", "fori": 10,
+            "valvole": False, "registro": "basso"}
+    modello = config.modello_armonica(voce)
+    assert (modello.fori, modello.valvole, modello.registro) == (10, False, "basso")
+    assert nome(modello.soffiati[0]) == "C3"
+    # Una voce della 9.0.0, senza valvole e registro, resta com'era
+    vecchia = config.modello_armonica({"tipo": "armonica", "famiglia": "cromatica", "tonalita": "C", "accordatura": "solo", "fori": 12})
+    assert vecchia.valvole and vecchia.registro == "normale"
+
+
+def test_lo_schema_della_cromatica_senza_valvole(monkeypatch):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    righe = armonica_vista.righe_schema(armonica.HarmonicaModel("C", "solo", 10, valvole=False))
+    etichette = [r.split("|")[0].strip() for r in righe[1:]]
+    assert etichette[:2] == ["+", "-"]
+    assert "-/<" in etichette and "+*<" in etichette
+    assert etichette.index("+<") > etichette.index("-*")
+    assert len({len(r) for r in righe}) == 1
+
+
+def test_aggiungere_la_trochilus_dal_gestore(monkeypatch):
+    import gestore_impostazioni
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
+    risposte = iter(["2", "DO", "3", "10", "2", "1"])
+    monkeypatch.setattr(gestore_impostazioni, "menu", lambda **_k: next(risposte))
+    monkeypatch.setattr(gestore_impostazioni, "dgt", lambda _p="", **k: k["default"])
+    nome_strumento, voce = gestore_impostazioni._nuova_armonica({})
+    assert nome_strumento == "Armonica cromatica DO Solo 10 fori senza valvole"
+    assert voce == {"tipo": "armonica", "famiglia": "cromatica", "tonalita": "C", "accordatura": "solo", "fori": 10,
+                    "valvole": False, "registro": "normale"}

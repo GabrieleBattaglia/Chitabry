@@ -44,7 +44,14 @@ def righe_schema(modello):
     celle = {}
     for tecnica in modello.tecniche:
         celle.setdefault(_sigla(tecnica), {})[tecnica.foro] = nome_da_midi(tecnica.midi)
-    ordine = RIGHE_CROMATICA if modello.cromatica else RIGHE_DIATONICA
+    if not modello.cromatica:
+        ordine = RIGHE_DIATONICA
+    elif modello.valvole:
+        ordine = RIGHE_CROMATICA
+    else:
+        # Senza valvole sono due armoniche a un semitono: prima tutte le
+        # righe a cursore aperto, poi le stesse con il cursore premuto
+        ordine = RIGHE_DIATONICA + tuple(sigla + "<" for sigla in RIGHE_DIATONICA)
     sigle = [s for s in ordine if s in celle]
     larghezza_etichetta = max(len("Foro"), *(len(s) for s in sigle))
     larghezza = max(len(str(modello.fori)), *(len(n) for riga in celle.values() for n in riga.values()))

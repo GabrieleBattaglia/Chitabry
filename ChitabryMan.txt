@@ -1,5 +1,5 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 15, di mercoledi' 7 ottobre 2026, per la versione 9.0.0.
+L'ultima revisione di questo documento e' la numero 16, di mercoledi' 7 ottobre 2026, per la versione 9.3.0.
 A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
@@ -388,7 +388,7 @@ Con un'armonica attiva la posizione si scrive con il simbolo del foro, per esemp
 
  Armonica a bocca
 
-Dalla versione 9.0.0 Chitabry conosce anche l'armonica a bocca, diatonica a dieci fori e cromatica a dodici o sedici. Si aggiunge come uno strumento qualunque, dal Gestore Strumenti nelle Impostazioni, e quando e' lo strumento attivo le voci che per una chitarra guardano il manico guardano i fori.
+Dalla versione 9.0.0 Chitabry conosce anche l'armonica a bocca, diatonica a dieci fori e cromatica a dieci, dodici o sedici. Si aggiunge come uno strumento qualunque, dal Gestore Strumenti nelle Impostazioni, e quando e' lo strumento attivo le voci che per una chitarra guardano il manico guardano i fori.
 
 La notazione.
 Ogni nota dell'armonica si scrive con un simbolo corto, fatto di segni e numeri e senza lettere, che sulla barra braille si legge in un colpo:
@@ -400,7 +400,7 @@ Ogni nota dell'armonica si scrive con un simbolo corto, fatto di segni e numeri 
 Accanto al simbolo, dove serve, Chitabry scrive la stessa cosa a parole, per esempio: -3//, foro 3 aspirato, bending di un tono.
 
 Le armoniche che Chitabry conosce.
-La tonalita' di un'armonica, per Chitabry, e' la nota del foro 1 soffiato. Le armoniche da DO a FA# cominciano dal DO centrale in su, quelle da SOL a SI sotto, come le fanno i costruttori: l'armonica in DO va da DO4 a DO7, quella in SOL da SOL3 a SOL6. La cromatica a sedici fori aggiunge un'ottava sotto.
+La tonalita' di un'armonica, per Chitabry, e' la nota del foro 1 soffiato. Le armoniche da DO a FA# cominciano dal DO centrale in su, quelle da SOL a SI sotto, come le fanno i costruttori: l'armonica in DO va da DO4 a DO7, quella in SOL da SOL3 a SOL6. La cromatica a sedici fori aggiunge un'ottava sotto. Le armoniche del registro basso, quelle che i costruttori chiamano Low, come la Low F o la Low D, stanno un'ottava sotto le altre: aggiungendole, Chitabry vi chiede il registro.
 Attenzione alle Lee Oskar Natural Minor e Melody Maker: sopra portano scritta la tonalita' della seconda posizione, che sta una quinta piu' su. Una Natural Minor con scritto SOL minore, per Chitabry, e' un'armonica in DO.
 Le accordature delle diatoniche:
    Richter, la standard di blues, folk e rock.
@@ -410,12 +410,13 @@ Le accordature delle diatoniche:
    Harmonic Minor, minore armonica in prima posizione.
    Melody Maker, melodie maggiori in seconda posizione.
 Le accordature delle cromatiche:
-   Solo, la standard: ogni quattro fori un'ottava, con la tonica ripetuta.
-   Bebop, la Solo con le due ance dei fori 4, 8 e 12 scambiate, cosi' la nota piu' grave sta sempre sul soffio.
-Bending e overbend si calcolano dalla fisica delle due ance che stanno nello stesso foro: si piega l'ancia piu' acuta, verso la piu' grave, di tutti i semitoni che stanno fra le due, e l'overbend fa suonare un semitono sopra la piu' acuta. Per questo il foro 5 della Richter non si piega: le sue due ance sono a un semitono. Sulla cromatica le valvole tengono separate le due ance, e Chitabry non calcola bending ne' overbend: le note in piu' le da' il cursore.
+   Solo, la standard: ogni quattro fori un'ottava, con la tonica ripetuta. A dieci, dodici o sedici fori: quella a dieci, come la JDR Trochilus Solo, va da DO4 a FA6, e con il cursore premuto un semitono piu' su.
+   Bebop, la Solo con le due ance dei fori 4, 8 e 12 scambiate, cosi' la nota piu' grave sta sempre sul soffio. A dodici o sedici fori.
+   Richter e Paddy Richter, a dieci fori, per le cromatiche che sono una diatonica con il cursore, come la Trochilus Blues e la Trochilus Pop: a cursore aperto e' una Richter, o una Paddy Richter, nella sua tonalita', e premendolo diventa la stessa armonica un semitono sopra.
+Bending e overbend si calcolano dalla fisica delle due ance che stanno nello stesso foro: si piega l'ancia piu' acuta, verso la piu' grave, di tutti i semitoni che stanno fra le due, e l'overbend fa suonare un semitono sopra la piu' acuta. Per questo il foro 5 della Richter non si piega: le sue due ance sono a un semitono. Sulle cromatiche conta se ci sono le valvole. Le valvole tengono separate le due ance, e su una cromatica che le ha, come le Hohner 270, Chitabry non calcola bending ne' overbend: le note in piu' le da' il cursore. Una cromatica senza valvole, come la Trochilus o una bebop, si piega invece come una diatonica, sia a cursore aperto sia a cursore premuto, e Chitabry calcola tutto due volte: -3//< e' il foro 3 aspirato, con il cursore premuto, piegato di un tono.
 
 Aggiungere un'armonica.
-Nelle Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento: scegliete Armonica a bocca, poi la famiglia, il numero di fori se e' una cromatica, la tonalita' e l'accordatura. Chitabry propone un nome, per esempio Armonica diatonica DO Richter, che accettate con Invio o cambiate scrivendone un altro.
+Nelle Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento: scegliete Armonica a bocca, poi la famiglia, la tonalita' e l'accordatura. Se l'accordatura esiste con piu' numeri di fori, Chitabry vi chiede quanti; se e' una cromatica, vi chiede se ha le valvole, proponendo per prima la scelta piu' comune per quell'accordatura; poi vi chiede il registro, normale o basso, dicendovi su che nota cade il foro 1 soffiato in tutti e due i casi. Chitabry propone un nome, per esempio Armonica diatonica DO Richter, che accettate con Invio o cambiate scrivendone un altro.
 
 Con un'armonica attiva.
    Manico dello strumento mostra lo schema dei fori: una griglia con un foro per colonna e una tecnica per riga, la riga + per i soffiati, - per gli aspirati, poi i bending e gli overbend, e sulla cromatica le righe con il cursore. In fondo, l'estensione.

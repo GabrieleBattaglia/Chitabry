@@ -2,7 +2,9 @@
 # Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Nato con la 9.0.0 dal piano della issue 58. Il modulo lavora solo con i
 # numeri MIDI e non importa music21: i nomi delle note li mette chi mostra,
-# nella nomenclatura scelta dall'utente.
+# nella nomenclatura scelta dall'utente. Dalla 9.3.0 la cromatica puo' avere
+# dieci fori, la disposizione della Richter e niente valvole, come la JDR
+# Trochilus, e ogni armonica puo' essere nel registro basso.
 
 import re
 from dataclasses import dataclass
@@ -11,41 +13,52 @@ from dataclasses import dataclass
 TONALITA = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 # Gli altri nomi con cui una tonalita' si puo' trovare scritta nell'archivio.
 _SINONIMI_TONALITA = {"C#": "Db", "D#": "Eb", "Gb": "F#", "G#": "Ab", "A#": "Bb"}
-FORI_DIATONICA = 10
-FORI_CROMATICA = (12, 16)
+FAMIGLIE = ("diatonica", "cromatica")
+REGISTRI = ("normale", "basso")
 
 
 @dataclass(frozen=True)
 class Accordatura:
     """Le ance di un'armonica in DO, in semitoni sopra il foro 1 soffiato.
-    Per la diatonica ci sono tutti e dieci i fori; per la cromatica i primi
-    quattro, che si ripetono un'ottava piu' su ogni quattro fori."""
+    Se ripetuta e' falso ci sono tutti i dieci fori; se e' vero ci sono i
+    primi quattro, che si ripetono un'ottava piu' su ogni quattro fori, per
+    quanti fori ha l'armonica. famiglie dice su quali armoniche si trova:
+    la Richter, per esempio, anche sulle cromatiche a cursore come la
+    Trochilus; fori dice con quanti fori; valvole dice se la cromatica, di
+    solito, le ha."""
     nome: str
-    famiglia: str
     descrizione: str
     soffiati: tuple
     aspirati: tuple
+    famiglie: tuple = ("diatonica",)
+    fori: tuple = (10,)
+    ripetuta: bool = False
+    valvole: bool = False
 
+
+_RICHTER_SOFFIATI = (0, 4, 7, 12, 16, 19, 24, 28, 31, 36)
+_RICHTER_ASPIRATI = (2, 7, 11, 14, 17, 21, 23, 26, 29, 33)
 
 ACCORDATURE = {
-    "richter": Accordatura("Richter", "diatonica", "la standard di blues, folk e rock",
-                           (0, 4, 7, 12, 16, 19, 24, 28, 31, 36), (2, 7, 11, 14, 17, 21, 23, 26, 29, 33)),
-    "country": Accordatura("Country", "diatonica", "la Richter con il foro 5 aspirato alzato di un semitono",
-                           (0, 4, 7, 12, 16, 19, 24, 28, 31, 36), (2, 7, 11, 14, 18, 21, 23, 26, 29, 33)),
-    "paddy_richter": Accordatura("Paddy Richter", "diatonica", "la Richter con il foro 3 soffiato alzato di un tono, per la musica irlandese",
-                                 (0, 4, 9, 12, 16, 19, 24, 28, 31, 36), (2, 7, 11, 14, 17, 21, 23, 26, 29, 33)),
-    "natural_minor": Accordatura("Natural Minor", "diatonica", "minore naturale in seconda posizione",
+    "richter": Accordatura("Richter", "la standard di blues, folk e rock",
+                           _RICHTER_SOFFIATI, _RICHTER_ASPIRATI, famiglie=FAMIGLIE),
+    "country": Accordatura("Country", "la Richter con il foro 5 aspirato alzato di un semitono",
+                           _RICHTER_SOFFIATI, (2, 7, 11, 14, 18, 21, 23, 26, 29, 33)),
+    "paddy_richter": Accordatura("Paddy Richter", "la Richter con il foro 3 soffiato alzato di un tono, per la musica irlandese",
+                                 (0, 4, 9, 12, 16, 19, 24, 28, 31, 36), _RICHTER_ASPIRATI, famiglie=FAMIGLIE),
+    "natural_minor": Accordatura("Natural Minor", "minore naturale in seconda posizione",
                                  (0, 3, 7, 12, 15, 19, 24, 27, 31, 36), (2, 7, 10, 14, 17, 21, 22, 26, 29, 33)),
-    "harmonic_minor": Accordatura("Harmonic Minor", "diatonica", "minore armonica in prima posizione",
+    "harmonic_minor": Accordatura("Harmonic Minor", "minore armonica in prima posizione",
                                   (0, 3, 7, 12, 15, 19, 24, 27, 31, 36), (2, 7, 11, 14, 17, 20, 23, 26, 29, 32)),
-    "melody_maker": Accordatura("Melody Maker", "diatonica", "melodie maggiori in seconda posizione",
+    "melody_maker": Accordatura("Melody Maker", "melodie maggiori in seconda posizione",
                                 (0, 4, 9, 12, 16, 19, 24, 28, 31, 36), (2, 7, 11, 14, 18, 21, 23, 26, 30, 33)),
-    "solo": Accordatura("Solo", "cromatica", "la standard: ogni quattro fori un'ottava, con la tonica ripetuta",
-                        (0, 4, 7, 12), (2, 5, 9, 11)),
+    "solo": Accordatura("Solo", "la standard: ogni quattro fori un'ottava, con la tonica ripetuta",
+                        (0, 4, 7, 12), (2, 5, 9, 11), famiglie=("cromatica",), fori=(10, 12, 16),
+                        ripetuta=True, valvole=True),
     # La bebop scambia le due ance dei fori 4, 8 e 12: la nota piu' grave sta
     # sempre sul soffio, e senza valvole i fori si possono piegare.
-    "bebop": Accordatura("Bebop", "cromatica", "la Solo con le ance dei fori 4, 8 e 12 scambiate, la piu' grave sul soffio",
-                         (0, 4, 7, 11), (2, 5, 9, 12)),
+    "bebop": Accordatura("Bebop", "la Solo con le ance dei fori 4, 8 e 12 scambiate, la piu' grave sul soffio",
+                         (0, 4, 7, 11), (2, 5, 9, 12), famiglie=("cromatica",), fori=(12, 16), ripetuta=True),
 }
 
 # Le posizioni si contano in quinte dalla tonalita' dell'armonica.
@@ -84,28 +97,33 @@ def normalizza_tonalita(nome):
     return pulito
 
 
-def midi_foro_1(tonalita, famiglia="diatonica", fori=FORI_DIATONICA):
+def midi_foro_1(tonalita, famiglia="diatonica", fori=10, registro="normale"):
     """Il numero MIDI del foro 1 soffiato.
     Le armoniche da DO a FA# cominciano dal DO centrale in su, quelle da SOL a
     SI sotto: e' l'uso dei costruttori, per cui l'armonica in SOL e' la piu'
     grave delle standard e quella in FA# la piu' acuta. La cromatica a sedici
-    fori aggiunge un'ottava sotto."""
+    fori aggiunge un'ottava sotto, e il registro basso, quello delle
+    armoniche Low come la Low F, scende di un'ottava."""
     classe = TONALITA.index(normalizza_tonalita(tonalita))
     base = 60 + classe if classe <= 6 else 48 + classe
     if famiglia == "cromatica" and fori == 16:
+        base -= 12
+    if registro == "basso":
         base -= 12
     return base
 
 
 def accordature_per_famiglia(famiglia):
     """Le chiavi delle accordature di una famiglia, nell'ordine del piano."""
-    return [chiave for chiave, acc in ACCORDATURE.items() if acc.famiglia == famiglia]
+    return [chiave for chiave, acc in ACCORDATURE.items() if famiglia in acc.famiglie]
 
 
 @dataclass(frozen=True)
 class Tecnica:
     """Un modo di suonare una nota: il foro, il verso dell'aria e cio' che si
-    fa in piu', cioe' piegare la nota, fare l'overbend o premere il cursore."""
+    fa in piu', cioe' piegare la nota, fare l'overbend o premere il cursore.
+    Su una cromatica senza valvole le tre cose si combinano: -3//< e' il
+    foro 3 aspirato, con il cursore premuto, piegato di un tono."""
     foro: int
     verso: str          # '+' soffiato, '-' aspirato
     midi: int
@@ -137,11 +155,10 @@ class Tecnica:
 
     def descrizione(self):
         """La stessa tecnica detta a parole, per lo screen reader."""
+        cursore = " con il cursore premuto" if self.cursore else ""
         if self.overbend:
-            return f"Foro {self.foro} {self.categoria}"
-        testo = f"Foro {self.foro} {'soffiato' if self.verso == '+' else 'aspirato'}"
-        if self.cursore:
-            testo += " con il cursore premuto"
+            return f"Foro {self.foro} {self.categoria}{cursore}"
+        testo = f"Foro {self.foro} {'soffiato' if self.verso == '+' else 'aspirato'}{cursore}"
         if self.bend:
             testo += f", {self.categoria}"
         return testo
@@ -184,40 +201,45 @@ class Finestra:
 
 
 class HarmonicaModel:
-    """Un'armonica concreta: tonalita', accordatura e fori.
+    """Un'armonica concreta: tonalita', accordatura, famiglia, fori, valvole
+    e registro.
     Calcola per ogni foro l'ancia soffiata e quella aspirata, e da queste le
     note che si ottengono piegando e con l'overbend, secondo la fisica delle
     due ance che condividono la cella: si piega l'ancia piu' acuta, verso la
     piu' grave, di tutti i semitoni che stanno fra le due; l'overbend fa
     suonare l'ancia piu' grave un semitono sopra la piu' acuta.
-    Sulla cromatica le valvole tengono separate le due ance, quindi niente
-    bending ne' overbend: le note in piu' le da' il cursore, un semitono sopra."""
+    Sulla cromatica il cursore alza tutto di un semitono. Se ha le valvole,
+    queste tengono separate le due ance e niente si piega; se non le ha, come
+    la Trochilus o una bebop, si piega come una diatonica, con il cursore
+    aperto e con il cursore premuto."""
 
-    def __init__(self, tonalita="C", accordatura="richter", fori=None):
+    def __init__(self, tonalita="C", accordatura="richter", fori=None, famiglia=None, valvole=None, registro="normale"):
         if accordatura not in ACCORDATURE:
             raise ValueError(f"accordatura '{accordatura}' sconosciuta: quelle conosciute sono {', '.join(ACCORDATURE)}")
         self.tonalita = normalizza_tonalita(tonalita)
         self.chiave_accordatura = accordatura
         self.accordatura = ACCORDATURE[accordatura]
-        self.famiglia = self.accordatura.famiglia
-        if self.famiglia == "diatonica":
-            if fori not in (None, FORI_DIATONICA):
-                raise ValueError(f"la diatonica ha {FORI_DIATONICA} fori, non {fori}")
-            self.fori = FORI_DIATONICA
+        self.famiglia = famiglia or self.accordatura.famiglie[0]
+        if self.famiglia not in self.accordatura.famiglie:
+            raise ValueError(f"l'accordatura {self.accordatura.nome} non c'e' sulla {self.famiglia}")
+        if fori is None:
+            fori = 12 if 12 in self.accordatura.fori else self.accordatura.fori[0]
+        if fori not in self.accordatura.fori:
+            possibili = " o ".join(str(f) for f in self.accordatura.fori)
+            raise ValueError(f"la {self.accordatura.nome} ha {possibili} fori, non {fori}")
+        self.fori = fori
+        if registro not in REGISTRI:
+            raise ValueError(f"registro '{registro}' sconosciuto: e' normale o basso")
+        self.registro = registro
+        # Le valvole ci sono solo sulle cromatiche, e la diatonica non ne ha mai
+        self.valvole = self.cromatica and (self.accordatura.valvole if valvole is None else bool(valvole))
+        base = midi_foro_1(self.tonalita, self.famiglia, self.fori, self.registro)
+        if self.accordatura.ripetuta:
+            self.soffiati = [base + 12 * (i // 4) + self.accordatura.soffiati[i % 4] for i in range(self.fori)]
+            self.aspirati = [base + 12 * (i // 4) + self.accordatura.aspirati[i % 4] for i in range(self.fori)]
         else:
-            if fori is None:
-                fori = FORI_CROMATICA[0]
-            if fori not in FORI_CROMATICA:
-                raise ValueError(f"la cromatica ha 12 o 16 fori, non {fori}")
-            self.fori = fori
-        base = midi_foro_1(self.tonalita, self.famiglia, self.fori)
-        if self.famiglia == "diatonica":
             self.soffiati = [base + s for s in self.accordatura.soffiati]
             self.aspirati = [base + a for a in self.accordatura.aspirati]
-        else:
-            gruppi = range(self.fori // 4)
-            self.soffiati = [base + 12 * g + s for g in gruppi for s in self.accordatura.soffiati]
-            self.aspirati = [base + 12 * g + a for g in gruppi for a in self.accordatura.aspirati]
         self.tecniche = self._calcola_tecniche()
         self.per_midi = {}
         for tecnica in self.tecniche:
@@ -229,31 +251,44 @@ class HarmonicaModel:
     def cromatica(self):
         return self.famiglia == "cromatica"
 
+    @property
+    def si_piega(self):
+        """Vero se bending e overbend si calcolano: sempre sulla diatonica,
+        sulla cromatica solo senza valvole."""
+        return not self.valvole
+
     def _calcola_tecniche(self):
         tecniche = []
-        for foro, (soffio, aspiro) in enumerate(zip(self.soffiati, self.aspirati, strict=True), start=1):
-            tecniche.append(Tecnica(foro, "+", soffio))
-            tecniche.append(Tecnica(foro, "-", aspiro))
-            if self.cromatica:
-                tecniche.append(Tecnica(foro, "+", soffio + 1, cursore=True))
-                tecniche.append(Tecnica(foro, "-", aspiro + 1, cursore=True))
-                continue
-            if aspiro > soffio:
-                # Fori bassi: si piega aspirando, e l'overblow sale sopra l'aspirata
-                for passo in range(1, aspiro - soffio):
-                    tecniche.append(Tecnica(foro, "-", aspiro - passo, bend=passo))
-                tecniche.append(Tecnica(foro, "+", aspiro + 1, overbend=True))
-            elif soffio > aspiro:
-                # Fori alti: si piega soffiando, e l'overdraw sale sopra la soffiata
-                for passo in range(1, soffio - aspiro):
-                    tecniche.append(Tecnica(foro, "+", soffio - passo, bend=passo))
-                tecniche.append(Tecnica(foro, "-", soffio + 1, overbend=True))
+        stati_cursore = (False, True) if self.cromatica else (False,)
+        for cursore in stati_cursore:
+            alzo = 1 if cursore else 0
+            for foro, (soffio, aspiro) in enumerate(zip(self.soffiati, self.aspirati, strict=True), start=1):
+                soffio, aspiro = soffio + alzo, aspiro + alzo
+                tecniche.append(Tecnica(foro, "+", soffio, cursore=cursore))
+                tecniche.append(Tecnica(foro, "-", aspiro, cursore=cursore))
+                if not self.si_piega:
+                    continue
+                if aspiro > soffio:
+                    # Fori bassi: si piega aspirando, e l'overblow sale sopra l'aspirata
+                    for passo in range(1, aspiro - soffio):
+                        tecniche.append(Tecnica(foro, "-", aspiro - passo, bend=passo, cursore=cursore))
+                    tecniche.append(Tecnica(foro, "+", aspiro + 1, overbend=True, cursore=cursore))
+                elif soffio > aspiro:
+                    # Fori alti: si piega soffiando, e l'overdraw sale sopra la soffiata
+                    for passo in range(1, soffio - aspiro):
+                        tecniche.append(Tecnica(foro, "+", soffio - passo, bend=passo, cursore=cursore))
+                    tecniche.append(Tecnica(foro, "-", soffio + 1, overbend=True, cursore=cursore))
         return tecniche
 
     def descrizione(self):
         """L'armonica detta per esteso, senza i nomi delle note: la tonalita'
         la mette chi mostra, nella nomenclatura dell'utente."""
-        return f"{self.famiglia}, accordatura {self.accordatura.nome}, {self.fori} fori"
+        testo = f"{self.famiglia}, accordatura {self.accordatura.nome}, {self.fori} fori"
+        if self.cromatica:
+            testo += ", con le valvole" if self.valvole else ", senza valvole"
+        if self.registro == "basso":
+            testo += ", registro basso"
+        return testo
 
     def estensione(self):
         """La nota piu' grave e la piu' acuta, overbend compresi."""
@@ -278,17 +313,19 @@ class HarmonicaModel:
             raise ValueError(f"questa armonica ha i fori da 1 a {self.fori}")
         if cursore and not self.cromatica:
             raise ValueError("il cursore c'e' solo sulle cromatiche")
-        if (bend or overbend) and self.cromatica:
-            raise ValueError("sulla cromatica le valvole separano le due ance: Chitabry non calcola bending ne' overbend, "
+        if (bend or overbend) and not self.si_piega:
+            raise ValueError("questa cromatica ha le valvole, che separano le due ance: Chitabry non calcola bending ne' overbend, "
                              "le note in piu' le da' il cursore, con il segno <")
         for tecnica in self.tecniche:
             if (tecnica.foro, tecnica.verso, tecnica.bend, tecnica.overbend, tecnica.cursore) == (foro, verso, bend, overbend, cursore):
                 return tecnica
-        raise ValueError(self._perche_no(foro, verso, bend, overbend))
+        raise ValueError(self._perche_no(foro, verso, bend, overbend, cursore))
 
-    def _perche_no(self, foro, verso, bend, overbend):
-        """Perche' su questo foro la tecnica chiesta non c'e'."""
+    def _perche_no(self, foro, verso, bend, overbend, cursore=False):
+        """Perche' su questo foro la tecnica chiesta non c'e'. Il cursore alza
+        le due ance insieme, quindi le ragioni sono le stesse."""
         soffio, aspiro = self.soffiati[foro - 1], self.aspirati[foro - 1]
+        coda = "<" if cursore else ""
         if aspiro > soffio:
             piega, salto = "-", aspiro - soffio
         elif soffio > aspiro:
@@ -298,13 +335,13 @@ class HarmonicaModel:
         nome_piega = "aspirando" if piega == "-" else "soffiando"
         if overbend:
             giusto = "+" if piega == "-" else "-"
-            return f"sul foro {foro} l'overbend si fa {'soffiando' if giusto == '+' else 'aspirando'}: {giusto}{foro}*"
+            return f"sul foro {foro} l'overbend si fa {'soffiando' if giusto == '+' else 'aspirando'}: {giusto}{foro}*{coda}"
         if verso != piega:
-            return f"il foro {foro} si piega {nome_piega}, perche' e' l'ancia piu' acuta a scendere: {piega}{foro}/"
+            return f"il foro {foro} si piega {nome_piega}, perche' e' l'ancia piu' acuta a scendere: {piega}{foro}/{coda}"
         if salto <= 1:
             return f"il foro {foro} non si piega: fra le sue due ance c'e' un semitono solo"
         massimo = salto - 1
-        return f"il foro {foro} {nome_piega} si piega al massimo di {massimo} semitoni, {piega}{foro}{'/' * massimo}"
+        return f"il foro {foro} {nome_piega} si piega al massimo di {massimo} semitoni, {piega}{foro}{'/' * massimo}{coda}"
 
     def accordi(self, classi):
         """I gruppi di fori vicini, stesso verso e senza tecniche, le cui note
