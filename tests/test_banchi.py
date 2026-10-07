@@ -65,6 +65,181 @@ def test_la_ricerca_tiene_solo_i_general_midi(tmp_path):
     assert banchi.dimensione_da_leggere(2_500_000) == "2.5 MB"
 
 
+def test_la_ricerca_trova_anche_le_copie_di_fluidsynth(tmp_path):
+    (tmp_path / "MeTeOra" / "fluidsynth").mkdir(parents=True)
+    (tmp_path / "MeTeOra" / "fluidsynth" / "libfluidsynth-3.dll").write_bytes(b"finta")
+    (tmp_path / "vlc").mkdir()
+    (tmp_path / "vlc" / "libfluidsynth_plugin.dll").write_bytes(b"un plugin, non FluidSynth")
+    motori = []
+    banchi.cerca_banchi([str(tmp_path)], motori=motori)
+    assert motori == [str(tmp_path / "MeTeOra" / "fluidsynth")]
+
+
+def test_fluidsynth_trovato_si_usa_dalle_impostazioni(monkeypatch, tmp_path):
+    """Con la cartella scritta nelle impostazioni si usa quella; se sparisce
+    si torna a quella dello scaricamento, accanto ai dati di Chitabry."""
+    trovata = tmp_path / "MeTeOra" / "fluidsynth"
+    trovata.mkdir(parents=True)
+    (trovata / "libfluidsynth-3.dll").write_bytes(b"finta")
+    monkeypatch.setattr(config, "cartella_dati", lambda: str(tmp_path / "Chitabry"))
+    monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "", "fluidsynth": str(trovata)}})
+    assert banchi.cartella_fluidsynth() == str(trovata)
+    assert banchi.fluidsynth_presente()
+    (trovata / "libfluidsynth-3.dll").unlink()
+    assert banchi.cartella_fluidsynth() == str(tmp_path / "Chitabry" / "fluidsynth")
+    assert not banchi.fluidsynth_presente()
+    # Nella cartella dello scaricamento servono tutte e due le DLL dello zip:
+    # con la prima sola lo scaricamento si e' interrotto, e va rifatto
+    scaricata = tmp_path / "Chitabry" / "fluidsynth"
+    scaricata.mkdir(parents=True)
+    (scaricata / "libfluidsynth-3.dll").write_bytes(b"finta")
+    assert not banchi.fluidsynth_presente()
+    (scaricata / "sndfile.dll").write_bytes(b"finta")
+    assert banchi.fluidsynth_presente()
+    # Una DLL finta non si carica, e non viene scelta
+    (trovata / "libfluidsynth-3.dll").write_bytes(b"finta")
+    assert banchi.fluidsynth_che_funziona([str(trovata)]) is None
+    assert not banchi.fluidsynth_pronto()
+
+
+@pytest.mark.skipif(not CI_SONO, reason="FluidSynth di MeTeOra o banco SGM assenti")
+def test_si_sceglie_la_prima_copia_di_fluidsynth_che_si_carica(tmp_path):
+    finta = tmp_path / "finta"
+    finta.mkdir()
+    (finta / "libfluidsynth-3.dll").write_bytes(b"non sono una DLL")
+    vera = os.path.normpath(FLUIDSYNTH_DI_METEORA)
+    assert banchi.fluidsynth_che_funziona([str(finta), vera]) == vera
+
+
+def test_con_fluidsynth_sul_computer_non_si_scarica_un_doppione(monkeypatch, capsys):
+    """Collaudo di Gabriele del 7 ottobre 2026: FluidSynth c'era, quello di
+    MeTeOra, e Chitabry proponeva di scaricarlo perche' guardava solo nella
+    sua cartella. Adesso la ricerca dei banchi trova anche le copie di
+    FluidSynth, e Chitabry usa la prima che si carica."""
+    import gestore_impostazioni
+    trovato = r"E:\banchi\Bello.sf2"
+    monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "", "volume": 0.8}, "tipo_suono": "suono_1"})
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    monkeypatch.setattr(banchi, "fluidsynth_pronto", lambda: False)
+
+    def cerca(motori=None, **_k):
+        motori.extend([r"E:\vecchia", r"E:\git\mine\MeTeOra\fluidsynth"])
+        return [(trovato, 30_000_000)]
+
+    monkeypatch.setattr(banchi, "cerca_banchi", cerca)
+    monkeypatch.setattr(banchi, "fluidsynth_che_funziona", lambda cartelle: cartelle[1])
+    monkeypatch.setattr(banchi, "scarica_fluidsynth", lambda *_a: pytest.fail("scaricato un doppione"))
+    domande = []
+    monkeypatch.setattr(gestore_impostazioni, "enter_escape", lambda testo: domande.append(testo) or True)
+    monkeypatch.setattr(gestore_impostazioni, "menu", lambda **_k: trovato)
+    risposte = iter([0.7, "n"])
+    monkeypatch.setattr(gestore_impostazioni, "dgt", lambda *_a, **_k: next(risposte))
+    monkeypatch.setattr(gestore_impostazioni, "key", lambda *_a, **_k: "")
+    gestore_impostazioni._configura_banco()
+    assert len(domande) == 1 and "una copia di FluidSynth" in domande[0]
+    assert config.impostazioni["banco"] == {"percorso": trovato, "volume": 0.7, "fluidsynth": r"E:\git\mine\MeTeOra\fluidsynth"}
+    assert "Chitabry usa quello, senza scaricarne un altro" in capsys.readouterr().out
+
+
+def banco_senza_fluidsynth(monkeypatch, motori_trovati, tasto_durante_la_ricerca):
+    """_configura_banco con FluidSynth che non si carica e una ricerca finta:
+    restituisce le domande fatte, e alla domanda dello scaricamento risponde
+    ESC."""
+    import gestore_impostazioni
+    monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "", "volume": 0.8, "fluidsynth": r"E:\guasta"}})
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    monkeypatch.setattr(banchi, "fluidsynth_pronto", lambda: False)
+
+    def cerca(fermo=None, motori=None, **_k):
+        if fermo():
+            return []
+        motori.extend(motori_trovati)
+        return []
+
+    monkeypatch.setattr(banchi, "cerca_banchi", cerca)
+    monkeypatch.setattr(banchi, "fluidsynth_che_funziona", lambda _cartelle: None)
+    monkeypatch.setattr(banchi, "scarica_fluidsynth", lambda *_a: pytest.fail("scaricato senza un si'"))
+    domande = []
+    monkeypatch.setattr(gestore_impostazioni, "enter_escape", lambda testo: domande.append(testo) or len(domande) == 1)
+    monkeypatch.setattr(gestore_impostazioni, "key", lambda *_a, **_k: tasto_durante_la_ricerca)
+    gestore_impostazioni._configura_banco()
+    return domande
+
+
+def test_una_copia_guasta_si_dimentica_e_la_ricerca_fermata_si_dice(monkeypatch, capsys):
+    """Una copia salvata che non si carica piu' non blocca il banco: si
+    dimentica, cosi' vale di nuovo lo scaricamento. E se la ricerca si ferma
+    con ESC, Chitabry non dice piu' che FluidSynth non c'e' sul computer."""
+    domande = banco_senza_fluidsynth(monkeypatch, [], chr(27))
+    assert "fluidsynth" not in config.impostazioni["banco"]
+    assert "Ricerca fermata con ESC." in capsys.readouterr().out
+    assert domande[1] == ("\rLa ricerca e' stata fermata prima di trovare FluidSynth. "
+                          "Lo scarico da GitHub, dalla pagina ufficiale? (INVIO per si', ESC per no): \r")
+    assert all(d.startswith("\r") and d.endswith("\r") for d in domande)
+
+
+def test_copie_trovate_che_non_si_caricano(monkeypatch):
+    """Prima: copie trovate, ma nessuna si carica, e subito dopo FluidSynth
+    non c'e' sul computer. Le due frasi si contraddicevano."""
+    domande = banco_senza_fluidsynth(monkeypatch, [r"E:\a", r"E:\b"], "")
+    assert domande[1].startswith("\rNessuna delle copie di FluidSynth trovate, 2, si puo' usare.")
+    domande = banco_senza_fluidsynth(monkeypatch, [], "")
+    assert domande[1].startswith("\rFluidSynth non c'e' sul computer.")
+
+
+def test_gli_strumenti_si_scelgono_per_nome(monkeypatch):
+    """Il menu degli strumenti era numerato: adesso le chiavi sono i nomi, e
+    si scelgono scrivendone le prime lettere (collaudo del 7 ottobre 2026)."""
+    import gestore_impostazioni
+    strumenti = {"Chitarra Standard": {"tipo": "corde", "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"], "tasti": 21},
+                 "Special 20": {"tipo": "armonica", "famiglia": "diatonica", "tonalita": "C", "accordatura": "richter", "fori": 10}}
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumenti": strumenti, "strumento_attivo": "Chitarra Standard"})
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    monkeypatch.setattr(config, "aggiorna_manico", lambda: None)
+    viste = []
+    risposte = iter(["s", "Special 20", None])
+
+    def menu_finto(**opzioni):
+        viste.append(opzioni)
+        return next(risposte)
+
+    monkeypatch.setattr(gestore_impostazioni, "menu", menu_finto)
+    gestore_impostazioni.GestoreStrumenti()
+    scelta = viste[1]
+    assert not scelta.get("numbered") and scelta["keyslist"]
+    assert list(scelta["d"]) == ["Chitarra Standard", "Special 20"]
+    assert scelta["d"]["Chitarra Standard"] == "21 tasti, 6 corde"
+    assert scelta["d"]["Special 20"].startswith("armonica diatonica in DO")
+    assert config.impostazioni["strumento_attivo"] == "Special 20"
+
+
+def test_con_uno_strumento_solo_non_si_invita_a_scrivere(monkeypatch, capsys):
+    """Il menu con una voce sola la sceglie senza leggere tasti: l'invito a
+    scrivere le prime lettere mandava le lettere al menu dopo, o nella
+    risposta S/N. E scegliendo lo strumento gia' attivo non si leggeva niente."""
+    import gestore_impostazioni
+    monkeypatch.setattr(config, "salva_modifiche", lambda: True)
+    monkeypatch.setattr(config, "aggiorna_manico", lambda: None)
+    chitarra = {"tipo": "corde", "accordatura": ["E2", "A2", "D3", "G3", "B3", "E4"], "tasti": 21}
+
+    def gestore(strumenti, attivo, risposte, conferme=()):
+        monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumenti": dict(strumenti), "strumento_attivo": attivo})
+        sequenza = iter(risposte)
+        monkeypatch.setattr(gestore_impostazioni, "menu", lambda **_k: next(sequenza))
+        altre = iter(conferme)
+        monkeypatch.setattr(gestore_impostazioni, "dgt", lambda *_a, **_k: next(altre))
+        gestore_impostazioni.GestoreStrumenti()
+        return capsys.readouterr().out
+
+    uscita = gestore({"Chitarra": chitarra}, "Chitarra", ["s", None])
+    assert "C'e' un solo strumento, Chitarra, ed e' gia' quello attivo." in uscita and "prime lettere" not in uscita
+    uscita = gestore({"Chitarra": chitarra, "Basso": chitarra}, "Chitarra", ["s", "Chitarra", None])
+    assert "Chitarra e' gia' lo strumento attivo." in uscita
+    uscita = gestore({"Chitarra": chitarra, "Basso": chitarra}, "Chitarra", ["e", None], ["s"])
+    assert "prime lettere" not in uscita and "Strumento Basso eliminato." in uscita
+    assert list(config.impostazioni["strumenti"]) == ["Chitarra"]
+
+
 def test_il_banco_si_salta_finche_non_e_pronto(monkeypatch):
     monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": ""}, "midi_strumento": 0})
     assert suoni.prossimo_suono("midi") == "suono_1"
@@ -242,7 +417,7 @@ def test_scegliere_un_banco_dalle_impostazioni(monkeypatch, tmp_path):
     trovato = str(tmp_path / "Bello.sf2")
     monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "", "volume": 0.8}, "tipo_suono": "suono_1"})
     monkeypatch.setattr(config, "salva_modifiche", lambda: True)
-    monkeypatch.setattr(banchi, "fluidsynth_presente", lambda: True)
+    monkeypatch.setattr(banchi, "fluidsynth_pronto", lambda: True)
     monkeypatch.setattr(banchi, "cerca_banchi", lambda **_k: [(trovato, 30_000_000)])
     monkeypatch.setattr(gestore_impostazioni, "enter_escape", lambda *_a: True)
     viste = []
@@ -268,7 +443,7 @@ def test_senza_banchi_fluidr3_si_scarica_solo_con_un_si(monkeypatch):
     import gestore_impostazioni
     monkeypatch.setattr(config, "impostazioni", {"banco": {"percorso": "", "volume": 0.8}, "tipo_suono": "suono_1"})
     monkeypatch.setattr(config, "salva_modifiche", lambda: True)
-    monkeypatch.setattr(banchi, "fluidsynth_presente", lambda: True)
+    monkeypatch.setattr(banchi, "fluidsynth_pronto", lambda: True)
     monkeypatch.setattr(banchi, "cerca_banchi", lambda **_k: [])
     domande = []
 

@@ -1,5 +1,5 @@
 # Chitabry, impostazioni: l'archivio dell'utente, le costanti delle note e il manico attivo.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Revisione 1 del 2026-09-09: i percorsi si ricavano dalla cartella del
 # programma e non piu' dalla directory di lavoro; il salvataggio scrive su un
 # file temporaneo e conserva la versione precedente come copia .bak; ogni
@@ -117,8 +117,12 @@ def get_impostazioni_default():
         },
         "chordpedia": {},
         # Il banco di suoni per FluidSynth, dalla 9.10.0: il file sf2 scelto,
-        # il volume delle sue note e quanto dura una nota non tenuta
-        "banco": {"percorso": "", "volume": 0.8, "dur": 4.0},
+        # il volume delle sue note e quanto dura una nota non tenuta; dalla
+        # 9.13 anche la cartella di un FluidSynth trovato sui dischi
+        "banco": {"percorso": "", "volume": 0.8, "dur": 4.0, "fluidsynth": ""},
+        # La soglia dell'accordatore in decibel, sulla scala della sua riga:
+        # sotto, non ascolta. Dalla 9.13, con la barra spaziatrice
+        "soglia_accordatore": 46,
     }
 
 

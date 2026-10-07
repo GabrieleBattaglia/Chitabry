@@ -5,6 +5,7 @@
 
 import json
 
+import numpy as np
 import pytest
 
 import armonica
@@ -476,17 +477,128 @@ def test_lo_schema_della_harmonic_minor_ha_il_foro_10_piegato_di_un_tono_e_mezzo
     assert "+///" in etichette
 
 
-def test_un_solo_gruppo_di_fori_suona_una_volta(monkeypatch, capsys, richter):
-    """Con un gruppo solo menu non aspetta un tasto: il SOL7 ripartiva all'infinito."""
+class MixerFinto:
+    """Il mixer polifonico senza flusso audio: ricorda le voci suonate."""
+
+    def __init__(self, num_strings, **_k):
+        self.voci = num_strings
+        self.suonate = []
+        self.lasciate = []
+        self.aperto = False
+
+    def start(self):
+        self.aperto = True
+
+    def stop(self):
+        self.aperto = False
+
+    def pluck(self, voce, mono):
+        self.suonate.append((voce, mono))
+
+    def lascia(self, voce, secondi=0.06):
+        self.lasciate.append(voce)
+
+
+def ascolto_finto(monkeypatch, tasti, suono="suono_1", bpm=90):
+    """Prepara l'ascolto dei gruppi di fori con i tasti dati, senza audio:
+    restituisce la lista dei mixer aperti e quella delle note rese, con la
+    loro durata."""
+    mixer = []
+    rese = []
+    monkeypatch.setattr(armonica_vista.GBAudio, "PolyphonicPlayer", lambda **k: mixer.append(MixerFinto(**k)) or mixer[-1])
+    monkeypatch.setattr(armonica_vista.suoni, "mono_delle_note",
+                        lambda note, _parametri, dur=None: rese.append((tuple(note), dur)) or np.ones(4, dtype=np.float32))
+    monkeypatch.setattr(armonica_vista.suoni, "suono_attivo", lambda: suono)
+    monkeypatch.setattr(armonica_vista.suoni, "parametri_armonica", lambda chiave: {"chiave": chiave})
+    monkeypatch.setattr(armonica_vista, "tempo_del_metronomo", lambda: bpm)
+    sequenza = iter(tasti)
+    monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: next(sequenza))
+    return mixer, rese
+
+
+def test_un_solo_gruppo_di_fori_si_ascolta_nota_per_nota(monkeypatch, capsys, richter):
+    """Con un gruppo solo menu non aspetta un tasto: il SOL7 ripartiva
+    all'infinito, poi si sentiva una volta e si poteva solo uscire. Adesso,
+    come per la chitarra, un tasto per nota e A o Q per l'accordo intero,
+    che dura due quarti al tempo del metronomo (collaudo del 7 ottobre 2026)."""
     monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
     monkeypatch.setattr(config, "ARMONICA", richter)
-    suonate = []
-    monkeypatch.setattr(armonica_vista.suoni, "suona_note", lambda note, armonica=False: suonate.append(tuple(note)))
-    monkeypatch.setattr(armonica_vista, "key", lambda *_a, **_k: "")
     monkeypatch.setattr(armonica_vista, "menu", lambda **_k: pytest.fail("con un gruppo solo il menu non serve"))
+    mixer, rese = ascolto_finto(monkeypatch, ["2", "q", "x", "9", "a", chr(27)])
     armonica_vista.accordi({7, 11, 2, 5}, {7: "G", 11: "B", 2: "D", 5: "F"}, "SOL7")
-    assert suonate == [(67, 71, 74, 77)]
-    assert "-2 -3 -4 -5: SOL4 SI4 RE5 FA5." in capsys.readouterr().out
+    accordo = (67, 71, 74, 77)
+    durata = 120 / 90
+    assert rese == [(accordo, durata), ((71,), durata), (accordo, durata), (accordo, durata)]
+    # Una voce per nota e l'ultima per l'accordo; prima di ogni suono le
+    # altre voci si chiudono con la rampa, un fiato alla volta, e il mixer
+    # non satura sommando una nota all'accordo
+    assert [voce for voce, _ in mixer[0].suonate] == [4, 1, 4, 4]
+    assert mixer[0].lasciate[:4] == [0, 1, 2, 3] and mixer[0].lasciate[4:8] == [0, 2, 3, 4]
+    assert not mixer[0].aperto
+    uscita = capsys.readouterr().out
+    assert "-2 -3 -4 -5: SOL4 SI4 RE5 FA5." in uscita
+    assert "Note: SOL4 - SI4 - RE5 - FA5 (1-4, A, Q, SPAZIO, ESC)" in uscita
+    assert "90 BPM" in uscita and "Comando non valido" in uscita
+
+
+def test_col_suono_midi_il_gruppo_suona_sul_canale_dell_armonica(monkeypatch, richter):
+    monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino", "strumento_attivo": "Special 20"})
+    monkeypatch.setattr(config, "ARMONICA", richter)
+    mixer, rese = ascolto_finto(monkeypatch, ["1", chr(27)], suono="midi", bpm=120)
+    monkeypatch.setattr(armonica_vista.suoni, "prepara_canale_armonica", lambda: 2)
+    midi = []
+    monkeypatch.setattr(armonica_vista.GBAudio, "play_midi_note_temp", lambda n, d, canale=0: midi.append((n, d, canale)))
+    armonica_vista.accordi({7, 11, 2, 5}, {7: "G", 11: "B", 2: "D", 5: "F"}, "SOL7")
+    assert midi == [(67, 1.0, 2), (71, 1.0, 2), (74, 1.0, 2), (77, 1.0, 2), (67, 1.0, 2)]
+    assert rese == [] and mixer[0].suonate == []
+
+
+def test_la_nota_midi_ribattuta_dura_quanto_deve(monkeypatch):
+    """Il timer della nota vecchia spegneva quella ribattuta: con l'accordo
+    appena partito, la nota del tasto 1 durava meno di due quarti."""
+    import time
+    eventi = []
+
+    class Porta:
+        h_midi = 1
+
+        def note_on(self, numero, _velocita, _canale):
+            eventi.append(("on", numero))
+
+        def note_off(self, numero, _canale):
+            eventi.append(("off", numero))
+
+    gb = armonica_vista.GBAudio
+    monkeypatch.setattr(gb, "get_midi_out", lambda: Porta())
+    monkeypatch.setattr(gb, "_NOTE_ACCESE", {})
+    gb.play_midi_note_temp(67, 0.2, canale=2)
+    time.sleep(0.05)
+    # La ribattuta spegne prima la nota che suona, poi la riaccende
+    gb.play_midi_note_temp(67, 0.4, canale=2)
+    time.sleep(0.25)
+    assert eventi == [("on", 67), ("off", 67), ("on", 67)]
+    time.sleep(0.35)
+    assert eventi == [("on", 67), ("off", 67), ("on", 67), ("off", 67)]
+
+
+def test_la_corda_tagliata_a_due_quarti_si_chiude_con_la_rampa(monkeypatch):
+    """La corda pizzicata resa per due quarti finiva con uno scatto: adesso
+    gli ultimi sessanta millesimi scendono a zero."""
+    import suoni
+    monkeypatch.setattr(config, "impostazioni", config.get_impostazioni_default())
+    mono = suoni.mono_delle_note([60, 64, 67], suoni.parametri_suono("suono_1"), dur=0.5)
+    assert abs(float(mono[-1])) < 1e-6
+    assert float(np.abs(mono[-50:]).max()) < 0.05 * float(np.abs(mono).max())
+
+
+def test_il_tempo_e_quello_del_metronomo_attivo(monkeypatch):
+    """I BPM vengono dall'ultimo preset del metronomo; senza preset, o con un
+    valore che non e' un tempo, quelli con cui il metronomo parte."""
+    for stato, atteso in (({"bpm": 90}, 90), (None, 120), ({"bpm": "veloce"}, 120), ({"bpm": 0}, 120)):
+        finto = type("Preset", (), {"get_last_used_preset": lambda self, s=stato: ("1", s)})
+        monkeypatch.setattr(armonica_vista.clitronomo, "PresetManager", lambda silenzioso=False, f=finto: f())
+        assert armonica_vista.tempo_del_metronomo() == atteso
+    assert armonica_vista.durata_due_quarti(60) == 2.0
 
 
 def test_i_gradi_dei_modi_plagali_partono_dalla_tonica(monkeypatch, capsys, richter):

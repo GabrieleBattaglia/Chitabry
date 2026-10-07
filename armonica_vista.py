@@ -3,9 +3,13 @@
 # Nato con la 9.0.0, issue 58: con un'armonica attiva, le voci del menu che
 # per una chitarra interrogano il manico interrogano i fori.
 
+import math
+
 from GBUtils import dgt, key, menu
 
+import clitronomo
 import config
+import GBAudio
 import suoni
 from nomenclatura import get_nota, nome_con_grafia, nome_da_midi, nome_utente_in_std, nomi_note_utente
 
@@ -17,6 +21,8 @@ RIGHE_DIATONICA = ("+", "-", "-/", "-//", "-///", "+/", "+//", "+///", "+*", "-*
 RIGHE_CROMATICA = ("+", "+<", "-", "-<")
 LEGENDA = ("Una riga per tecnica: + soffiato, - aspirato, ogni barra un semitono di bending, "
            "l'asterisco l'overbend, il segno minore il cursore premuto.")
+# Il tempo del metronomo quando non ha ancora un preset: quello con cui parte
+TEMPO_DI_SERIE = 120
 
 
 def nome_attivo():
@@ -143,6 +149,91 @@ def _nome_nell_accordo(nomi_classi, midi):
     return nome_da_midi(midi)
 
 
+def tempo_del_metronomo():
+    """I BPM del metronomo attivo, cioe' del suo ultimo preset, o il suo
+    tempo di serie se non ne ha. Il metronomo conta i BPM in quarti,
+    qualunque sia il tempo della battuta."""
+    _, stato = clitronomo.PresetManager(silenzioso=True).get_last_used_preset()
+    bpm = (stato or {}).get('bpm', TEMPO_DI_SERIE)
+    try:
+        bpm = float(bpm)
+    except (TypeError, ValueError):
+        return TEMPO_DI_SERIE
+    if not math.isfinite(bpm) or not 5 <= bpm <= 1000:
+        return TEMPO_DI_SERIE
+    return bpm
+
+
+def durata_due_quarti(bpm):
+    """Due quarti a quel tempo, in secondi: quanto durano le note e gli
+    accordi dei gruppi di fori. Prima duravano quanto il suono, fino a nove
+    secondi (collaudo di Gabriele del 7 ottobre 2026)."""
+    return 2 * 60.0 / bpm
+
+
+def ascolta_gruppo(finestra, nomi_classi):
+    """L'ascolto di un gruppo di fori, come quello degli accordi della
+    chitarra: un tasto per nota, dal foro piu' basso, A o Q per l'accordo
+    intero, che si sente subito, Spazio per cambiare suono, Esc per uscire.
+    Note e accordo durano due quarti al tempo del metronomo attivo. Prima
+    l'accordo si sentiva una volta, e si poteva solo uscire."""
+    note = list(finestra.note)
+    tasti = min(len(note), 10)
+    nomi = [_nome_nell_accordo(nomi_classi, n) for n in note]
+    bpm = tempo_del_metronomo()
+    durata = durata_due_quarti(bpm)
+    ultimo = str(tasti) if tasti < 10 else "0"
+    comandi = f"1-{ultimo}, A, Q, SPAZIO, ESC"
+    print(f"Ascolto di {finestra.simboli}: ogni suono dura due quarti al tempo del metronomo, {bpm:g} BPM.")
+    print(f"Tasti da 1 a {ultimo} per le note, A o Q per l'accordo, SPAZIO cambia suono, ESC esce.")
+    stato = {'suono': suoni.suono_attivo()}
+    # Una voce per nota e una per l'accordo intero, al centro come l'armonica
+    mixer = GBAudio.PolyphonicPlayer(fs=GBAudio.FS, num_strings=len(note) + 1)
+
+    def suona(indici):
+        scelte = [note[i] for i in indici]
+        if stato['suono'] == 'midi':
+            canale = suoni.prepara_canale_armonica()
+            for numero in scelte:
+                GBAudio.play_midi_note_temp(numero, durata, canale=canale)
+            return
+        mono = suoni.mono_delle_note(scelte, suoni.parametri_armonica(stato['suono']), dur=durata)
+        if mono is None:
+            return
+        voce = indici[0] if len(indici) == 1 else len(note)
+        # Un fiato alla volta, come sull'armonica: le altre voci si chiudono
+        # con la rampa. L'accordo arriva gia' al pieno, e una nota sommata a
+        # lui faceva saturare il mixer; prima della 9.13, con sd.play, il
+        # suono nuovo sostituiva il vecchio, ma di colpo
+        for altra in range(len(note) + 1):
+            if altra != voce:
+                mixer.lascia(altra)
+        mixer.pluck(voce, mono)
+
+    mixer.start()
+    try:
+        suona(range(len(note)))
+        while True:
+            print(f"\rNote: {' - '.join(nomi)} ({comandi}): \r", end="", flush=True)
+            scelta = key().lower()
+            if scelta.isdigit():
+                numero = int(scelta) if scelta != '0' else 10
+                if 1 <= numero <= tasti:
+                    suona([numero - 1])
+            elif scelta in ('a', 'q'):
+                suona(range(len(note)))
+            elif scelta == ' ':
+                stato['suono'] = suoni.prossimo_suono(stato['suono'])
+                print(f"\nSuono: {suoni.descrizione_suono(stato['suono'])}")
+            elif scelta == chr(27):
+                print()
+                break
+            else:
+                print(f"\nComando non valido. Premi {comandi}.")
+    finally:
+        mixer.stop()
+
+
 def accordi(classi, nomi_classi, nome_accordo):
     """Il Costruttore Accordi con un'armonica attiva: i gruppi di fori vicini,
     nello stesso verso, che suonano l'accordo, da ascoltare uno per uno.
@@ -171,9 +262,7 @@ def accordi(classi, nomi_classi, nome_accordo):
         # Con una voce sola menu la restituisce subito senza leggere un tasto:
         # dentro il ciclo l'accordo ripartiva all'infinito
         print(f"{voci['1']}.")
-        print(f"Ascolto di {finestre[0].simboli}.")
-        suoni.suona_note(finestre[0].note, armonica=True)
-        key("Premi un tasto per tornare al menu...")
+        ascolta_gruppo(finestre[0], nomi_classi)
         return
     print("Scegli il numero del gruppo da ascoltare, Esc per uscire.")
     mostra = True
@@ -182,6 +271,5 @@ def accordi(classi, nomi_classi, nome_accordo):
         mostra = False
         if scelta is None:
             break
-        finestra = finestre[int(scelta) - 1]
-        print(f"Ascolto di {finestra.simboli}.")
-        suoni.suona_note(finestra.note, armonica=True)
+        ascolta_gruppo(finestre[int(scelta) - 1], nomi_classi)
+        print("Scegli un altro gruppo, ? per rileggerli, Esc per uscire.")

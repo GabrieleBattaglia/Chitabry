@@ -1,5 +1,5 @@
 # Chitabry, suoni: cio' che tastiera, accordi, scale e gioco hanno in comune per suonare una nota.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Nato con la revisione 1 del 2026-09-09: le stesse trenta righe per leggere i
 # parametri del suono, configurare il renderer e ricavare il mono per il mixer
 # erano ripetute in sei punti di views.py e gioca_suono.py.
@@ -199,39 +199,62 @@ def applica_volume_midi():
         porta.control_change(GBAudio.CC_VOLUME, volume_midi_attuale(), canale)
 
 
+def parametri_armonica(chiave):
+    """I parametri del suono per le note dell'armonica: dal banco suonano
+    con lo strumento Harmonica, come col MIDI."""
+    parametri = parametri_suono(chiave)
+    if parametri.get('banco'):
+        parametri = dict(parametri, programma=GBAudio.PROGRAMMA_ARMONICA)
+    return parametri
+
+
+def mono_delle_note(numeri_midi, parametri, dur=None):
+    """Piu' note insieme in un mono solo, gia' pronto per stare al centro:
+    se la somma, divisa sui due canali, supera il pieno, si riporta giu'.
+    dur e' la durata di ogni nota, o None per quella del suono. Restituisce
+    None se non c'e' niente da suonare."""
+    pezzi = []
+    for numero in numeri_midi:
+        renderer = GBAudio.NoteRenderer(fs=GBAudio.FS)
+        configura_renderer(renderer, GBAudio.midi_to_freq(numero), parametri, dur=dur)
+        mono = mono_da_renderer(renderer)
+        if mono is not None and mono.size > 0:
+            pezzi.append(mono)
+    if not pezzi:
+        return None
+    mix = np.zeros(max(len(p) for p in pezzi), dtype=np.float32)
+    for pezzo in pezzi:
+        mix[:len(pezzo)] += pezzo
+    if dur is not None and parametri['karplus']:
+        # La corda pizzicata tagliata prima che si spenga da sola finirebbe
+        # con uno scatto: si chiude con la stessa rampa di una nota lasciata
+        coda = min(len(mix), round(secondi_di_rilascio(parametri) * GBAudio.FS))
+        mix[len(mix) - coda:] *= np.linspace(1.0, 0.0, coda, dtype=np.float32)
+    # Al centro ciascun canale riceve il mono per il coseno di 45 gradi:
+    # piu' note insieme sommano il volume, e oltre il pieno si riporta giu'
+    picco = float(np.abs(mix).max()) * float(np.cos(np.pi / 4))
+    if picco > 1.0:
+        mix /= np.float32(picco)
+    return mix
+
+
 def suona_note(numeri_midi, armonica=False):
     """Suona subito una o piu' note insieme con il suono attivo, al centro e
     senza mixer: una nota trovata sull'armonica, o un gruppo di fori.
     Con armonica vero e il suono MIDI, le note escono con il programma
     Harmonica sul suo canale."""
     chiave = suono_attivo()
-    parametri = parametri_suono(chiave)
+    parametri = parametri_armonica(chiave) if armonica else parametri_suono(chiave)
     if chiave == 'midi':
         canale = prepara_canale_armonica() if armonica else 0
         for numero in numeri_midi:
             GBAudio.play_midi_note_temp(numero, parametri['dur'], canale=canale)
         return
-    if armonica and parametri.get('banco'):
-        # Anche dal banco l'armonica suona con lo strumento Harmonica
-        parametri = dict(parametri, programma=GBAudio.PROGRAMMA_ARMONICA)
-    pezzi = []
-    for numero in numeri_midi:
-        renderer = GBAudio.NoteRenderer(fs=GBAudio.FS)
-        configura_renderer(renderer, GBAudio.midi_to_freq(numero), parametri)
-        mono = mono_da_renderer(renderer)
-        if mono is not None and mono.size > 0:
-            pezzi.append(mono)
-    if not pezzi:
+    mix = mono_delle_note(numeri_midi, parametri)
+    if mix is None:
         return
-    mix = np.zeros(max(len(p) for p in pezzi), dtype=np.float32)
-    for pezzo in pezzi:
-        mix[:len(pezzo)] += pezzo
     # Al centro, con la stessa potenza di prima su ciascun canale
     stereo = np.column_stack([mix, mix]) * np.float32(np.cos(np.pi / 4))
-    # Piu' note insieme sommano il volume: oltre il pieno si riporta giu'
-    picco = float(np.abs(stereo).max())
-    if picco > 1.0:
-        stereo /= picco
     sd.play(stereo, samplerate=GBAudio.FS, blocking=False)
 
 

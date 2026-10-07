@@ -1,24 +1,23 @@
-Prove a mano dalla 9.8.3 alla 9.11.0: accordatore, teoria dell'armonica, volume MIDI, banco di suoni e numeri della guida. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le note del giro precedente sono salvate in git.
-GB: va tutto bene ma dovremmo stabilire un tasto rapido che chieda la soglia di silenzio perché a volte è troppo sensibile, a volte lo è poco, dipende dal rumore ambientale. Perciò facciamo che lo spazio chiede la soglia entro cui l'accordatore non ascolta. Ok?
-
-Passo 5: con la Hohner attiva, Trova Posizione, poi Costruttore Accordi con SOL settima di dominante.
-GB: sono andato in impostazioni ed ho visto che non c'è un banco strumenti impostato. Ho scelto la voce e mi chiede di scaricarlo. Qui mi fermo perché non voglio un doppione, sul mio pc se ne sono parecchi di banchi, incluso il fluidSynth. Perché chitabry mi dice che non ce ne sono? Evidentemente cerca male o nei posti sbagliati.
-Questo è un bug critico e va corretto subito.
-Pois, s per seleziona strumento attivo: qui ci sono i numeri per gli strumenti. Non va bene, dobbiamo usare anche qui la comoda menu, così scelgo dal nome dello strumento e non da un numero.
-
-Domanda 7: i messaggi dicono Scrivi e Scegli, e il SOL7 suona una volta sola?
-GB: sì, ma anche qui servono tasti per ascoltare le singole note, come si fa per la chitarra, poi un tasto, q oppure a, per mantenere la coerenza con il resto dell'app per sentirlo tutto assieme, così il musicista se lo ascolta finché vuole, mentre ora può solo uscire. Accordo e le singole note, non dovrebbero essere così lunghe come sono ora, devono prendere la durata di 2/4 in base al tempo impostato nel metronomo attivo.
-
-Domanda 10: lo scaricamento e la ricerca si seguono bene con le righe di avanzamento? Quanto dura la ricerca?
-Passo 9: Scale, SOL blues con la Hohner e il suono BAN, esercizio con A, D e L, con il metronomo acceso.
-Domanda 11: l'armonica del banco suona senza vibrato, a tempo con il battito, e al volume giusto rispetto al click?
-Passo 10: rimetti la chitarra come strumento, perche' con l'armonica attiva il banco suona sempre Harmonica. Poi Impostazioni, Seleziona Strumento MIDI, Church Organ; e Tastiera con il suono BAN: un DO tenuto, poi un MI, poi una nota tenuta per piu' di otto secondi.
-Domanda 12: scelto l'organo, il messaggio dice che il suono attivo resta il banco?
-Domanda 13: all'inizio del MI senti ancora il DO di prima? La nota lunga, dopo otto secondi, si spegne dolcemente o con uno scatto? Senti un ritardo fra il tasto e la nota?
-Passo 11: Seleziona Strumento MIDI, una delle Acoustic Guitar, e prova il suono BAN in Trova Posizione e nel Costruttore Accordi.
-Domanda 14: la chitarra del banco va bene, e il suo volume e' simile a quello dell'armonica e dell'organo?
-Passo 12: Gioca col suono, Note, e con il banco ancora scelto premi la barra spaziatrice tre volte, ascoltando la nota a ogni cambio.
-Domanda 15: il giro e' Sintetico, poi il banco con la chitarra, poi Accordi, e la nota del banco ha l'altezza giusta?
-Passo 13: Guida: cerca 16. poi 12.3. e 12.9. con la ricerca del tuo editor, e scorri l'indice.
-Domanda 16: i numeri dei capitoli ti aiutano a orientarti?
+Prove a mano della 9.13.4, piu' quelle della 9.10 e della 9.11 che restavano: soglia dell'accordatore, strumenti per nome, ascolto dei gruppi di fori, FluidSynth trovato sul computer, banco di suoni. Da sorgente. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no. Le tue note del giro precedente sono salvate in git.
+Passo 1: Accordatore, poi premi la barra spaziatrice e dai una soglia alta, per esempio 70; suona piano, poi ripeti con una soglia bassa, per esempio 35.
+Domanda 1: con la soglia alta la riga mette il volume fra parentesi angolari e non legge la nota, con quella bassa la legge? La domanda si capisce?
+Passo 2: Impostazioni, Gestisci Strumenti, s, e scrivi J: deve scegliere la JDR-Trochilus C e dirlo. Poi s e H, per tornare alla Hohner, e ancora s e H, che deve dire che la Hohner e' gia' attiva. Infine e, scrivi U e poi T per l'Ukulele Tenore, e alla domanda S/N rispondi N.
+Domanda 2: la scelta per nome e' comoda, e la descrizione accanto al nome basta a riconoscere gli strumenti?
+Passo 3: con la Hohner attiva, Costruttore Accordi, SOL settima di dominante: prova i tasti da 1 a 4, poi A, poi Q, poi la barra spaziatrice, e infine ESC.
+Domanda 3: note e accordo durano due quarti al tempo del tuo metronomo, e la riga dice i BPM giusti? Una nota nuova chiude bene quella di prima, senza scatti? Con il MIDI, una nota ribattuta subito dopo l'accordo dura anche lei due quarti? ESC ti riporta al menu principale, perche' il gruppo e' uno solo?
+Passo 4: Costruttore Accordi con DO maggiore, che ha piu' gruppi di fori: ascoltane uno, ESC, poi un altro.
+Domanda 4: dopo ESC torni alla scelta dei gruppi, e il punto interrogativo li rilegge?
+Passo 5: Impostazioni, Banco di suoni, INVIO per la ricerca sui dischi, poi scegli SGM-V2.01 nella cartella VstPlugins; volume 0.8, e usalo come suono attivo.
+Domanda 5: Chitabry dice di aver trovato FluidSynth nella cartella di MeTeOra, senza proporre di scaricarlo? La ricerca si segue bene con la riga di avanzamento, e quanto dura?
+Passo 6: Scale, SOL blues con la Hohner e il suono BAN, esercizio con A, D e L, con il metronomo acceso.
+Domanda 6: l'armonica del banco suona senza vibrato, a tempo con il battito, e al volume giusto rispetto al click?
+Passo 7: rimetti la chitarra come strumento, perche' con l'armonica attiva il banco suona sempre Harmonica. Poi Impostazioni, Seleziona Strumento MIDI, Church Organ; e Tastiera con il suono BAN: un DO tenuto, poi un MI, poi una nota tenuta per piu' di otto secondi.
+Domanda 7: scelto l'organo, il messaggio dice che il suono attivo resta il banco?
+Domanda 8: all'inizio del MI senti ancora il DO di prima? La nota lunga, dopo otto secondi, si spegne dolcemente o con uno scatto? Senti un ritardo fra il tasto e la nota?
+Passo 8: Seleziona Strumento MIDI, una delle Acoustic Guitar, e prova il suono BAN in Trova Posizione e nel Costruttore Accordi.
+Domanda 9: la chitarra del banco va bene, e il suo volume e' simile a quello dell'armonica e dell'organo?
+Passo 9: Gioca col suono, Note, e con il banco ancora scelto premi la barra spaziatrice tre volte, ascoltando la nota a ogni cambio.
+Domanda 10: il giro e' Sintetico, poi il banco con la chitarra, poi Accordi, e la nota del banco ha l'altezza giusta?
+Passo 10: Guida: cerca 8.1. poi 12.9. e 15.4. con la ricerca del tuo editor, e scorri l'indice.
+Domanda 11: le parti nuove sulla soglia, su FluidSynth e sull'ascolto dei gruppi di fori si capiscono?
 Esito:

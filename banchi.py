@@ -150,14 +150,17 @@ def dischi_fissi():
     return radici
 
 
-def cerca_banchi(radici=None, avvisa=None, fermo=None):
+def cerca_banchi(radici=None, avvisa=None, fermo=None, motori=None):
     """I banchi General MIDI nelle radici, di partenza tutti i dischi fissi:
     lista di (percorso, dimensione in byte), in ordine di nome. I banchi di
     pochi strumenti, che suonerebbero con strumenti sbagliati o mancanti,
     restano fuori. avvisa(cartelle) arriva ogni tanto con le cartelle
     visitate fin li'; fermo(), se c'e' e torna vero, interrompe la ricerca.
     Le cartelle di sistema, nascoste o illeggibili si saltano, e anche quella
-    dei file temporanei, dove i banchi sono di passaggio."""
+    dei file temporanei, dove i banchi sono di passaggio. Se motori e' una
+    lista, ci si aggiungono le cartelle con la DLL di FluidSynth, nell'ordine
+    in cui si incontrano: lo stesso giro trova anche le copie di FluidSynth
+    gia' sul computer, come quella di MeTeOra."""
     trovati = []
     visitate = 0
     temporanei = os.path.normcase(tempfile.gettempdir())
@@ -171,6 +174,8 @@ def cerca_banchi(radici=None, avvisa=None, fermo=None):
             sottocartelle[:] = [s for s in sottocartelle if s.casefold() not in CARTELLE_DA_SALTARE and not s.startswith("$")
                 and os.path.normcase(os.path.join(cartella, s)) != temporanei]
             for nome in files:
+                if motori is not None and nome.lower() == FLUIDSYNTH_DLL[0]:
+                    motori.append(cartella)
                 if nome.lower().endswith(ESTENSIONI_DEI_BANCHI):
                     percorso = os.path.join(cartella, nome)
                     if general_midi(percorso):
@@ -179,9 +184,22 @@ def cerca_banchi(radici=None, avvisa=None, fermo=None):
     return sorted(trovati, key=lambda t: os.path.basename(t[0]).casefold())
 
 
-def cartella_fluidsynth():
-    """Dove Chitabry tiene FluidSynth scaricato: accanto ai suoi dati."""
+def cartella_dello_scaricamento():
+    """Dove Chitabry mette FluidSynth quando lo scarica: accanto ai suoi dati."""
     return os.path.join(config.cartella_dati(), "fluidsynth")
+
+
+def cartella_fluidsynth():
+    """Il FluidSynth che Chitabry usa: la copia trovata sui dischi e scritta
+    nelle impostazioni, come quella di MeTeOra, se c'e' ancora; altrimenti
+    quello scaricato. Fino alla 9.11 si guardava solo la cartella dello
+    scaricamento, e con FluidSynth gia' sul computer Chitabry proponeva di
+    scaricarne un doppione (collaudo di Gabriele del 7 ottobre 2026)."""
+    banco = config.impostazioni.get('banco')
+    trovata = banco.get('fluidsynth') if isinstance(banco, dict) else None
+    if isinstance(trovata, str) and trovata and os.path.isfile(os.path.join(trovata, FLUIDSYNTH_DLL[0])):
+        return trovata
+    return cartella_dello_scaricamento()
 
 
 def cartella_dei_banchi():
@@ -190,7 +208,38 @@ def cartella_dei_banchi():
 
 
 def fluidsynth_presente():
-    return all(os.path.isfile(os.path.join(cartella_fluidsynth(), dll)) for dll in FLUIDSYNTH_DLL)
+    """Vero se ci sono i file di FluidSynth da usare: nella cartella dello
+    scaricamento le due DLL dello zip ufficiale, perche' senza la seconda lo
+    scaricamento si e' interrotto e va rifatto; in una copia trovata sui
+    dischi la DLL principale, con le sue librerie, che possono avere altri
+    nomi. E' un controllo veloce sui file: se FluidSynth si carica davvero lo
+    dice fluidsynth_pronto."""
+    cartella = cartella_fluidsynth()
+    necessarie = FLUIDSYNTH_DLL if cartella == cartella_dello_scaricamento() else FLUIDSYNTH_DLL[:1]
+    return all(os.path.isfile(os.path.join(cartella, dll)) for dll in necessarie)
+
+
+def fluidsynth_pronto():
+    """Vero se FluidSynth c'e' e si carica davvero. Serve alle impostazioni:
+    con una copia guasta, a cui manca una libreria, devono poterne cercare
+    un'altra o scaricarlo, invece di trattarla come buona."""
+    return fluidsynth_presente() and fluidsynth_che_funziona([cartella_fluidsynth()]) is not None
+
+
+def fluidsynth_che_funziona(cartelle):
+    """La prima delle cartelle da cui FluidSynth si carica davvero, con
+    tutte le funzioni che servono a Chitabry, o None. Le copie trovate sui
+    dischi possono essere di versioni o build diverse, o senza le librerie da
+    cui dipendono: si prova a caricarle, invece di fidarsi del nome."""
+    for cartella in cartelle:
+        try:
+            dll = ctypes.CDLL(os.path.join(cartella, FLUIDSYNTH_DLL[0]))
+            for nome in _FIRME:
+                getattr(dll, nome)
+        except (OSError, AttributeError):
+            continue
+        return cartella
+    return None
 
 
 def _scarica(url, avanza=None):
@@ -221,14 +270,14 @@ def scarica_fluidsynth(avanza=None):
     dati = _scarica(FLUIDSYNTH_URL, avanza)
     if hashlib.sha256(dati).hexdigest() != FLUIDSYNTH_SHA256:
         raise OSError("lo zip di FluidSynth scaricato non è quello atteso")
-    cartella = cartella_fluidsynth()
+    cartella = cartella_dello_scaricamento()
     os.makedirs(cartella, exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(dati)) as archivio:
         for nome in archivio.namelist():
             if os.path.basename(nome) in FLUIDSYNTH_DLL and "/bin/" in nome:
                 with open(os.path.join(cartella, os.path.basename(nome)), "wb") as f:
                     f.write(archivio.read(nome))
-    if not fluidsynth_presente():
+    if not all(os.path.isfile(os.path.join(cartella, dll)) for dll in FLUIDSYNTH_DLL):
         raise OSError("nello zip di FluidSynth mancano le DLL attese")
 
 
@@ -268,30 +317,34 @@ _SYNTH = {}
 _BLOCCO = threading.RLock()
 
 
+# Le funzioni di FluidSynth che Chitabry chiama, con il tipo del risultato e
+# degli argomenti
+_P = ctypes.c_void_p
+_INTERO = ctypes.c_int
+_FIRME = {
+    "new_fluid_settings": (_P, []),
+    "fluid_settings_setnum": (_INTERO, [_P, ctypes.c_char_p, ctypes.c_double]),
+    "fluid_settings_setint": (_INTERO, [_P, ctypes.c_char_p, _INTERO]),
+    "new_fluid_synth": (_P, [_P]),
+    "fluid_synth_sfload": (_INTERO, [_P, ctypes.c_char_p, _INTERO]),
+    "fluid_synth_system_reset": (_INTERO, [_P]),
+    "fluid_synth_all_sounds_off": (_INTERO, [_P, _INTERO]),
+    "fluid_synth_program_change": (_INTERO, [_P, _INTERO, _INTERO]),
+    "fluid_synth_pitch_bend": (_INTERO, [_P, _INTERO, _INTERO]),
+    "fluid_synth_noteon": (_INTERO, [_P, _INTERO, _INTERO, _INTERO]),
+    "fluid_synth_noteoff": (_INTERO, [_P, _INTERO, _INTERO]),
+    "fluid_synth_write_float": (_INTERO, [_P, _INTERO, _P, _INTERO, _INTERO, _P, _INTERO, _INTERO]),
+    "delete_fluid_synth": (None, [_P]),
+    "delete_fluid_settings": (None, [_P]),
+    "fluid_set_log_function": (_P, [_INTERO, _P, _P]),
+}
+
+
 def _fluid():
     if _LIBRERIA:
         return _LIBRERIA[0]
     dll = ctypes.CDLL(os.path.join(cartella_fluidsynth(), FLUIDSYNTH_DLL[0]))
-    p = ctypes.c_void_p
-    intero = ctypes.c_int
-    firme = {
-        "new_fluid_settings": (p, []),
-        "fluid_settings_setnum": (intero, [p, ctypes.c_char_p, ctypes.c_double]),
-        "fluid_settings_setint": (intero, [p, ctypes.c_char_p, intero]),
-        "new_fluid_synth": (p, [p]),
-        "fluid_synth_sfload": (intero, [p, ctypes.c_char_p, intero]),
-        "fluid_synth_system_reset": (intero, [p]),
-        "fluid_synth_all_sounds_off": (intero, [p, intero]),
-        "fluid_synth_program_change": (intero, [p, intero, intero]),
-        "fluid_synth_pitch_bend": (intero, [p, intero, intero]),
-        "fluid_synth_noteon": (intero, [p, intero, intero, intero]),
-        "fluid_synth_noteoff": (intero, [p, intero, intero]),
-        "fluid_synth_write_float": (intero, [p, intero, p, intero, intero, p, intero, intero]),
-        "delete_fluid_synth": (None, [p]),
-        "delete_fluid_settings": (None, [p]),
-        "fluid_set_log_function": (p, [intero, p, p]),
-    }
-    for nome, (risultato, argomenti) in firme.items():
+    for nome, (risultato, argomenti) in _FIRME.items():
         funzione = getattr(dll, nome)
         funzione.restype, funzione.argtypes = risultato, argomenti
     for livello in _LIVELLI_TACIUTI:

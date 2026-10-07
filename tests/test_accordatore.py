@@ -135,6 +135,74 @@ def test_la_riga_di_ascolto_ogni_mezzo_secondo(monkeypatch, capsys):
     assert capsys.readouterr().out.count("Ascolto") <= 4
 
 
+def test_la_soglia_di_ascolto_dalle_impostazioni(monkeypatch):
+    """Di serie 46 dB, come prima; un valore scritto male nell'archivio torna
+    quello di serie, uno fuori scala si riporta dentro. La soglia vera sta
+    mezzo decibel sotto, dove la riga arrotondata comincia a scrivere 46: un
+    blocco a 45,7 dB, che la riga mostra come 46, si ascolta."""
+    for valore, atteso in ((None, 46), (60, 60), ("rumore", 46), (float("nan"), 46), (150, 100), (-5, 0)):
+        monkeypatch.setattr(accordatore.config, "impostazioni", {} if valore is None else {"soglia_accordatore": valore})
+        assert accordatore.soglia_in_decibel() == atteso
+    monkeypatch.setattr(accordatore.config, "impostazioni", {})
+    assert accordatore.soglia_rms() == pytest.approx(1e-5 * 10 ** (45.5 / 20))
+    assert 1e-5 * 10 ** (45.4 / 20) < accordatore.soglia_rms() < 1e-5 * 10 ** (45.7 / 20)
+    assert f"{accordatore.decibel(accordatore.soglia_rms() * 1.001):.0f}" == "46"
+
+
+def test_la_barra_spaziatrice_cambia_la_soglia(monkeypatch, capsys):
+    """Collaudo di Gabriele del 7 ottobre 2026: secondo il rumore della
+    stanza l'accordatore era troppo sensibile o troppo poco. Lo spazio chiede
+    la soglia, che si salva e vale subito per il flusso audio."""
+    monkeypatch.setattr(accordatore.config, "impostazioni", {"soglia_accordatore": 46, "nomenclatura": "latino"})
+    salvate = []
+    monkeypatch.setattr(accordatore.config, "salva_modifiche", lambda: salvate.append(dict(accordatore.config.impostazioni)))
+    monkeypatch.setattr(accordatore, "_dispositivi_di_ingresso", lambda: {"4": "Microfono [WASAPI]"})
+    monkeypatch.setattr(accordatore, "enter_escape", lambda *_a: False)
+    monkeypatch.setattr(accordatore.sd, "default", type("Predefiniti", (), {"device": (4, 0)})())
+    monkeypatch.setattr(accordatore.sd, "query_devices", lambda *_a, **_k: {"default_samplerate": SR})
+    flussi = []
+
+    class FlussoFinto:
+        def __init__(self, **opzioni):
+            self.callback = opzioni["callback"]
+            flussi.append(self)
+
+        def start(self):
+            pass
+
+        def stop(self):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(accordatore.sd, "InputStream", FlussoFinto)
+    domande = []
+    monkeypatch.setattr(accordatore, "dgt", lambda prompt, **k: domande.append((prompt, k["default"])) or 60)
+    # Un LA a 56 dB: sopra la soglia di prima, sotto quella nuova
+    blocco = tono(440.0)
+    blocco = (blocco / np.sqrt(np.mean(blocco ** 2)) * 1e-5 * 10 ** (56 / 20)).astype(np.float32)
+    giri = []
+
+    def tastiera(*_a, **_k):
+        giri.append(True)
+        if len(giri) == 1:
+            return " "
+        if len(giri) == 2:
+            flussi[0].callback(blocco[:, None], len(blocco), None, None)
+            return ""
+        return "\x1b"
+
+    monkeypatch.setattr(accordatore, "key", tastiera)
+    accordatore.Accordatore()
+    assert domande and domande[0][1] == 46 and "Soglia di ascolto in dB" in domande[0][0]
+    assert salvate[-1]["soglia_accordatore"] == 60
+    uscita = capsys.readouterr().out
+    assert "Spazio cambia la soglia di ascolto, ora 46 dB." in uscita and "Soglia di ascolto: 60 dB." in uscita
+    # Sotto la soglia nuova il volume va fra parentesi angolari, e la nota non si legge
+    assert "N:nessuna (0%) Hz:0.0 <dB:56>" in uscita
+
+
 def finta_scelta(monkeypatch, dispositivi, ricerca, predefinito):
     """Accordatore fino alla scelta della periferica: il flusso audio non si
     apre, e cio' che il menu riceve resta in viste."""

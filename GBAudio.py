@@ -1,5 +1,5 @@
 # GBAudio, motore audio di Chitabry: sintesi dello strumento e dialogo con il MIDI.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Data creazione: 6 gennaio 2026.
 # Non e' un doppione di Acusticator e non va unificato con quello: Acusticator
 # riproduce effetti brevi da uno score, questo suona uno strumento con note
@@ -14,6 +14,7 @@
 
 import atexit
 import ctypes
+import itertools
 import math
 import threading
 import time
@@ -771,17 +772,40 @@ def freq_to_midi(freq):
         return None
     return round(12 * math.log2(freq / 440.0) + 69)
 
+# Le note accese da play_midi_note_temp, per canale e numero, con il numero
+# dell'ultima accensione: il timer di una nota spegne solo la sua, e non
+# quella ribattuta dopo di lei. Il numero cresce sempre, per tutte le note,
+# cosi' un timer vecchio e lungo non ritrova mai il suo numero su una nota
+# accesa dopo.
+_NOTE_ACCESE = {}
+_ACCENSIONI = itertools.count(1)
+_BLOCCO_NOTE = threading.Lock()
+
+
 def play_midi_note_temp(note_num, duration, velocity=127, canale=0):
-    """Riproduce una nota MIDI per una determinata durata in secondi, sul canale indicato."""
+    """Riproduce una nota MIDI per una determinata durata in secondi, sul
+    canale indicato. Se la stessa nota suona ancora, prima la si spegne, e il
+    suo timer non tocca piu' quella nuova: fino alla 9.13 il note_off della
+    nota vecchia spegneva quella ribattuta, che durava meno del dovuto."""
     if note_num is None:
         return
     m_out = get_midi_out()
-    m_out.note_on(note_num, velocity, canale)
+    chiave = (canale, note_num)
+    with _BLOCCO_NOTE:
+        if chiave in _NOTE_ACCESE and m_out.h_midi is not None:
+            m_out.note_off(note_num, canale)
+        generazione = next(_ACCENSIONI)
+        _NOTE_ACCESE[chiave] = generazione
+        m_out.note_on(note_num, velocity, canale)
 
     def off():
         time.sleep(duration)
-        if m_out.h_midi is not None:
-            m_out.note_off(note_num, canale)
+        with _BLOCCO_NOTE:
+            if _NOTE_ACCESE.get(chiave) != generazione:
+                return
+            del _NOTE_ACCESE[chiave]
+            if m_out.h_midi is not None:
+                m_out.note_off(note_num, canale)
 
     threading.Thread(target=off, daemon=True).start()
 

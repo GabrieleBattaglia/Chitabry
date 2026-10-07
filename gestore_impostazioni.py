@@ -1,5 +1,5 @@
 # Chitabry, gestore impostazioni: suoni, strumenti, nomenclatura e porte MIDI.
-# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 # Nato con la revisione 1 del 2026-09-09 dallo spezzettamento di views.py.
 # Ogni modifica si scrive subito su disco con config.salva_modifiche.
 
@@ -88,16 +88,26 @@ def _chiedi_accordatura(num_corde):
 
 
 def _descrivi_strumenti(strumenti):
+    """Le voci del menu degli strumenti: la chiave e' il nome, che si sceglie
+    scrivendone le prime lettere, e la descrizione dice che strumento e'.
+    Fino alla 9.11 il menu era numerato, e si sceglieva da un numero invece
+    che dal nome (collaudo di Gabriele del 7 ottobre 2026)."""
     descrizioni = {}
     for nome, conf in strumenti.items():
         if config.e_armonica(conf):
             try:
-                descrizioni[nome] = f"{nome} (armonica {armonica_vista.descrivi(config.modello_armonica(conf))})"
+                descrizioni[nome] = f"armonica {armonica_vista.descrivi(config.modello_armonica(conf))}"
             except ValueError:
-                descrizioni[nome] = f"{nome} (armonica con dati da correggere)"
+                descrizioni[nome] = "armonica con dati da correggere"
         else:
-            descrizioni[nome] = f"{nome} ({conf.get('tasti')} tasti, {len(conf.get('accordatura', []))} corde)"
+            descrizioni[nome] = f"{conf.get('tasti')} tasti, {len(conf.get('accordatura', []))} corde"
     return descrizioni
+
+
+def _scegli_strumento(strumenti):
+    """Uno strumento per nome, con il menu che filtra a ogni lettera; None con Esc."""
+    return menu(d=_descrivi_strumenti(strumenti), keyslist=True, show=True, show_on_filter=False, ordered=False,
+                ntf="Strumento non trovato")
 
 
 def _nuovo_strumento_a_corda(strumenti):
@@ -225,9 +235,16 @@ def GestoreStrumenti():
         if scelta is None:
             break
         if scelta == 's':
-            print("Seleziona lo strumento attivo:")
-            scelto = menu(d=_descrivi_strumenti(strumenti), keyslist=True, show=True, numbered=True, ntf="Strumento non trovato")
-            if scelto is not None and scelto != strum_attivo:
+            # Con una voce sola il menu la sceglie senza leggere tasti: le
+            # lettere scritte seguendo l'invito finirebbero nel menu dopo
+            if len(strumenti) == 1:
+                print(f"C'e' un solo strumento, {next(iter(strumenti))}, ed e' gia' quello attivo.")
+                continue
+            print("Seleziona lo strumento attivo, scrivendo le prime lettere del nome:")
+            scelto = _scegli_strumento(strumenti)
+            if scelto is not None and scelto == strum_attivo:
+                print(f"{scelto} e' gia' lo strumento attivo.")
+            elif scelto is not None:
                 config.impostazioni['strumento_attivo'] = scelto
                 config.salva_modifiche()
                 config.aggiorna_manico()
@@ -235,12 +252,15 @@ def GestoreStrumenti():
         elif scelta == 'a':
             _aggiungi_strumento(strumenti)
         elif scelta == 'e':
-            print("Seleziona lo strumento da eliminare:")
             eliminabili = {k: v for k, v in strumenti.items() if k != strum_attivo}
             if not eliminabili:
                 print("Non ci sono altri strumenti da eliminare.")
                 continue
-            scelto = menu(d=_descrivi_strumenti(eliminabili), keyslist=True, show=True, numbered=True, ntf="Strumento non trovato")
+            if len(eliminabili) == 1:
+                scelto = next(iter(eliminabili))
+            else:
+                print("Seleziona lo strumento da eliminare, scrivendo le prime lettere del nome:")
+                scelto = _scegli_strumento(eliminabili)
             if scelto is not None:
                 conferma = dgt(f"Sei sicuro di voler eliminare {scelto}? (S/N): ", kind="s")
                 if conferma.strip().lower() == 's':
@@ -354,28 +374,69 @@ def _configura_banco():
     da MeTeOra, che fa la stessa cosa per i suoi MIDI."""
     print("Banco di suoni. Chitabry suona un banco General MIDI, cioe' un file sf2, con FluidSynth: e' un quarto suono, "
           "accanto ai due sintetici e al MIDI di Windows, e lo scegli fra i banchi che hai sul computer.")
-    if not banchi.fluidsynth_presente():
-        if not enter_escape("FluidSynth non c'e' ancora. Lo scarico da GitHub, dalla pagina ufficiale? (INVIO per si', ESC per no): "):
-            return
-        if _scarica_con_avanzamento(banchi.scarica_fluidsynth, "FluidSynth") is None:
-            key("Premi un tasto...")
-            return
-        print("FluidSynth scaricato.")
+    presente = banchi.fluidsynth_pronto()
+    if not presente:
+        # Una copia salvata che non si carica piu' si dimentica: altrimenti
+        # varrebbe anche dopo uno scaricamento riuscito
+        banco_salvato = config.impostazioni.get('banco')
+        if isinstance(banco_salvato, dict) and banco_salvato.pop('fluidsynth', None):
+            config.salva_modifiche()
+    # La ricerca sui dischi trova i banchi e, nello stesso giro, le copie di
+    # FluidSynth gia' sul computer: si scarica solo se non ce n'e' nessuna
+    domanda = ("Cerco i banchi General MIDI su tutti i dischi fissi?" if presente else
+               "Cerco su tutti i dischi fissi i banchi General MIDI e una copia di FluidSynth gia' presente, per esempio quella di MeTeOra?")
     voci = {}
+    motori = []
+    interrotta = []
     attuale = config.impostazioni.get('banco', {}).get('percorso', '')
-    if enter_escape("Cerco i banchi General MIDI su tutti i dischi fissi? Puo' durare qualche minuto, e ESC la ferma. (INVIO per si', ESC per no): "):
-        trovati = banchi.cerca_banchi(avvisa=lambda n: _riga(f"Cartelle visitate: {n}"), fermo=lambda: key(attesa=0) == chr(27))
+
+    def fermo():
+        # Si ricorda che la ricerca e' stata fermata: senza, Chitabry diceva
+        # che FluidSynth non c'era sul computer anche se non l'aveva cercato
+        # dappertutto
+        if not interrotta and key(attesa=0) == chr(27):
+            interrotta.append(True)
+        return bool(interrotta)
+
+    cercato = enter_escape(f"\r{domanda} Puo' durare qualche minuto, e ESC la ferma. (INVIO per si', ESC per no): \r")
+    if cercato:
+        trovati = banchi.cerca_banchi(avvisa=lambda n: _riga(f"Cartelle visitate: {n}"), fermo=fermo, motori=motori)
         print()
+        if interrotta:
+            print("Ricerca fermata con ESC.")
         print(f"Banchi General MIDI trovati: {len(trovati)}.")
         for percorso, dimensione in trovati:
             voci[percorso] = f"{os.path.basename(percorso)}, {banchi.dimensione_da_leggere(dimensione)}, in {os.path.dirname(percorso)}"
+    if not presente:
+        cartella = banchi.fluidsynth_che_funziona(motori)
+        if cartella is not None:
+            config.impostazioni.setdefault('banco', {})['fluidsynth'] = cartella
+            config.salva_modifiche()
+            print(f"FluidSynth trovato in {cartella}: Chitabry usa quello, senza scaricarne un altro.")
+        else:
+            # La frase dice cio' che e' successo davvero, prima di proporre
+            # lo scaricamento
+            if motori:
+                perche = f"Nessuna delle copie di FluidSynth trovate, {len(motori)}, si puo' usare."
+            elif interrotta:
+                perche = "La ricerca e' stata fermata prima di trovare FluidSynth."
+            elif cercato:
+                perche = "FluidSynth non c'e' sul computer."
+            else:
+                perche = "FluidSynth non c'e' nella cartella di Chitabry."
+            if not enter_escape(f"\r{perche} Lo scarico da GitHub, dalla pagina ufficiale? (INVIO per si', ESC per no): \r"):
+                return
+            if _scarica_con_avanzamento(banchi.scarica_fluidsynth, "FluidSynth") is None:
+                key("Premi un tasto...")
+                return
+            print("FluidSynth scaricato.")
     if attuale and attuale not in voci and os.path.isfile(attuale):
         voci = {attuale: f"{os.path.basename(attuale)}, quello attuale", **voci}
     dimensione = banchi.dimensione_da_leggere(banchi.FLUIDR3_DIMENSIONE)
     if not voci:
         # Con una voce sola il menu la sceglie senza chiedere: 148 MB si
         # scaricano solo con un si'
-        if not enter_escape(f"Nessun banco da scegliere. Scarico FluidR3 GM, il banco libero di FluidSynth, {dimensione}? (INVIO per si', ESC per no): "):
+        if not enter_escape(f"\rNessun banco da scegliere. Scarico FluidR3 GM, il banco libero di FluidSynth, {dimensione}? (INVIO per si', ESC per no): \r"):
             return
         scelta = "scarica"
     else:

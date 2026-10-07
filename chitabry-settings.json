@@ -3366,7 +3366,7 @@
             "registro": "normale"
         }
     },
-    "strumento_attivo": "JDR-Trochilus C",
+    "strumento_attivo": "Hohner Special 20 C",
     "classifica_note": [
         {
             "nome": "Riprovo",
@@ -3431,5 +3431,11 @@
     "tipo_suono": "midi",
     "midi_strumento": 12,
     "midi_in_dispositivo": "",
-    "versione_formato": 3
+    "versione_formato": 3,
+    "midi_volume": 100,
+    "banco": {
+        "percorso": "",
+        "volume": 0.8,
+        "dur": 4.0
+    }
 }

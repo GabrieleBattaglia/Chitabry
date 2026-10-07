@@ -2,6 +2,16 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.13.4 (7 ottobre 2026)
+Due novita' e quattro correzioni, dal collaudo di Gabriele del 7 ottobre 2026, passate da una revisione a piu' voci prima del rilascio.
+*   Accordatore: la barra spaziatrice chiede la soglia di ascolto, in decibel sulla scala della riga, sotto la quale l'accordatore non ascolta. Prima era fissa a 46 dB, e secondo il rumore della stanza era troppo sensibile o troppo poco. La soglia resta nelle impostazioni e vale anche per il rilevamento della periferica. Un volume che la riga mostra uguale alla soglia si ascolta: prima, con il volume a 45,7 dB, la riga scriveva 46 fra parentesi angolari, come se fosse sotto.
+*   Costruttore Accordi con un'armonica: il gruppo di fori si ascolta come gli accordi della chitarra. I tasti da 1 in su suonano le note una per una, A o Q l'accordo intero, la barra spaziatrice cambia suono, ESC torna alla scelta dei gruppi, o al menu principale se il gruppo era uno solo. Si suona un fiato alla volta: una nota nuova chiude con una breve sfumatura quella di prima. Prima l'accordo si sentiva una volta e si poteva solo uscire.
+*   Costruttore Accordi con un'armonica: note e accordo durano due quarti al tempo del metronomo attivo, invece della durata del suono, che arrivava a nove secondi; la corda pizzicata, tagliata prima che si spenga da sola, si chiude con una rampa invece che con uno scatto.
+*   Banco di suoni: Chitabry cercava FluidSynth solo nella sua cartella, e con FluidSynth gia' sul computer, per esempio quello di MeTeOra, proponeva di scaricarne un doppione. Adesso la ricerca dei banchi sui dischi trova anche le copie di FluidSynth, e Chitabry usa la prima che si carica; scarica solo se non ce n'e' nessuna che funzioni, e la domanda dice perche', anche quando la ricerca e' stata fermata con ESC. Una copia ricordata che non si carica piu' si dimentica, e uno scaricamento interrotto a meta' si riconosce e si rifa'. La ricerca dei banchi invece era giusta: su questo computer trova dieci banchi General MIDI, fra cui SGM, Arachno e FluidR3, in una trentina di secondi.
+*   Gestisci Strumenti: lo strumento da attivare o da eliminare si sceglie dal nome, scrivendone le prime lettere, invece che da un numero. Con un solo strumento possibile non si invita a scrivere, e scegliendo quello gia' attivo Chitabry lo dice.
+*   Suono MIDI: una nota ribattuta prima della fine della precedente veniva spenta dal timer di quella, e durava meno del dovuto. Valeva per i gruppi di fori, per Trova Posizione e per gli accordi della chitarra.
+*   La guida passa alla revisione 26. Quattordici prove nuove, e quella dell'accordo sul gruppo unico riscritta: 208 in tutto.
+
 Versione 9.11.0 (7 ottobre 2026)
 Il banco di suoni anche in Gioca col suono.
 *   In Gioca col suono la barra spaziatrice alterna adesso la Chitarra, il Sintetizzatore e, quando un banco e' pronto, il banco di suoni, con lo strumento scelto per il MIDI (Gabriele, 7 ottobre 2026). Prima il banco li' non suonava.

@@ -13,13 +13,17 @@ import time
 
 import numpy as np
 import sounddevice as sd
-from GBUtils import enter_escape, key, menu
+from GBUtils import dgt, enter_escape, key, menu
 
 import config
 from nomenclatura import get_nota
 
 BLOCK_SIZE = 4096
-RMS_THRESHOLD = 0.002
+# La soglia di ascolto di serie, in decibel sulla scala della riga: sotto,
+# l'accordatore non ascolta. Dalla 9.13 si cambia con la barra spaziatrice,
+# perche' secondo il rumore della stanza era troppo sensibile o troppo poco
+# (collaudo di Gabriele del 7 ottobre 2026), e resta nelle impostazioni.
+SOGLIA_PREDEFINITA = 46
 # YIN: il primo minimo della differenza normalizzata sotto la soglia da' il
 # periodo; se nessuno ci scende, sotto quella di ripiego. Misurato su toni
 # sintetici dal LA0 al DO8: senza rumore nessun errore d'ottava, e nemmeno
@@ -150,6 +154,39 @@ def decibel(rms):
     return 20 * math.log10(rms / 1e-5) if rms > 1e-5 else 0.0
 
 
+def soglia_in_decibel():
+    """La soglia di ascolto delle impostazioni, in decibel da 0 a 100."""
+    valore = config.impostazioni.get('soglia_accordatore', SOGLIA_PREDEFINITA)
+    try:
+        valore = float(valore)
+    except (TypeError, ValueError):
+        return SOGLIA_PREDEFINITA
+    if not math.isfinite(valore):
+        return SOGLIA_PREDEFINITA
+    return min(100.0, max(0.0, valore))
+
+
+def soglia_rms():
+    """La soglia di ascolto come valore RMS, quello che si confronta con il
+    volume di ogni blocco. Sta mezzo decibel sotto la soglia scelta, dove la
+    riga, che arrotonda all'intero, comincia a scrivere quel numero: con la
+    soglia a 46 un blocco che la riga mostra come 46 dB si ascolta, invece di
+    finire fra parentesi angolari, che vogliono dire sotto la soglia."""
+    return 1e-5 * 10 ** ((soglia_in_decibel() - 0.5) / 20)
+
+
+def _chiedi_soglia():
+    """La barra spaziatrice dell'accordatore: chiede la soglia di ascolto e
+    la salva. Restituisce la soglia nuova come valore RMS."""
+    attuale = round(soglia_in_decibel())
+    nuova = dgt(f"Soglia di ascolto in dB, sotto la quale l'accordatore non ascolta (attuale: {attuale}): ",
+                kind='i', imin=0, imax=100, default=attuale)
+    config.impostazioni['soglia_accordatore'] = nuova
+    config.salva_modifiche()
+    print(f"Soglia di ascolto: {nuova} dB.")
+    return soglia_rms()
+
+
 def _misura_rumore(device_idx, secondi=SECONDI_RILEVAMENTO, livelli=None):
     """Ascolta il dispositivo per qualche secondo e restituisce il picco RMS.
     Se livelli e' un dizionario, ci scrive il picco fin li' sotto l'indice
@@ -241,11 +278,12 @@ def _rileva_dispositivi_attivi(input_devices):
     print()
     con_segnale = sorted(((results.get(int(idx_str), 0.0), idx_str) for idx_str in input_devices), reverse=True)
     filtered = {}
+    soglia = soglia_rms()
     for rms_val, idx_str in con_segnale:
-        if rms_val >= RMS_THRESHOLD:
+        if rms_val >= soglia:
             filtered[idx_str] = f"{input_devices[idx_str]} (segnale {decibel(rms_val):.0f} dB)"
     if not filtered:
-        print(f"Nessun segnale significativo rilevato (sotto {decibel(RMS_THRESHOLD):.0f} dB). Vengono mostrati tutti i dispositivi.")
+        print(f"Nessun segnale significativo rilevato (sotto {soglia_in_decibel():.0f} dB). Vengono mostrati tutti i dispositivi.")
         return input_devices
     return filtered
 
@@ -319,6 +357,9 @@ def Accordatore():
     blocco = dimensione_del_blocco(device_sr)
     pitch_readings = []
     current_rms = [0.0]
+    # Una lista, perche' la barra spaziatrice la cambia mentre il flusso
+    # audio la legge
+    soglia = [soglia_rms()]
     pitch_lock = threading.Lock()
     stop_event = threading.Event()
     ema_state = {'freq': 0.0, 'active': False}
@@ -329,7 +370,7 @@ def Accordatore():
         mono = indata[:, 0]
         rms = float(np.sqrt(np.mean(mono ** 2)))
         current_rms[0] = rms
-        if rms < RMS_THRESHOLD:
+        if rms < soglia[0]:
             return
         detected_freq = rileva_frequenza(mono, device_sr)
         if detected_freq > 0.0:
@@ -337,7 +378,7 @@ def Accordatore():
                 pitch_readings.append(detected_freq)
 
     print("Accordatore cromatico.")
-    print("ESC per uscire.")
+    print(f"Spazio cambia la soglia di ascolto, ora {soglia_in_decibel():.0f} dB. ESC per uscire.")
     try:
         stream = sd.InputStream(device=device_idx, samplerate=device_sr, channels=1, blocksize=blocco, dtype='float32', callback=_audio_callback)
         stream.start()
@@ -355,6 +396,16 @@ def Accordatore():
             ch = key(attesa=0.05)
             if ch == '\x1b':
                 break
+            if ch == ' ':
+                # La riga resta com'e' e la domanda va sotto; le letture
+                # raccolte nel frattempo, con la soglia vecchia, si buttano
+                print()
+                soglia[0] = _chiedi_soglia()
+                with pitch_lock:
+                    pitch_readings.clear()
+                ema_state['active'] = False
+                last_print_time = 0
+                continue
             current_time = time.time()
             if current_time - last_print_time < 1.0:
                 continue
@@ -363,7 +414,7 @@ def Accordatore():
                 pitch_readings.clear()
             rms = current_rms[0]
             db_val = decibel(rms)
-            above_threshold = rms >= RMS_THRESHOLD
+            above_threshold = rms >= soglia[0]
             if rms > 1e-6:
                 all_dbs.append(db_val)
             # La media mobile lega la lettura a quella del secondo prima, solo
