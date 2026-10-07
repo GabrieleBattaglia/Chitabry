@@ -1,0 +1,21 @@
+Prove a mano della 9.0.0 (armonica, issue 58) e della 8.1.2 (metronomo, issue 57), da sorgente. Una riga per voce: cancellate quelle che vanno, commentate dopo i due punti quelle che no.
+Prima: Impostazioni, Gestisci Strumenti, Aggiungi nuovo strumento, Armonica a bocca, Diatonica, DO, Richter, Invio sul nome proposto, e rendetela attiva.
+Passo 1: Manico dello strumento.
+Domanda 1: lo schema dei fori si legge bene sulla barra braille, con le colonne allineate e le righe dei bending e degli overbend comprensibili?
+Passo 2: Nota sul manico con SOL, poi di nuovo con SOL4.
+Domanda 2: righe come "SOL4: -2 (foro 2 aspirato), +3 (foro 3 soffiato)." sono comode, o preferite solo i simboli?
+Passo 3: Trova Posizione con -3//, +6*, -5/, +3/, poi Invio a vuoto.
+Domanda 3: le note suonano giuste, e le spiegazioni dei simboli impossibili si capiscono?
+Passo 4: Costruttore Accordi, SOL settima di dominante, ascoltate il gruppo 1; poi LA minore.
+Domanda 4: i gruppi di fori, e la nota che manca quando l'accordo non sta intero, sono utili cosi'?
+Passo 5: Scale, SOL, una scala blues (la Weighted Hexatonic Blues di music21 e' probabilistica: a volte ha la quinta diminuita, a volte no), Invio sull'ottava proposta, poi A, D e L.
+Domanda 5: posizione, tablatura, gradi e note critiche tutti insieme sono troppi, o vanno bene?
+Domanda 6: durante l'ascolto la riga di stato con la tablatura al posto dei nomi si segue?
+Passo 6: ripetete l'esercizio con il suono MIDI, barra spaziatrice fino a MID.
+Domanda 7: si sente l'armonica del General MIDI, e poi nella Tastiera torna lo strumento MIDI di prima?
+Passo 7: aggiungete una cromatica Solo a 12 fori in DO, rendetela attiva, ripetete Manico dello strumento e Trova Posizione con +4< e -4/.
+Domanda 8: le righe con il cursore e il rifiuto del bending sulla cromatica sono chiari?
+Passo 8: rimettete attiva la chitarra e controllate che Manico dello strumento, Nota sul manico, Trova Posizione e Costruttore Accordi siano come prima.
+Passo 9: nel Metronomo caricate un preset con ml, cambiate i BPM con b100, caricatene un altro con ml.
+Domanda 9: arriva la domanda Sovrascrivi, Nuovo nome, Carica senza salvare, Annulla, e ogni risposta fa quello che dice?
+Esito:
