@@ -7,6 +7,7 @@ import json
 import os
 
 import numpy as np
+import pytest
 
 import clitronomo
 
@@ -122,3 +123,54 @@ def test_preset_senza_struttura_non_viene_sovrascritto(tmp_path):
     clitronomo.PresetManager(filename=percorso, silenzioso=True)
     assert not os.path.exists(percorso)
     assert any(n.startswith("presets.json.illeggibile-") for n in os.listdir(tmp_path))
+
+
+def _due_preset(tmp_path):
+    """Un archivio con due metronomi, il primo caricato e poi modificato."""
+    pm = clitronomo.PresetManager(filename=str(tmp_path / "presets.json"), silenzioso=True)
+    m = clitronomo.Metronome(bpm=90)
+    pm.save_preset("Lento", m.get_state())
+    m.bpm = 150
+    pm.save_preset("Veloce", m.get_state())
+    m.set_state(pm.data["presets"]["1"]["state"], "1")
+    return pm, m
+
+
+def test_ml_senza_modifiche_carica_e_basta(tmp_path, monkeypatch):
+    pm, m = _due_preset(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda _testo="": pytest.fail("ml non doveva chiedere niente"))
+    assert clitronomo.carica_preset(m, pm, "veloce")
+    assert m.current_preset_id == "2"
+    assert m.bpm == 150
+
+
+def test_ml_con_modifiche_chiede_e_annulla(tmp_path, monkeypatch):
+    """Issue 57: le modifiche al primo metronomo sparivano caricando il secondo."""
+    pm, m = _due_preset(tmp_path)
+    m.set_bpm(100)
+    assert m.is_dirty
+    monkeypatch.setattr("builtins.input", lambda _testo="": "a")
+    assert not clitronomo.carica_preset(m, pm, "veloce")
+    assert m.current_preset_id == "1"
+    assert m.bpm == 100
+    assert m.is_dirty
+
+
+def test_ml_con_modifiche_sovrascrive_poi_carica(tmp_path, monkeypatch):
+    pm, m = _due_preset(tmp_path)
+    m.set_bpm(100)
+    monkeypatch.setattr("builtins.input", lambda _testo="": "s")
+    assert clitronomo.carica_preset(m, pm, "veloce")
+    assert m.current_preset_id == "2"
+    assert m.bpm == 150
+    assert not m.is_dirty
+    assert pm.data["presets"]["1"]["state"]["bpm"] == 100
+
+
+def test_ml_con_modifiche_carica_senza_salvare(tmp_path, monkeypatch):
+    pm, m = _due_preset(tmp_path)
+    m.set_bpm(100)
+    monkeypatch.setattr("builtins.input", lambda _testo="": "c")
+    assert clitronomo.carica_preset(m, pm, "veloce")
+    assert m.bpm == 150
+    assert pm.data["presets"]["1"]["state"]["bpm"] == 90

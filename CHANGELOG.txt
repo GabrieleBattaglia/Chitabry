@@ -2,6 +2,10 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 8.1.2 (7 ottobre 2026)
+Il metronomo non perde piu' le modifiche quando caricate un altro preset.
+*   Se avevate cambiato qualcosa in un metronomo e ne caricavate un altro con ml, le modifiche sparivano senza una parola (issue 57). Adesso ml fa come gia' facevano x e q: se ci sono modifiche non salvate vi chiede se sovrascrivere il preset, salvarle con un nome nuovo, caricare lo stesso senza salvare oppure annullare. La domanda arriva solo dopo che il preset da caricare e' stato trovato, quindi un nome sbagliato non vi fa rispondere a niente.
+
 Versione 8.1.1 (17 settembre 2026)
 Il pacchetto dimagrisce di centoquarantatre megabyte.
 *   L'eseguibile passa da 322 a 179 megabyte, il quarantaquattro per cento in meno, misurato compilando le due ricette a poche ore di distanza. Escono matplotlib, PyQt6 e i backend grafici Tk e Qt, che arrivavano nel pacchetto al seguito di music21 e non servivano a niente: Chitabry e' un programma a console e non disegna un solo grafico. Restano numpy e scipy, che sono le librerie con cui Acusticator genera i suoni, e restano i 3932 file dell'archivio Scala, che sono il catalogo delle scale.

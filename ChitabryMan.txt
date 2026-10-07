@@ -1,6 +1,6 @@
 Benvenuti nel manuale, istruzioni per l'uso, di Chitabry.
-L'ultima revisione di questo documento e' la numero 13, di lunedi' 14 settembre 2026, per la versione 8.1.0.
-A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5, modalita' auto).
+L'ultima revisione di questo documento e' la numero 14, di mercoledi' 7 ottobre 2026, per la versione 8.1.2.
+A cura di Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 
 Indice Dettagliato degli Argomenti:
 1. Come installare Chitabry.
@@ -183,7 +183,7 @@ All'avvio, verrà caricato l'ultimo preset utilizzato o, in assenza di preset, v
 
    m mostra la lista dei preset salvati.
    ms seguito da un nome salva la configurazione corrente, per esempio ms Esercizio A.
-   ml seguito da un nome carica il preset che lo porta, per esempio ml Esercizio.
+   ml seguito da un nome carica il preset che lo porta, per esempio ml Esercizio. Se il metronomo ha modifiche non salvate, prima di caricare vi chiede se sovrascrivere il preset attuale, salvarle con un nome nuovo, caricare senza salvare o annullare.
    mc seguito da un nome cancella il preset che lo porta, per esempio mc Lento.
 
  Programmazione

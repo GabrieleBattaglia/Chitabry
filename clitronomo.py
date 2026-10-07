@@ -978,7 +978,8 @@ class PresetManager:
             print(f"\nPreset '{final_name}' tenuto in memoria ma non scritto su disco.")
         return preset_id_str
     def find_preset(self, search_term):
-        """Usa il motore di ricerca per trovare e caricare un preset."""
+        """Usa il motore di ricerca per trovare un preset; a caricarlo e' chi chiama.
+        Restituisce la coppia (id, stato), o None se nessuno o piu' d'uno corrispondono."""
         matches = self._find_matches(search_term)
 
         if len(matches) == 0:
@@ -991,7 +992,7 @@ class PresetManager:
             print("Per favore, sii piu' specifico.")
             return None
         pid, pdata = matches[0]
-        print(f"\nPreset trovato: '{pdata['name']}'. Caricamento in corso...")
+        print(f"\nPreset trovato: '{pdata['name']}'.")
         return pid, pdata['state']
 
     def delete_preset(self, search_term, active_preset_id=None):
@@ -1144,6 +1145,19 @@ def _prompt_save_changes(clitronomo, preset_manager, action_char='E', action_wor
             return False # Annulla l'azione
         else:
             print("Scelta non valida.")
+def carica_preset(clitronomo, preset_manager, search_term):
+    """Il comando ml: carica il preset che porta search_term nel nome.
+    Se il metronomo ha modifiche non salvate chiede prima cosa farne, come
+    fanno gia' x e q: fino alla 8.1.1 il preset caricato le cancellava in
+    silenzio (issue 57). Restituisce True se il preset e' stato caricato."""
+    found_preset = preset_manager.find_preset(search_term)
+    if not found_preset:
+        return False
+    if clitronomo.is_dirty and not _prompt_save_changes(clitronomo, preset_manager, action_char='C', action_word='caricare'):
+        return False
+    preset_id, preset_state = found_preset
+    clitronomo.set_state(preset_state, preset_id)
+    return True
 def main():
     """Funzione principale che avvia il metronomo e gestisce l'input dell'utente."""
     preset_manager = PresetManager()
@@ -1223,10 +1237,7 @@ def main():
             if search_term is None:
                 search_term = input("Carica preset contenente (lascia vuoto per annullare): ")
             if search_term:
-                found_preset = preset_manager.find_preset(search_term) # <-- CORRETTO
-                if found_preset:
-                    preset_id, preset_state = found_preset
-                    clitronomo.set_state(preset_state, preset_id)
+                carica_preset(clitronomo, preset_manager, search_term)
         elif command == 'ms':
             if value is None:
                 try:
