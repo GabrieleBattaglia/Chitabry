@@ -116,6 +116,9 @@ def get_impostazioni_default():
             "volume": 0.35
         },
         "chordpedia": {},
+        # Il banco di suoni per FluidSynth, dalla 9.10.0: il file sf2 scelto,
+        # il volume delle sue note e quanto dura una nota non tenuta
+        "banco": {"percorso": "", "volume": 0.8, "dur": 4.0},
     }
 
 

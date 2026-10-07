@@ -3,11 +3,14 @@
 # Nato con la revisione 1 del 2026-09-09 dallo spezzettamento di views.py.
 # Ogni modifica si scrive subito su disco con config.salva_modifiche.
 
+import os
+
 import numpy as np
-from GBUtils import dgt, key, menu
+from GBUtils import dgt, enter_escape, key, menu
 
 import armonica
 import armonica_vista
+import banchi
 import config
 import GBAudio
 import suoni
@@ -253,14 +256,22 @@ def _descrizione_tipo_suono():
         return "Sintesi Karplus-Strong"
     if tipo_suono == 'suono_2':
         return "Sintesi Onda Semplice"
+    if tipo_suono == 'banco':
+        return suoni.descrizione_suono('banco')
     return f"MIDI ({GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})"
 
 
 def _scegli_tipo_suono():
-    menu_tipi = {'1': "Sintesi Karplus-Strong", '2': "Sintesi Onda Semplice", '3': "Strumento MIDI del Banco Attivo"}
+    menu_tipi = {'1': "Sintesi Karplus-Strong", '2': "Sintesi Onda Semplice", '3': "Strumento MIDI di Windows",
+                 '4': "Banco di suoni, un soundfont suonato da FluidSynth"}
     print("Seleziona il tipo di suono attivo:")
     scelta_t = menu(d=menu_tipi, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
-    tipi = {'1': 'suono_1', '2': 'suono_2', '3': 'midi'}
+    tipi = {'1': 'suono_1', '2': 'suono_2', '3': 'midi', '4': 'banco'}
+    if scelta_t == '4' and not suoni.banco_pronto():
+        # Il banco non e' ancora pronto: lo si prepara, e alla fine si chiede
+        # se usarlo come suono attivo
+        _configura_banco()
+        return
     if scelta_t in tipi:
         config.impostazioni['tipo_suono'] = tipi[scelta_t]
         config.salva_modifiche()
@@ -308,6 +319,75 @@ def _scegli_tastiera_midi():
     key("Premi un tasto...")
 
 
+def _riga(testo):
+    """Una riga che si riscrive, fra due ritorni carrello, per l'avanzamento."""
+    print(f"\r{testo}\r", end="", flush=True)
+
+
+def _scarica_con_avanzamento(funzione, cosa):
+    """Scarica con una riga che dice i megabyte arrivati. Restituisce cio' che
+    la funzione restituisce, True se niente, o None se lo scaricamento fallisce."""
+    def avanza(scaricati, totale):
+        if totale:
+            _riga(f"{cosa}: {scaricati / 1_000_000:.0f} di {totale / 1_000_000:.0f} MB")
+        else:
+            _riga(f"{cosa}: {scaricati / 1_000_000:.0f} MB")
+    try:
+        risultato = funzione(avanza)
+    except (OSError, ValueError) as e:
+        print(f"\nScaricamento di {cosa} non riuscito: {e}")
+        return None
+    print()
+    return True if risultato is None else risultato
+
+
+def _configura_banco():
+    """Il banco di suoni: FluidSynth, se manca, la ricerca dei banchi General
+    MIDI sui dischi, la scelta, il volume. Il codice che cerca e scarica viene
+    da MeTeOra, che fa la stessa cosa per i suoi MIDI."""
+    print("Banco di suoni. Chitabry suona un banco General MIDI, cioe' un file sf2, con FluidSynth: e' un quarto suono, "
+          "accanto ai due sintetici e al MIDI di Windows, e lo scegli fra i banchi che hai sul computer.")
+    if not banchi.fluidsynth_presente():
+        if not enter_escape("FluidSynth non c'e' ancora. Lo scarico da GitHub, dalla pagina ufficiale? (INVIO per si', ESC per no): "):
+            return
+        if _scarica_con_avanzamento(banchi.scarica_fluidsynth, "FluidSynth") is None:
+            key("Premi un tasto...")
+            return
+        print("FluidSynth scaricato.")
+    voci = {}
+    attuale = config.impostazioni.get('banco', {}).get('percorso', '')
+    if enter_escape("Cerco i banchi General MIDI su tutti i dischi fissi? Puo' durare qualche minuto, e ESC la ferma. (INVIO per si', ESC per no): "):
+        trovati = banchi.cerca_banchi(avvisa=lambda n: _riga(f"Cartelle visitate: {n}"), fermo=lambda: key(attesa=0) == chr(27))
+        print()
+        print(f"Banchi General MIDI trovati: {len(trovati)}.")
+        for percorso, dimensione in trovati:
+            voci[percorso] = f"{os.path.basename(percorso)}, {banchi.dimensione_da_leggere(dimensione)}, in {os.path.dirname(percorso)}"
+    if attuale and attuale not in voci and os.path.isfile(attuale):
+        voci = {attuale: f"{os.path.basename(attuale)}, quello attuale", **voci}
+    voci["scarica"] = f"Scarica FluidR3 GM, il banco libero di FluidSynth, {banchi.dimensione_da_leggere(banchi.FLUIDR3_DIMENSIONE)}"
+    print("Scegli il banco di suoni:")
+    scelta = menu(d=voci, keyslist=True, show=True, numbered=True, ordered=False, ntf="Scelta non valida", p="Banco: ")
+    if scelta is None:
+        return
+    if scelta == "scarica":
+        percorso = _scarica_con_avanzamento(banchi.scarica_fluidr3, "FluidR3 GM")
+        if percorso is None:
+            key("Premi un tasto...")
+            return
+    else:
+        percorso = scelta
+    banco = config.impostazioni.setdefault('banco', {})
+    banco['percorso'] = percorso
+    banco['volume'] = dgt(f"Volume del banco (0.0 - 1.0) (attuale: {banco.get('volume', 0.8)}): ", kind='f', fmin=0.0, fmax=1.0,
+                          default=banco.get('volume', 0.8))
+    banchi.chiudi()
+    if dgt("Vuoi usarlo come suono attivo? (S/N): ", kind="s").strip().lower() == 's':
+        config.impostazioni['tipo_suono'] = 'banco'
+    config.salva_modifiche()
+    print(f"Banco di suoni: {os.path.basename(percorso)}. Lo strumento e' quello scelto per il MIDI, e l'armonica suona con Harmonica.")
+    key("Premi un tasto...")
+
+
 def _scegli_volume_midi():
     """Il volume delle note MIDI, strumenti e armonica, in percentuale. Il
     click del metronomo non c'entra: il suo volume e' quello del preset."""
@@ -334,6 +414,7 @@ def GestoreImpostazioni():
             '3': f"Seleziona Strumento MIDI (Attivo: {GBAudio.MIDI_INSTRUMENTS[config.impostazioni.get('midi_strumento', 0)]})",
             '4': f"Connetti Tastiera MIDI (Attivo: {midi_in_attivo if midi_in_attivo else 'Nessuno'})",
             '5': f"Volume MIDI (attuale: {config.impostazioni.get('midi_volume', 100)}%)",
+            '6': f"Banco di suoni (attuale: {os.path.basename(config.impostazioni.get('banco', {}).get('percorso', '')) or 'nessuno'})",
         }
         scelta = menu(d=menu_impostazioni, keyslist=True, show=True, show_on_filter=False, ntf="Scelta non valida")
         if scelta is None:
@@ -361,3 +442,5 @@ def GestoreImpostazioni():
             _scegli_tastiera_midi()
         elif scelta == '5':
             _scegli_volume_midi()
+        elif scelta == '6':
+            _configura_banco()

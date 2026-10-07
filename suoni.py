@@ -3,14 +3,30 @@
 # Nato con la revisione 1 del 2026-09-09: le stesse trenta righe per leggere i
 # parametri del suono, configurare il renderer e ricavare il mono per il mixer
 # erano ripetute in sei punti di views.py e gioca_suono.py.
+# Dalla 9.10.0 c'e' un quarto suono, il banco: un soundfont General MIDI
+# suonato da FluidSynth, nota per nota, che passa dal mixer come i sintetici.
+
+import os
 
 import numpy as np
 import sounddevice as sd
 
+import banchi
 import config
 import GBAudio
 
-CICLO_SUONI = ("suono_1", "suono_2", "midi")
+CICLO_SUONI = ("suono_1", "suono_2", "midi", "banco")
+# Il rilascio di una nota del banco lasciata sulla Tastiera, in secondi
+RILASCIO_BANCO = 0.15
+# Se il banco non suona, lo si dice una volta sola e non a ogni nota
+_BANCO_AVVISATO = []
+
+
+def banco_pronto():
+    """Vero se il suono banco si puo' usare: FluidSynth scaricato e un banco
+    scelto che c'e' ancora. Se no, il banco si salta nella rotazione."""
+    percorso = config.impostazioni.get('banco', {}).get('percorso', '')
+    return bool(percorso) and os.path.isfile(percorso) and banchi.fluidsynth_presente()
 
 
 def suono_attivo():
@@ -19,10 +35,12 @@ def suono_attivo():
 
 
 def prossimo_suono(chiave):
-    """Il suono che segue nella rotazione suono_1, suono_2, midi, che e' quella della barra spaziatrice."""
-    if chiave not in CICLO_SUONI:
-        return CICLO_SUONI[0]
-    return CICLO_SUONI[(CICLO_SUONI.index(chiave) + 1) % len(CICLO_SUONI)]
+    """Il suono che segue nella rotazione suono_1, suono_2, midi, banco, che
+    e' quella della barra spaziatrice. Il banco c'e' solo se e' pronto."""
+    ciclo = [c for c in CICLO_SUONI if c != "banco" or banco_pronto()]
+    if chiave not in ciclo:
+        return ciclo[0]
+    return ciclo[(ciclo.index(chiave) + 1) % len(ciclo)]
 
 
 def descrizione_suono(chiave):
@@ -30,19 +48,37 @@ def descrizione_suono(chiave):
     if chiave == "midi":
         inst_idx = config.impostazioni.get("midi_strumento", 0)
         return f"MIDI ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})"
+    if chiave == "banco":
+        inst_idx = config.impostazioni.get("midi_strumento", 0)
+        nome = os.path.basename(config.impostazioni.get('banco', {}).get('percorso', '')) or "nessuno"
+        return f"Banco {nome} ({GBAudio.MIDI_INSTRUMENTS[inst_idx]})"
     return config.impostazioni[chiave]["descrizione"]
 
 
 def sigla_suono(chiave):
-    """La sigla corta per le righe di stato: S1, S2 o MID."""
+    """La sigla corta per le righe di stato: S1, S2, MID o BAN."""
     if chiave == "midi":
         return "MID"
+    if chiave == "banco":
+        return "BAN"
     return "S2" if chiave == "suono_2" else "S1"
 
 
 def parametri_suono(chiave):
     """I parametri di sintesi del suono indicato, con i ripieghi di sempre.
-    Per midi si prendono quelli del suono 1, che servono per la durata."""
+    Per midi si prendono quelli del suono 1, che servono per la durata. Per
+    il banco ci sono il file, lo strumento General MIDI, che e' quello scelto
+    per il MIDI, la durata e il volume."""
+    if chiave == "banco":
+        b = config.impostazioni.get('banco', {})
+        return {
+            'karplus': False, 'banco': True,
+            'percorso': b.get('percorso', ''),
+            'programma': config.impostazioni.get('midi_strumento', 0),
+            'dur': b.get('dur', 4.0), 'vol': b.get('volume', 0.8),
+            'hardness': 0.6, 'damping': 0.997, 'pick_pos': 0.15, 'bright': 0.4,
+            'kind': 1, 'adsr': [0, 0, 100, RILASCIO_BANCO * 1000],
+        }
     s = config.impostazioni["suono_1" if chiave == "midi" else chiave]
     return {
         'karplus': 'pluck_hardness' in s,
@@ -61,6 +97,13 @@ def configura_renderer(renderer, freq, parametri, dur=None):
     """Imposta il renderer per una nota, senza pan: della posizione stereo si
     occupa il mixer con set_pan, cosi' il mono si ricava sempre allo stesso modo."""
     durata = parametri['dur'] if dur is None else dur
+    if parametri.get('banco'):
+        # La nota del banco viaggia attaccata al renderer, che resta quello
+        # di GBAudio: chi lo usa non deve sapere quale suono sta suonando
+        renderer.nota_del_banco = banchi.RendererBanco(parametri['percorso'], parametri['programma'], renderer.fs)
+        renderer.nota_del_banco.set_params(freq, durata, parametri['vol'])
+        return
+    renderer.nota_del_banco = None
     if parametri['karplus']:
         renderer.set_params(freq, durata, parametri['vol'], 0.0,
                             pluck_hardness=parametri['hardness'], damping_factor=parametri['damping'],
@@ -73,12 +116,37 @@ def mono_da_renderer(renderer):
     """Rende la nota e ne restituisce il canale mono, senza il pan del renderer;
     None se non c'e' niente da suonare. Resta float32 come il mixer: la
     divisione per il pan lo promuoverebbe a float64, il doppio della memoria."""
+    if getattr(renderer, 'nota_del_banco', None) is not None:
+        try:
+            stereo = renderer.nota_del_banco.render()
+        except OSError as e:
+            _avvisa_banco(e)
+            return None
+        return stereo[:, 0] if stereo.size else None
     stereo = renderer.render()
     if stereo.size == 0:
         return None
     if renderer.pan_l != 0:
         return (stereo[:, 0] / renderer.pan_l).astype(np.float32, copy=False)
     return stereo[:, 0]
+
+
+def tenuta_da_renderer(renderer):
+    """La nota tenuta della Tastiera, come coppia (mono, ciclo): dal banco,
+    se il renderer ne ha una, altrimenti dall'inviluppo del sintetico."""
+    if getattr(renderer, 'nota_del_banco', None) is not None:
+        try:
+            return renderer.nota_del_banco.render_tenuta()
+        except OSError as e:
+            _avvisa_banco(e)
+            return np.zeros(0, dtype=np.float32), None
+    return renderer.render_tenuta()
+
+
+def _avvisa_banco(errore):
+    if not _BANCO_AVVISATO:
+        print(f"Il banco di suoni non suona: {errore}.")
+        _BANCO_AVVISATO.append(True)
 
 
 def secondi_di_rilascio(parametri, minimo=0.02):
@@ -143,23 +211,28 @@ def suona_note(numeri_midi, armonica=False):
         for numero in numeri_midi:
             GBAudio.play_midi_note_temp(numero, parametri['dur'], canale=canale)
         return
+    if armonica and parametri.get('banco'):
+        # Anche dal banco l'armonica suona con lo strumento Harmonica
+        parametri = dict(parametri, programma=GBAudio.PROGRAMMA_ARMONICA)
     pezzi = []
     for numero in numeri_midi:
         renderer = GBAudio.NoteRenderer(fs=GBAudio.FS)
         configura_renderer(renderer, GBAudio.midi_to_freq(numero), parametri)
-        audio = renderer.render()
-        if audio.size > 0:
-            pezzi.append(audio)
+        mono = mono_da_renderer(renderer)
+        if mono is not None and mono.size > 0:
+            pezzi.append(mono)
     if not pezzi:
         return
-    mix = np.zeros((max(len(p) for p in pezzi), 2), dtype=np.float32)
+    mix = np.zeros(max(len(p) for p in pezzi), dtype=np.float32)
     for pezzo in pezzi:
         mix[:len(pezzo)] += pezzo
+    # Al centro, con la stessa potenza di prima su ciascun canale
+    stereo = np.column_stack([mix, mix]) * np.float32(np.cos(np.pi / 4))
     # Piu' note insieme sommano il volume: oltre il pieno si riporta giu'
-    picco = float(np.abs(mix).max())
+    picco = float(np.abs(stereo).max())
     if picco > 1.0:
-        mix /= picco
-    sd.play(mix, samplerate=GBAudio.FS, blocking=False)
+        stereo /= picco
+    sd.play(stereo, samplerate=GBAudio.FS, blocking=False)
 
 
 def suona_una_nota(nota_std, pan=0.0):
@@ -172,6 +245,14 @@ def suona_una_nota(nota_std, pan=0.0):
         return
     renderer = GBAudio.NoteRenderer(fs=GBAudio.FS)
     freq = GBAudio.note_to_freq(nota_std)
+    if parametri.get('banco'):
+        configura_renderer(renderer, freq, parametri)
+        mono = mono_da_renderer(renderer)
+        if mono is not None and mono.size > 0:
+            angolo = (pan + 1.0) * np.pi / 4.0
+            sd.play(np.column_stack([mono * np.cos(angolo), mono * np.sin(angolo)]).astype(np.float32),
+                    samplerate=GBAudio.FS, blocking=False)
+        return
     if parametri['karplus']:
         renderer.set_params(freq, parametri['dur'], parametri['vol'], pan,
                             pluck_hardness=parametri['hardness'], damping_factor=parametri['damping'],

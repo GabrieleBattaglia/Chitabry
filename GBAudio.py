@@ -914,20 +914,10 @@ def on_midi_in_note_on(note_num, velocity):
         if tipo_suono == 'midi':
             get_midi_out().note_on(note_num, velocity)
         else:
-            freq = midi_to_freq(note_num)
-            suono = config.impostazioni[tipo_suono]
-            dur = suono.get('dur_accordi', 2.0)
-            vol = suono.get('volume', 0.35)
-            renderer = NoteRenderer(fs=FS)
-            if 'pluck_hardness' in suono:
-                renderer.set_params(freq, dur, vol, 0.0,
-                                    pluck_hardness=suono.get('pluck_hardness', 0.6),
-                                    damping_factor=suono.get('damping_factor', 0.997))
-            else:
-                renderer.set_params(freq, dur, vol, 0.0, kind=suono.get('kind', 1), adsr_list=suono.get('adsr', [0, 0, 0, 0]))
-            note_audio = renderer.render()
-            if note_audio.size > 0:
-                sd.play(note_audio, samplerate=FS, blocking=False)
+            # suoni importa questo modulo: lo si importa qui, alla prima nota.
+            # Passando da suoni, la tastiera MIDI suona anche con il banco.
+            import suoni
+            suoni.suona_note([note_num])
     except Exception as e:  # noqa: BLE001 - callback di winmm: un errore qui non ha nessuno a cui risalire
         print(f"Nota MIDI non riprodotta: {e}")
 

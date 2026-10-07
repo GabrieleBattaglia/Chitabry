@@ -19,3 +19,7 @@ midi/*_converted*.mid
 # Cache di ruff e pytest
 .ruff_cache/
 .pytest_cache/
+# FluidSynth e i banchi di suoni che Chitabry scarica da se': sono binari,
+# e FluidR3 da solo pesa 148 MB. Si riscaricano dalle impostazioni.
+fluidsynth/
+banchi/

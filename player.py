@@ -201,7 +201,7 @@ def PlayerGenerico():
             return None
         v = voce_libera()
         suoni.configura_renderer(renderers[v], GBAudio.midi_to_freq(midi_num), stato['parametri'])
-        mono, ciclo = renderers[v].render_tenuta()
+        mono, ciclo = suoni.tenuta_da_renderer(renderers[v])
         if mono.size == 0:
             return None
         if tastiera.tiene:

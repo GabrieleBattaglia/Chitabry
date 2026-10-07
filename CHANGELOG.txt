@@ -2,6 +2,16 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Fable 5.1, UltraCode).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 9.10.0 (7 ottobre 2026)
+Un quarto suono: il banco, cioe' un soundfont General MIDI suonato da FluidSynth.
+*   Nelle Impostazioni, Banco di suoni: Chitabry scarica FluidSynth se manca, cerca i banchi General MIDI su tutti i dischi, li elenca con nome, dimensione e cartella, e propone anche di scaricare FluidR3 GM. Il codice che cerca e scarica viene da MeTeOra, che fa la stessa cosa per i suoi MIDI (collaudo di Gabriele del 7 ottobre 2026).
+*   Il banco e' un tipo di suono come gli altri: si sceglie nelle Impostazioni o con la barra spaziatrice, con la sigla BAN, e vale per l'esercizio delle scale, la Tastiera con le note tenute, Trova Posizione, gli accordi, il gioco col suono e la tastiera MIDI esterna. Nel giro della barra spaziatrice c'e' solo quando un banco e' scelto.
+*   Lo strumento e' quello scelto per il MIDI, e l'armonica suona con lo strumento Harmonica. Nel banco SGM l'armonica non ha il vibrato del sintetizzatore di Windows: misurata con l'accordatore, la sua intonazione resta ferma entro tre decimi di centesimo.
+*   Le note si preparano in memoria, una per una: FluidSynth rende due secondi di nota in un millesimo. Passano dal mixer come quelle sintetiche, quindi nell'esercizio delle scale il battito e' il beep del preset del metronomo e arriva con la nota.
+*   Ogni strumento del banco si pareggia sul suo DO centrale, perche' nei banchi i livelli sono molto diversi: nel banco SGM l'armonica arrivava a 0,09 e la chitarra a 0,45. Le note fuori dal temperamento si accordano con il pitch bend.
+*   FluidSynth e i banchi scaricati stanno nelle cartelle fluidsynth e banchi accanto al programma, e restano fuori da git.
+*   La guida passa alla revisione 23, con il sottocapitolo 12.8. Sette prove nuove, 177 in tutto.
+
 Versione 9.9.1 (7 ottobre 2026)
 Il volume MIDI si regola, e il metronomo delle scale prende il suo dal preset.
 *   Nelle Impostazioni c'e' il Volume MIDI, da 0 a 100: vale per le note dello strumento MIDI scelto e per quelle dell'armonica. Prima le note MIDI uscivano sempre al volume pieno del sintetizzatore.

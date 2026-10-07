@@ -599,6 +599,9 @@ class Esercizio:
                 suoni.prepara_canale_armonica()
             return
         parametri = suoni.parametri_suono(self.suono)
+        if parametri.get('banco') and self.s.canale_midi != 0:
+            # Dal banco l'armonica suona con lo strumento Harmonica, come col MIDI
+            parametri = dict(parametri, programma=GBAudio.PROGRAMMA_ARMONICA)
         for i in range(self.num_notes):
             self.poly.set_pan(i, suoni.pan_per_voce(i, self.num_notes))
             suoni.configura_renderer(self.renderers[i], self.s.frequenze[i] or 0.0, parametri)
