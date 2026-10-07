@@ -19,8 +19,29 @@ Passo 8: rimettete attiva la chitarra e controllate che Manico dello strumento, 
 Passo 9: nel Metronomo caricate un preset con ml, cambiate i BPM con b100, caricatene un altro con ml.
 Domanda 9: arriva la domanda Sovrascrivi, Nuovo nome, Carica senza salvare, Annulla, e ogni risposta fa quello che dice?
 Passo 10: aggiungete la vostra Trochilus: Armonica a bocca, Cromatica, la sua tonalita', Solo, 10 fori, Senza valvole, Registro normale, e rendetela attiva.
-Passo 11: con l'Accordatore suonate sulla Trochilus, a cursore aperto, i fori 4 e 5 soffiati, poi i fori 9 e 10 soffiati e aspirati.
-Domanda 10: su una Trochilus in DO Chitabry si aspetta DO5 sui fori 4 e 5 soffiati, DO6 e RE6 sul foro 9, MI6 e FA6 sul foro 10. Tornano? Se no, scrivete le note che leggete: il costruttore non pubblica la disposizione a dieci fori, e la correggo sulla vostra.
+Passo 11: aprite l'Accordatore e suonate sulla Trochilus una nota per volta, a cursore aperto salvo l'ultima. Dopo i due punti di ogni misura scrivete la riga che legge l'accordatore, per esempio N:DO4 (+2%) Hz:262.0. I valori attesi sono per la Trochilus in DO: se la vostra e' in un'altra tonalita', scrivetelo qui:
+Misura 1: foro 1 soffiato, atteso DO4, 261,6 Hz:
+Misura 2: foro 1 aspirato, atteso RE4, 293,7 Hz:
+Misura 3: foro 2 soffiato, atteso MI4, 329,6 Hz:
+Misura 4: foro 2 aspirato, atteso FA4, 349,2 Hz:
+Misura 5: foro 3 soffiato, atteso SOL4, 392,0 Hz:
+Misura 6: foro 3 aspirato, atteso LA4, 440,0 Hz:
+Misura 7: foro 4 soffiato, atteso DO5, 523,3 Hz:
+Misura 8: foro 4 aspirato, atteso SI4, 493,9 Hz:
+Misura 9: foro 5 soffiato, atteso DO5, 523,3 Hz:
+Misura 10: foro 5 aspirato, atteso RE5, 587,3 Hz:
+Misura 11: foro 6 soffiato, atteso MI5, 659,3 Hz:
+Misura 12: foro 6 aspirato, atteso FA5, 698,5 Hz:
+Misura 13: foro 7 soffiato, atteso SOL5, 784,0 Hz:
+Misura 14: foro 7 aspirato, atteso LA5, 880,0 Hz:
+Misura 15: foro 8 soffiato, atteso DO6, 1046,5 Hz:
+Misura 16: foro 8 aspirato, atteso SI5, 987,8 Hz:
+Misura 17: foro 9 soffiato, atteso DO6, 1046,5 Hz:
+Misura 18: foro 9 aspirato, atteso RE6, 1174,7 Hz:
+Misura 19: foro 10 soffiato, atteso MI6, 1318,5 Hz:
+Misura 20: foro 10 aspirato, atteso FA6, 1396,9 Hz:
+Misura 21: foro 10 aspirato con il cursore premuto, atteso FA#6, 1480,0 Hz:
+Domanda 10: dove le note lette sono diverse da quelle attese, la disposizione della vostra Trochilus non e' quella standard, e la correggo su quello che avete misurato. In particolare, il foro 5 soffiato e' un secondo DO5, e il foro 10 arriva a MI6 e FA6, come nella Solo standard?
 Passo 12: Manico dello strumento, poi Trova Posizione con -3/<, -1/ e +4*, poi Invio a vuoto.
 Domanda 11: le righe a cursore premuto, dopo quelle a cursore aperto, si seguono? I bending con il cursore suonano come sullo strumento?
 Passo 13: con la diatonica in DO attiva, Scale, SOL, gruppo 1, blues, e leggete la tabella delle dodici posizioni.
