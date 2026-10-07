@@ -1,0 +1,12 @@
+Collaudo del pacchetto compilato della 10.0.0, prima della pubblicazione, insieme alla issue 56. La copia da provare e' E:\git\tmp\Chitabry-10.0.0\Chitabry.exe: parte con le impostazioni nuove, senza strumenti tuoi e senza banco. Una riga per voce: cancella quelle che vanno, commenta dopo i due punti quelle che no.
+Passo 1: avvia la copia e ascolta l'avvio fino alla riga Premere '?'.
+Domanda 1: l'avvio e' pulito, senza righe che invitano a installare matplotlib? Il controllo aggiornamenti dice Hai gia' l'ultima versione, v8.0.0, che prima della pubblicazione e' giusto?
+Passo 2: Scale, DO, gruppo 1, maggiore, e poi l'esercizio con A, D e L, con il metronomo acceso; poi Costruttore Accordi con SOL settima e una forma ascoltata con Q.
+Domanda 2: scale e accordi funzionano, e suonano con il Karplus e con il sintetico, cambiando con la barra spaziatrice?
+Passo 3: Tastiera, qualche nota tenuta, anche con lo Shift; poi Metronomo e Flauto.
+Domanda 3: suoni, metronomo e flauto si sentono come dai sorgenti?
+Passo 4: copia un tuo file .mid, per esempio La solitudine.mid, nella cartella midi accanto all'eseguibile, poi MidiStudy.
+Domanda 4: MidiStudy apre il file e ne mostra le tracce?
+Passo 5: Impostazioni, voce 5, Banco di suoni, INVIO per la ricerca; scegli SGM-V2.01, volume 0.8, e usalo come suono attivo. Poi Tastiera con il suono BAN.
+Domanda 5: Chitabry trova FluidSynth nella cartella di MeTeOra, senza proporre di scaricarlo, e il banco suona anche dal pacchetto?
+Esito:
