@@ -3428,6 +3428,13 @@
             "durata_sec": 217.38088035583496,
             "durata_str": "03.37.380",
             "data": "2026-05-21 15:29:59"
+        },
+        {
+            "nome": "Meteobry",
+            "precisione": 67.91666666666667,
+            "durata_sec": 380.4010181427002,
+            "durata_str": "06.20.401",
+            "data": "2026-10-27 20:53:11"
         }
     ],
     "classifica_freq": [
@@ -3439,7 +3446,7 @@
             "data": "2026-05-15 13:32:18"
         }
     ],
-    "ultimo_controllo_pulizia_midi": "2026-09-10",
+    "ultimo_controllo_pulizia_midi": "2026-10-27",
     "tipo_suono": "banco",
     "midi_strumento": 12,
     "midi_in_dispositivo": "",

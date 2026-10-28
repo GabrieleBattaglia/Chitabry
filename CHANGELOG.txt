@@ -2,6 +2,13 @@ Chitabry, cronologia delle versioni.
 Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5.5, modalita' auto).
 Le voci dicono cosa cambia all'uso, non come e' fatto il codice. Sotto ogni versione, i punti con l'asterisco.
 
+Versione 10.0.3 (28 ottobre 2026)
+Tre ritocchi chiesti da Gabriele il 28 ottobre 2026.
+*   La voce Manico dello strumento del menu principale si chiama Disposizione note, perche' non tutti gli strumenti hanno un manico: con l'armonica mostra i fori. La funzione e' la stessa (issue 61).
+*   Nello schema dei fori dell'armonica le righe aspirate stanno sopra e quelle soffiate sotto, come negli schemi della maggior parte degli armonicisti; dentro ciascun gruppo restano la nota, i bending e l'overbend, e sulla cromatica le stesse righe con il cursore (issue 62).
+*   Il pacchetto compilato lascia fuori pygame e PIL, con le loro DLL: music21 li usa solo per il MIDI in tempo reale e per le immagini, che Chitabry non usa. Sono 27 MB in meno (issue 60).
+*   La guida passa alla revisione 28. Le prove dello schema dei fori seguono l'ordine nuovo: 213 in tutto.
+
 Versione 10.0.0 (7 ottobre 2026)
 Pubblicata su GitHub il 7 ottobre 2026 come release v10.0.0, con il solo archivio Chitabry.zip in allegato: per chi aggiorna dalla 8.0.0 raccoglie anche tutte le versioni dalla 8.0.1 alla 9.13.4.
 Un MIDI solo, il banco di suoni, e le note che durano finche' tieni il tasto, anche nelle scale e negli accordi (collaudo di Gabriele del 7 ottobre 2026).

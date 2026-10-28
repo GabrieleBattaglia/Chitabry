@@ -296,11 +296,12 @@ def test_lo_schema_dei_fori(monkeypatch, richter):
     righe = armonica_vista.righe_schema(richter)
     assert len({len(r) for r in righe}) == 1   # colonne allineate
     assert righe[0].startswith("Foro|1    |2    |")
-    assert righe[1].startswith("+   |DO4  |MI4  |SOL4 |DO5  |")
+    # Issue 62: sopra le aspirate, sotto le soffiate
+    assert righe[1].startswith("-   |RE4  |SOL4 |SI4  |RE5  |")
     etichette = [r.split("|")[0].strip() for r in righe[1:]]
-    assert etichette == ["+", "-", "-/", "-//", "-///", "+/", "+//", "+*", "-*"]
+    assert etichette == ["-", "-/", "-//", "-///", "-*", "+", "+/", "+//", "+*"]
     cromatica = armonica_vista.righe_schema(armonica.HarmonicaModel("C", "solo"))
-    assert [r.split("|")[0].strip() for r in cromatica[1:]] == ["+", "+<", "-", "-<"]
+    assert [r.split("|")[0].strip() for r in cromatica[1:]] == ["-", "-<", "+", "+<"]
 
 
 def test_la_scala_di_do_sull_ottava_centrale(monkeypatch, richter):
@@ -408,9 +409,11 @@ def test_lo_schema_della_cromatica_senza_valvole(monkeypatch):
     monkeypatch.setattr(config, "impostazioni", {"nomenclatura": "latino"})
     righe = armonica_vista.righe_schema(armonica.HarmonicaModel("C", "solo", 10, valvole=False))
     etichette = [r.split("|")[0].strip() for r in righe[1:]]
-    assert etichette[:2] == ["+", "-"]
+    assert etichette[:2] == ["-", "-/"]
     assert "-/<" in etichette and "+*<" in etichette
-    assert etichette.index("+<") > etichette.index("-*")
+    assert etichette.index("+") > etichette.index("-*")
+    assert etichette.index("-<") > etichette.index("+*")
+    assert etichette.index("+<") > etichette.index("-*<")
     assert len({len(r) for r in righe}) == 1
 
 

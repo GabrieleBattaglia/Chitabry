@@ -14,12 +14,14 @@ import player
 import suoni
 from nomenclatura import get_nota, nome_con_grafia, nome_da_midi, nome_utente_in_std, nomi_note_utente
 
-# Le righe dello schema, nell'ordine in cui si leggono: prima le note
-# naturali, poi i bending aspirati dei fori bassi, quelli soffiati dei fori
-# alti, e gli overbend. Il bending soffiato di un tono e mezzo c'e' sul foro
-# 10 della Harmonic Minor, dove le ance distano quattro semitoni. Sulla cromatica soffiato e aspirato, con e senza cursore.
-RIGHE_DIATONICA = ("+", "-", "-/", "-//", "-///", "+/", "+//", "+///", "+*", "-*")
-RIGHE_CROMATICA = ("+", "+<", "-", "-<")
+# Le righe dello schema, nell'ordine in cui si leggono: sopra le aspirate,
+# sotto le soffiate, come negli schemi della maggior parte degli armonicisti
+# (issue 62, dalla 10.0.3). In ciascun gruppo la nota, poi i bending, poi
+# l'overbend. Il bending soffiato di un tono e mezzo c'e' sul foro 10 della
+# Harmonic Minor, dove le ance distano quattro semitoni. Sulla cromatica
+# aspirato e soffiato, con e senza cursore.
+RIGHE_DIATONICA = ("-", "-/", "-//", "-///", "-*", "+", "+/", "+//", "+///", "+*")
+RIGHE_CROMATICA = ("-", "-<", "+", "+<")
 LEGENDA = ("Una riga per tecnica: + soffiato, - aspirato, ogni barra un semitono di bending, "
            "l'asterisco l'overbend, il segno minore il cursore premuto.")
 # Il tempo del metronomo quando non ha ancora un preset: quello con cui parte
@@ -72,7 +74,7 @@ def righe_schema(modello):
 
 
 def schema():
-    """La voce Manico dello strumento, con un'armonica attiva."""
+    """La voce Disposizione note, con un'armonica attiva."""
     modello = config.ARMONICA
     print(f"Lo schema dei fori di {nome_attivo()}, {descrivi(modello)}.")
     print(LEGENDA)

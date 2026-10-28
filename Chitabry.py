@@ -19,7 +19,9 @@ import player
 import scale_catalog
 from versione import API_RELEASE, APP_NAME, AUTORI, VERSIONE, data_italiana
 
-VOCE_MANICO = "Manico dello strumento"
+# Dalla 10.0.3 si chiama Disposizione note, perche' non tutti gli strumenti
+# hanno un manico: sull'armonica mostra i fori (issue 61). La funzione resta.
+VOCE_MANICO = "Disposizione note"
 MAINMENU = {
     "Costruttore Accordi": "Analizza/Scopri le note di un accordo",
     "Tastiera": "Suona liberamente con la tastiera del PC",

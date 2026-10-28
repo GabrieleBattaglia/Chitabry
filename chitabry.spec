@@ -44,9 +44,12 @@ a = Analysis(
     # porta i backend Tk e Qt, che qui non servono a nessuno perche' il
     # programma e' a console e non disegna niente. numpy e scipy invece
     # restano: sono le librerie con cui Acusticator genera i suoni.
+    # Dalla 10.0.3 anche pygame e PIL, con le loro DLL, 27 MB: music21 li
+    # importa solo per il MIDI in tempo reale e per le immagini, che Chitabry
+    # non usa (issue 60).
     excludes=[
         'matplotlib', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6', 'tkinter',
-        'pandas', 'IPython', 'jupyter', 'notebook',
+        'pandas', 'IPython', 'jupyter', 'notebook', 'pygame', 'PIL',
     ],
     noarchive=False,
     optimize=0,
