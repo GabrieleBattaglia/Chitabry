@@ -19,7 +19,7 @@ import GBAudio
 import suoni
 
 FLUIDSYNTH_DI_METEORA = "E:/git/mine/MeTeOra/fluidsynth"
-BANCO_SGM = r"E:\VstPlugins\SF2 Instruments\SGM-V2.01.sf2"
+BANCO_SGM = r"E:\MidiBanks\SGM-V2.01.sf2"
 CI_SONO = os.path.isfile(os.path.join(FLUIDSYNTH_DI_METEORA, banchi.FLUIDSYNTH_DLL[0])) and os.path.isfile(BANCO_SGM)
 
 
